@@ -1,0 +1,77 @@
+{
+  "settings": {
+    "title": "Configuración",
+    "account": "Cuenta",
+    "profile": "Perfil",
+    "preferences": "Preferencias",
+    "language": "Idioma",
+    "currency": "Moneda",
+    "support": "Soporte",
+    "helpCenter": "Centro de Ayuda",
+    "termsPrivacy": "Términos y Privacidad"
+  },
+  "home": {
+    "send": "Enviar",
+    "receive": "Recibir",
+    "swap": "Intercambiar",
+    "save": "Ahorrar",
+    "tokens": "Tokens"
+  },
+  "send": {
+    "title": "Enviar",
+    "recipient": "Destinatario",
+    "amount": "Cantidad",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar"
+  },
+  "receive": {
+    "title": "Recibir",
+    "address": "Tu Dirección",
+    "copy": "Copiar",
+    "share": "Compartir"
+  },
+  "swap": {
+    "title": "Intercambiar",
+    "from": "Desde",
+    "to": "Hasta",
+    "confirm": "Confirmar Intercambio",
+    "cancel": "Cancelar"
+  },
+  "wallet": {
+    "title": "Billeteras y Colecciones",
+    "connectedWallet": "Billetera Conectada",
+    "logout": "Cerrar Sesión",
+    "logoutConfirm": "¿Estás seguro de que quieres cerrar sesión? Necesitarás iniciar sesión nuevamente para acceder a tu billetera.",
+    "cancel": "Cancelar"
+  },
+  "login": {
+    "title": "Iniciar sesión con Privy",
+    "subtitle": "Autenticación segura de billetera"
+  },
+  "tabs": {
+    "home": "Inicio",
+    "portfolio": "Portafolio",
+    "checker": "Verificador",
+    "activities": "Actividades",
+    "settings": "Configuración"
+  },
+  "nft": {
+    "title": "Colección NFT",
+    "empty": "No hay NFTs todavía",
+    "emptySubtext": "Tu colección de NFT aparecerá aquí"
+  },
+  "activities": {
+    "title": "Actividades",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "thisWeek": "Esta Semana"
+  },
+  "languages": {
+    "en": "Inglés",
+    "es": "Español",
+    "fr": "Francés",
+    "de": "Alemán",
+    "zh": "Chino",
+    "ja": "Japonés"
+  }
+}

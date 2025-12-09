@@ -1,0 +1,474 @@
+import React, { useState, useEffect } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, StatusBar, Switch, ActivityIndicator, Dimensions, Image } from 'react-native'
+import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { usePrivy } from '@privy-io/expo'
+import { useSignRawHash } from '@privy-io/expo/extended-chains'
+import { useNetwork } from '../context/NetworkContext'
+import { moveToOctas, createCycle } from '../services/movement_service/savingCycleService'
+import AlertModal from '../components/AlertModal'
+import { DateRangePicker } from '../components/DateRangePicker'
+import { TOKEN_METADATA } from '../constants/tokenMetadata'
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window')
+const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
+
+interface AllowedAsset {
+    address: string
+    name: string
+    symbol: string
+    decimals: number
+    logoUrl?: string
+}
+
+export default function CreateSavingCycle() {
+    const router = useRouter()
+    const { user } = usePrivy()
+    const { network } = useNetwork()
+    const { signRawHash } = useSignRawHash()
+
+    const [name, setName] = useState('')
+    const [description, setDescription] = useState('')
+    const [initialDeposit, setInitialDeposit] = useState('')
+    const [isGoalBased, setIsGoalBased] = useState(true)
+    const [goalAmount, setGoalAmount] = useState('')
+    const [startDateTime, setStartDateTime] = useState(new Date())
+    const [endDateTime, setEndDateTime] = useState(() => {
+        const future = new Date()
+        future.setDate(future.getDate() + 30)
+        return future
+    })
+    const [creating, setCreating] = useState(false)
+    const [showAlert, setShowAlert] = useState(false)
+    const [alertType, setAlertType] = useState<'success' | 'error'>('success')
+    const [alertMessage, setAlertMessage] = useState('')
+    const [allowedAssets, setAllowedAssets] = useState<AllowedAsset[]>([])
+    const [selectedAsset, setSelectedAsset] = useState<AllowedAsset | null>(null)
+    const [loadingAssets, setLoadingAssets] = useState(true)
+
+    const walletAddress = (user?.linked_accounts?.find((account: any) =>
+        account.type === 'wallet' && (account as any).chain_type === 'aptos'
+    ) as any)?.address || ''
+
+    useEffect(() => {
+        // Use GMOON token - the only allowed FA for saving cycles
+        setLoadingAssets(true)
+        const gmoonToken = TOKEN_METADATA['gmoon']
+        const asset: AllowedAsset = {
+            address: gmoonToken.faAddress,
+            name: gmoonToken.name,
+            symbol: gmoonToken.symbol,
+            decimals: gmoonToken.decimals,
+            logoUrl: gmoonToken.logoUrl
+        }
+        setAllowedAssets([asset])
+        setSelectedAsset(asset)
+        setLoadingAssets(false)
+    }, [network])
+
+    const buildSignHash = () => {
+        return async (address: string, hash: string) => {
+            const { signature } = await signRawHash({
+                address,
+                chainType: 'aptos',
+                hash: hash as `0x${string}`,
+            })
+
+            if (!signature) {
+                throw new Error('No signature returned from signRawHash')
+            }
+
+            // Get public key from wallet
+            const publicKey = (user?.linked_accounts?.find((account: any) =>
+                account.type === 'wallet' && (account as any).chain_type === 'aptos'
+            ) as any)?.publicKey || (user?.linked_accounts?.find((account: any) =>
+                account.type === 'wallet' && (account as any).chain_type === 'aptos'
+            ) as any)?.public_key || ''
+
+            return {
+                data: {
+                    signature,
+                    public_key: publicKey,
+                },
+            }
+        }
+    }
+
+    const handleCreate = async () => {
+        // Validation
+        if (!name.trim()) {
+            alert('Please enter a name for your saving goal')
+            return
+        }
+
+        if (!initialDeposit || parseFloat(initialDeposit) <= 0) {
+            alert('Please enter a valid initial deposit')
+            return
+        }
+
+        if (isGoalBased && (!goalAmount || parseFloat(goalAmount) <= parseFloat(initialDeposit))) {
+            alert('Goal amount must be greater than initial deposit')
+            return
+        }
+
+        const startTimestamp = Math.floor(startDateTime.getTime() / 1000)
+        const endTimestamp = Math.floor(endDateTime.getTime() / 1000)
+
+        if (startTimestamp >= endTimestamp) {
+            alert('End date must be after start date')
+            return
+        }
+
+        if (startTimestamp < Math.floor(Date.now() / 1000)) {
+            alert('Start date cannot be in the past')
+            return
+        }
+
+        if (network !== 'testnet') {
+            alert('Saving cycles are only available on testnet')
+            return
+        }
+
+        setCreating(true)
+
+        if (!selectedAsset) {
+            alert('No asset selected')
+            return
+        }
+
+        try {
+            const result = await createCycle(
+                walletAddress,
+                name,
+                description,
+                startTimestamp,
+                endTimestamp,
+                selectedAsset.address,
+                moveToOctas(parseFloat(initialDeposit)),
+                isGoalBased ? moveToOctas(parseFloat(goalAmount)) : 0,
+                buildSignHash(),
+                network
+            )
+
+            if (result.success) {
+                setAlertType('success')
+                setAlertMessage('Saving cycle created successfully!')
+                setShowAlert(true)
+
+                // Navigate back after a short delay
+                setTimeout(() => {
+                    router.back()
+                }, 2000)
+            } else {
+                setAlertType('error')
+                setAlertMessage(result.error || 'Failed to create saving cycle')
+                setShowAlert(true)
+            }
+        } catch (error: any) {
+            console.error('Error creating cycle:', error)
+            setAlertType('error')
+            setAlertMessage(error.message || 'Failed to create saving cycle')
+            setShowAlert(true)
+        } finally {
+            setCreating(false)
+        }
+    }
+
+    return (
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" />
+
+            {/* Alert Modal */}
+            <AlertModal
+                visible={showAlert}
+                type={alertType}
+                title={alertMessage}
+                message=""
+                onClose={() => setShowAlert(false)}
+            />
+
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+                    <Ionicons name="close" size={28} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Create Saving Plan</Text>
+                <View style={{ width: 28 }} />
+            </View>
+
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                {/* Form */}
+                <View style={styles.formContainer}>
+                    {/* Asset Info */}
+                    {selectedAsset && (
+                        <View style={styles.assetInfoCard}>
+                            <View style={styles.assetContent}>
+                                {selectedAsset.logoUrl && (
+                                    <Image
+                                        source={{ uri: selectedAsset.logoUrl }}
+                                        style={styles.assetLogo}
+                                    />
+                                )}
+                                <View style={styles.assetInfo}>
+                                    <Text style={styles.assetName}>{selectedAsset.name}</Text>
+                                    <Text style={styles.assetSymbol}>{selectedAsset.symbol}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Name */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Goal Name</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="e.g., Buy a house"
+                            placeholderTextColor="#8B98A5"
+                            value={name}
+                            onChangeText={setName}
+                            maxLength={50}
+                        />
+                    </View>
+
+                    {/* Description */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Description (Optional)</Text>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Add details about your goal"
+                            placeholderTextColor="#8B98A5"
+                            value={description}
+                            onChangeText={setDescription}
+                            multiline
+                            numberOfLines={3}
+                            maxLength={200}
+                        />
+                    </View>
+
+                    {/* Initial Deposit */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Initial Deposit ({selectedAsset?.symbol || 'MOVE'})</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="0.00"
+                            placeholderTextColor="#8B98A5"
+                            value={initialDeposit}
+                            onChangeText={setInitialDeposit}
+                            keyboardType="decimal-pad"
+                        />
+                    </View>
+
+                    {/* Goal-based Toggle */}
+                    <View style={styles.switchGroup}>
+                        <View>
+                            <Text style={styles.label}>Goal-based Savings</Text>
+                            <Text style={styles.switchSubtext}>
+                                Set a target amount to reach
+                            </Text>
+                        </View>
+                        <Switch
+                            value={isGoalBased}
+                            onValueChange={setIsGoalBased}
+                            trackColor={{ false: '#3A3F4A', true: 'rgba(255, 195, 13, 0.3)' }}
+                            thumbColor={isGoalBased ? '#ffda34' : '#8B98A5'}
+                        />
+                    </View>
+
+                    {/* Goal Amount (conditional) */}
+                    {isGoalBased && (
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Goal Amount ({selectedAsset?.symbol || 'MOVE'})</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="0.00"
+                                placeholderTextColor="#8B98A5"
+                                value={goalAmount}
+                                onChangeText={setGoalAmount}
+                                keyboardType="decimal-pad"
+                            />
+                        </View>
+                    )}
+
+                    {/* Date Range Picker */}
+                    <DateRangePicker
+                        startDate={startDateTime}
+                        endDate={endDateTime}
+                        onStartDateChange={setStartDateTime}
+                        onEndDateChange={setEndDateTime}
+                    />
+
+                    {/* Info Card */}
+                    <View style={styles.infoCard}>
+                        <Ionicons name="information-circle" size={24} color="#ffda34" />
+                        <View style={styles.infoTextContainer}>
+                            <Text style={styles.infoTitle}>Early Withdrawal Penalty</Text>
+                            <Text style={styles.infoText}>
+                                Withdrawing before the duration ends will incur a 5% penalty
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={{ height: 100 }} />
+            </ScrollView>
+
+            {/* Create Button */}
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                    style={[styles.createButton, creating && styles.createButtonDisabled]}
+                    activeOpacity={0.8}
+                    onPress={handleCreate}
+                    disabled={creating}
+                >
+                    {creating ? (
+                        <>
+                            <ActivityIndicator size="small" color="#121315" />
+                            <Text style={styles.createButtonText}>Creating...</Text>
+                        </>
+                    ) : (
+                        <Text style={styles.createButtonText}>Create Saving Plan</Text>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#121315',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
+        paddingBottom: IS_SMALL_SCREEN ? 12 : 20,
+    },
+    headerTitle: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    scrollView: {
+        flex: 1,
+    },
+    formContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+    },
+    inputGroup: {
+        marginBottom: IS_SMALL_SCREEN ? 16 : 24,
+    },
+    label: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    input: {
+        backgroundColor: '#222327',
+        borderWidth: 0,
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: IS_SMALL_SCREEN ? 12 : 14,
+        color: 'white',
+        fontSize: 16,
+    },
+    textArea: {
+        minHeight: IS_SMALL_SCREEN ? 70 : 80,
+        textAlignVertical: 'top',
+    },
+    switchGroup: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+        paddingVertical: 12,
+    },
+    switchSubtext: {
+        color: '#8B98A5',
+        fontSize: 12,
+        marginTop: 4,
+    },
+    infoCard: {
+        flexDirection: 'row',
+        backgroundColor: '#222327',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 0,
+        gap: 12,
+        marginTop: IS_SMALL_SCREEN ? 16 : 20,
+    },
+    infoTextContainer: {
+        flex: 1,
+    },
+    infoTitle: {
+        color: '#ffda34',
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 4,
+    },
+    infoText: {
+        color: '#8B98A5',
+        fontSize: 12,
+        lineHeight: 18,
+    },
+    buttonContainer: {
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        paddingBottom: 40,
+        backgroundColor: '#121315',
+    },
+    createButton: {
+        backgroundColor: '#ffda34',
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    createButtonDisabled: {
+        opacity: 0.6,
+    },
+    createButtonText: {
+        color: '#121315',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    assetInfoCard: {
+        backgroundColor: '#222327',
+        padding: 20,
+        borderRadius: 16,
+        marginBottom: IS_SMALL_SCREEN ? 16 : 24,
+        borderWidth: 0,
+    },
+    assetContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    assetLogo: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: 'rgba(255, 195, 13, 0.1)',
+    },
+    assetInfo: {
+        flex: 1,
+    },
+    assetName: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    assetSymbol: {
+        color: '#8B98A5',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+})

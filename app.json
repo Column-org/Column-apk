@@ -1,30 +1,73 @@
 {
   "expo": {
-    "name": "Satoshi",
-    "slug": "Satoshi",
+    "scheme": "column",
+    "name": "Column",
+    "slug": "Column",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Column.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "usesAppleSignIn": true,
+      "supportsTablet": true,
+      "bundleIdentifier": "com.column.app",
+      "associatedDomains": [
+        "webcredentials:auth.privy.io"
+      ],
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/Column.png",
         "backgroundColor": "#ffffff"
       },
+      "package": "com.satoshi.app",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true,
+      "navigationBarColor": "#121315",
+      "navigationBarStyle": "dark-content"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.5"
+          },
+          "android": {
+            "compileSdkVersion": 35
+          }
+        }
+      ],
+      "expo-web-browser",
+      "expo-font"
+    ],
+    "extra": {
+      "privyAppId": "cmikkk5n304ssjp0cnpbwwfg0",
+      "privyClientId": "client-WY6TNA2cfUt3qmhn2tBzTwtAiEzmquMi8AvxYtdiTmxDX",
+      "passkeyAssociatedDomain": "https://auth.privy.io",
+      "router": {},
+      "eas": {
+        "projectId": "e4a63f50-bc06-49de-8541-80b9efffd032"
+      }
     }
   }
 }

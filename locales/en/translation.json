@@ -1,0 +1,77 @@
+{
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "profile": "Profile",
+    "preferences": "Preferences",
+    "language": "Language",
+    "currency": "Currency",
+    "support": "Support",
+    "helpCenter": "Help Center",
+    "termsPrivacy": "Terms & Privacy"
+  },
+  "home": {
+    "send": "Send",
+    "receive": "Receive",
+    "swap": "Swap",
+    "save": "Save",
+    "tokens": "Tokens"
+  },
+  "send": {
+    "title": "Send",
+    "recipient": "Recipient",
+    "amount": "Amount",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "receive": {
+    "title": "Receive",
+    "address": "Your Address",
+    "copy": "Copy",
+    "share": "Share"
+  },
+  "swap": {
+    "title": "Swap",
+    "from": "From",
+    "to": "To",
+    "confirm": "Confirm Swap",
+    "cancel": "Cancel"
+  },
+  "wallet": {
+    "title": "Wallets & Collections",
+    "connectedWallet": "Connected Wallet",
+    "logout": "Logout",
+    "logoutConfirm": "Are you sure you want to logout? You'll need to login again to access your wallet.",
+    "cancel": "Cancel"
+  },
+  "login": {
+    "title": "Log in with Privy",
+    "subtitle": "Secure wallet authentication"
+  },
+  "tabs": {
+    "home": "Home",
+    "portfolio": "Portfolio",
+    "checker": "Checker",
+    "activities": "Activities",
+    "settings": "Settings"
+  },
+  "nft": {
+    "title": "NFT Collection",
+    "empty": "No NFTs yet",
+    "emptySubtext": "Your NFT collection will appear here"
+  },
+  "activities": {
+    "title": "Activities",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This Week"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German",
+    "zh": "Chinese",
+    "ja": "Japanese"
+  }
+}

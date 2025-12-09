@@ -1,0 +1,20 @@
+[package]
+name = "SendAsset"
+version = "2.0.0"
+authors = []
+edition = "2.0"
+
+[addresses]
+sendasset_system= "0x00eb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75"
+
+[dev-addresses]
+
+
+[dependencies.AptosFramework]
+git = "https://github.com/movementlabsxyz/aptos-core.git"
+rev = "movement"
+subdir = "aptos-move/framework/aptos-framework"
+
+[dev-dependencies]
+
+

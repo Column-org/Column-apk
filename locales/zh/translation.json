@@ -1,0 +1,77 @@
+{
+  "settings": {
+    "title": "设置",
+    "account": "账户",
+    "profile": "个人资料",
+    "preferences": "偏好设置",
+    "language": "语言",
+    "currency": "货币",
+    "support": "支持",
+    "helpCenter": "帮助中心",
+    "termsPrivacy": "条款与隐私"
+  },
+  "home": {
+    "send": "发送",
+    "receive": "接收",
+    "swap": "兑换",
+    "save": "储蓄",
+    "tokens": "代币"
+  },
+  "send": {
+    "title": "发送",
+    "recipient": "收款人",
+    "amount": "金额",
+    "confirm": "确认",
+    "cancel": "取消"
+  },
+  "receive": {
+    "title": "接收",
+    "address": "您的地址",
+    "copy": "复制",
+    "share": "分享"
+  },
+  "swap": {
+    "title": "兑换",
+    "from": "从",
+    "to": "到",
+    "confirm": "确认兑换",
+    "cancel": "取消"
+  },
+  "wallet": {
+    "title": "钱包与收藏",
+    "connectedWallet": "已连接钱包",
+    "logout": "退出登录",
+    "logoutConfirm": "您确定要退出登录吗？您需要重新登录才能访问您的钱包。",
+    "cancel": "取消"
+  },
+  "login": {
+    "title": "使用 Privy 登录",
+    "subtitle": "安全的钱包认证"
+  },
+  "tabs": {
+    "home": "首页",
+    "portfolio": "投资组合",
+    "checker": "验证器",
+    "activities": "活动记录",
+    "settings": "设置"
+  },
+  "nft": {
+    "title": "NFT 收藏",
+    "empty": "暂无 NFT",
+    "emptySubtext": "您的 NFT 收藏将显示在这里"
+  },
+  "activities": {
+    "title": "活动记录",
+    "today": "今天",
+    "yesterday": "昨天",
+    "thisWeek": "本周"
+  },
+  "languages": {
+    "en": "英语",
+    "es": "西班牙语",
+    "fr": "法语",
+    "de": "德语",
+    "zh": "中文",
+    "ja": "日语"
+  }
+}

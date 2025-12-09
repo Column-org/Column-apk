@@ -1,0 +1,165 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f5f5f5;
+}
+
+.container {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.header {
+  margin-top: 40px;
+  margin-bottom: 30px;
+}
+
+.header-text {
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.balance-card {
+  background-color: white;
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.balance-label {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.balance-amount {
+  color: #333;
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.balance-usd {
+  color: #999;
+  font-size: 16px;
+}
+
+.actions {
+  flex-direction: row;
+  justify-content: space-around;
+  margin-bottom: 30px;
+}
+
+.action-button {
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  padding: 20px 30px;
+}
+
+.action-icon {
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  border-radius: 20px;
+  margin-bottom: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.transactions {
+  flex: 1;
+}
+
+.transactions-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.transactions-title {
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.view-all {
+  color: white;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.transaction-list {
+  background-color: white;
+  border-radius: 20px;
+  padding: 10px;
+}
+
+.transaction-item {
+  flex-direction: row;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.transaction-item:last-child {
+  border-bottom: none;
+}
+
+.transaction-icon {
+  width: 45px;
+  height: 45px;
+  border-radius: 22.5px;
+  background-color: #f5f5f5;
+  justify-content: center;
+  align-items: center;
+  margin-right: 15px;
+}
+
+.transaction-icon-text {
+  font-size: 20px;
+}
+
+.transaction-details {
+  flex: 1;
+}
+
+.transaction-name {
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.transaction-date {
+  color: #999;
+  font-size: 13px;
+}
+
+.transaction-amount {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.transaction-amount.positive {
+  color: #10b981;
+}
+
+.transaction-amount.negative {
+  color: #ef4444;
+}
