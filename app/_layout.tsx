@@ -109,6 +109,11 @@ export default function RootLayout() {
           <PrivyProvider
             appId={privyAppId}
             clientId={privyClientId}
+            config={{
+              appearance: {
+                theme: 'dark',
+              },
+            }}
           >
             <SecurityProvider>
               <BalanceVisibilityProvider>

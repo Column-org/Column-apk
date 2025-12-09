@@ -31,12 +31,31 @@
         "foregroundImage": "./assets/Column.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.satoshi.app",
+      "package": "com.column.app",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "usesCleartextTraffic": true,
       "navigationBarColor": "#121315",
-      "navigationBarStyle": "dark-content"
+      "navigationBarStyle": "dark-content",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "auth.privy.io"
+            },
+            {
+              "scheme": "column"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
