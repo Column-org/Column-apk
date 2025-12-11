@@ -21,7 +21,6 @@ export default function AmountInput({ displayAmount, selectedToken, onChangeAmou
                 placeholderTextColor="#8B98A5"
                 textAlign="center"
             />
-            <Text style={styles.usdValue}>$0.00</Text>
             <View style={styles.balanceContainer}>
                 <Ionicons name="wallet-outline" size={16} color="#8B98A5" />
                 <Text style={styles.balanceText}>
@@ -45,7 +44,7 @@ const styles = StyleSheet.create({
     amountText: {
         color: 'white',
         fontSize: 64,
-        fontWeight: '300',
+        fontWeight: '700',
         marginBottom: 8,
         backgroundColor: 'transparent',
         minWidth: 150,

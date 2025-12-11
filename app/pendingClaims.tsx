@@ -60,9 +60,9 @@ export default function PendingClaims() {
         message: '',
     })
 
-    const walletAddress = user?.linked_accounts?.find(
+    const walletAddress = (user?.linked_accounts?.find(
         (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-    )?.address || ''
+    ) as any)?.address || ''
 
     const showLoadError = useCallback((error: unknown) => {
         Alert.alert(

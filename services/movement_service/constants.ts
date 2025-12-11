@@ -1,3 +1,5 @@
+import { FA5Style } from "@expo/vector-icons/build/FontAwesome5";
+
 export const MODULE_ADDRESS = "0x00eb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75";
 
 export const CONTRACT_MODULE = "sendmove";
@@ -5,7 +7,7 @@ export const SAVING_CYCLE_MODULE = "saving_cycle";
 
 // Backend Environment Configuration
 // Change USE_LOCAL_BACKEND to switch between local and production
-export const USE_LOCAL_BACKEND = true; // Set to false for production
+export const USE_LOCAL_BACKEND = false; // Set to false for production
 
 export const BACKEND_URLS = {
   local: "http://10.148.185.245:3000",

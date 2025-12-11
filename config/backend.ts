@@ -10,7 +10,7 @@
  */
 
 // Set to true for local development, false for production
-export const USE_LOCAL_BACKEND = true
+export const USE_LOCAL_BACKEND = false
 
 const LOCAL_HOST = '10.148.185.245'
 const LOCAL_PORT = 3000

@@ -34,24 +34,28 @@ export default function SwapTokenSelector({ selectedToken, tokens, onSelectToken
         activeOpacity={0.7}
       >
         <View style={styles.tokenInfo}>
-          {selectedToken?.logoURI && !failedImages.has(selectedToken.logoURI) ? (
-            <Image
-              source={{ uri: selectedToken.logoURI }}
-              style={styles.tokenIcon}
-              onError={() => {
-                setFailedImages(prev => new Set(prev).add(selectedToken.logoURI!))
-              }}
-            />
-          ) : (
-            <View style={styles.tokenIconPlaceholder}>
-              <Text style={styles.tokenIconText}>
-                {selectedToken?.symbol?.substring(0, 2) || '?'}
+          {selectedToken && (
+            <>
+              {selectedToken.logoURI && !failedImages.has(selectedToken.logoURI) ? (
+                <Image
+                  source={{ uri: selectedToken.logoURI }}
+                  style={styles.tokenIcon}
+                  onError={() => {
+                    setFailedImages(prev => new Set(prev).add(selectedToken.logoURI!))
+                  }}
+                />
+              ) : (
+                <View style={styles.tokenIconPlaceholder}>
+                  <Text style={styles.tokenIconText}>
+                    {selectedToken.symbol.substring(0, 2)}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.tokenSymbol}>
+                {selectedToken.symbol}
               </Text>
-            </View>
+            </>
           )}
-          <Text style={styles.tokenSymbol}>
-            {selectedToken?.symbol || 'Select Token'}
-          </Text>
         </View>
         <Ionicons name="chevron-down" size={20} color="#8B98A5" />
       </TouchableOpacity>

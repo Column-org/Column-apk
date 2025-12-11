@@ -166,7 +166,7 @@ export default function Swap() {
       // Step 2: Sign hash using Privy
       const { signature } = await signRawHash({
         address: walletAddress,
-        chainType: 'aptos',
+        chainType: 'aptos' as any,
         hash,
       })
 
@@ -296,7 +296,7 @@ export default function Swap() {
         {/* Switch Button */}
         <View style={styles.switchContainer}>
           <TouchableOpacity onPress={switchTokens} style={styles.switchButton}>
-            <Ionicons name="swap-vertical" size={20} color="white" />
+            <Ionicons name="swap-vertical" size={20} color="#121315" />
           </TouchableOpacity>
         </View>
 

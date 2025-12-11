@@ -19,6 +19,7 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
 const Home = () => {
     const scrollY = useRef(new Animated.Value(0)).current
+    const scaleAnim = useRef(new Animated.Value(1)).current
     const { getThemeImage } = useTheme()
     const { network } = useNetwork()
     const { user } = usePrivy()
@@ -28,9 +29,9 @@ const Home = () => {
     const [pendingClaimsCount, setPendingClaimsCount] = useState(0)
     const tokenListRefreshRef = useRef<(() => void) | null>(null)
 
-    const walletAddress = user?.linked_accounts?.find((account: any) =>
+    const walletAddress = (user?.linked_accounts?.find((account: any) =>
         account.type === 'wallet' && account.chain_type === 'aptos'
-    )?.address || ''
+    ) as any)?.address || ''
 
     const loadPendingClaims = useCallback(async () => {
         try {
@@ -85,23 +86,37 @@ const Home = () => {
         extrapolate: 'clamp',
     })
 
+    const handleModalStateChange = (isOpen: boolean) => {
+        Animated.timing(scaleAnim, {
+            toValue: isOpen ? 0.95 : 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start()
+    }
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#121315" />
 
-            {/* Sticky Header with Gradient */}
-            <Animated.View style={[styles.stickyHeader, { opacity: headerOpacity }]}>
-                <LinearGradient
-                    colors={['#121315', 'rgba(15, 20, 25, 0.95)', 'rgba(15, 20, 25, 0)']}
-                    style={styles.headerGradient}
-                />
-            </Animated.View>
+            <Animated.View style={[
+                styles.contentWrapper,
+                {
+                    transform: [{ scale: scaleAnim }],
+                }
+            ]}>
+                {/* Sticky Header with Gradient */}
+                <Animated.View style={[styles.stickyHeader, { opacity: headerOpacity }]}>
+                    <LinearGradient
+                        colors={['#121315', 'rgba(15, 20, 25, 0.95)', 'rgba(15, 20, 25, 0)']}
+                        style={styles.headerGradient}
+                    />
+                </Animated.View>
 
-            <View style={styles.stickyHeaderContent}>
-                <Header />
-            </View>
+                <View style={styles.stickyHeaderContent}>
+                    <Header onModalStateChange={handleModalStateChange} />
+                </View>
 
-            <Animated.ScrollView
+                <Animated.ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollViewContent}
                 showsVerticalScrollIndicator={false}
@@ -158,6 +173,7 @@ const Home = () => {
 
                 <View style={{ height: 20 }} />
             </Animated.ScrollView>
+            </Animated.View>
         </View>
     )
 }
@@ -166,6 +182,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#121315',
+    },
+    contentWrapper: {
+        flex: 1,
     },
     stickyHeader: {
         position: 'absolute',

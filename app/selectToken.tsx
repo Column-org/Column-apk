@@ -25,7 +25,7 @@ export default function SelectToken() {
         )
     }, [user?.linked_accounts])
 
-    const walletAddress = movementWallets[0]?.address || ''
+    const walletAddress = (movementWallets[0] as any)?.address || ''
 
     useEffect(() => {
         const fetchAssets = async () => {
@@ -89,7 +89,7 @@ export default function SelectToken() {
                                             source={{ uri: asset.metadata.icon_uri }}
                                             style={styles.tokenIcon}
                                             onError={() => {
-                                                console.log('Image load error for:', asset.name, asset.metadata.icon_uri)
+                                                console.log('Image load error for:', asset.metadata.name, asset.metadata.icon_uri)
                                                 setImageErrors(prev => ({ ...prev, [index]: true }))
                                             }}
                                         />

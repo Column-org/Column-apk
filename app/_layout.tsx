@@ -113,7 +113,7 @@ export default function RootLayout() {
               appearance: {
                 theme: 'dark',
               },
-            }}
+            } as any}
           >
             <SecurityProvider>
               <BalanceVisibilityProvider>

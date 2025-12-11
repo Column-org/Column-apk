@@ -21,6 +21,9 @@ const Activities = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [showFilterMenu, setShowFilterMenu] = useState(false)
+    const [hideFailedTx, setHideFailedTx] = useState(false)
+    const [filterType, setFilterType] = useState<'all' | 'send' | 'receive' | 'swap' | 'contract'>('all')
     const scrollY = useRef(new Animated.Value(0)).current
 
     const walletAddress = useMemo(() => {
@@ -28,7 +31,7 @@ const Activities = () => {
         const movementWallet = user.linked_accounts.find(
             (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
         )
-        return movementWallet?.address || ''
+        return (movementWallet as any)?.address || ''
     }, [user?.linked_accounts])
 
     const fetchTransactions = useCallback(async (showRefresh = false) => {
@@ -131,7 +134,19 @@ const Activities = () => {
         return `${address.slice(0, 6)}...${address.slice(-4)}`
     }
 
-    const groupedTransactions = useMemo(() => groupTransactionsByDate(transactions), [transactions, groupTransactionsByDate])
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(tx => {
+            // Filter by success status
+            if (hideFailedTx && tx.success === false) return false
+
+            // Filter by transaction type
+            if (filterType !== 'all' && tx.type !== filterType) return false
+
+            return true
+        })
+    }, [transactions, hideFailedTx, filterType])
+
+    const groupedTransactions = useMemo(() => groupTransactionsByDate(filteredTransactions), [filteredTransactions, groupTransactionsByDate])
 
     const headerShadow = scrollY.interpolate({
         inputRange: [0, 50],
@@ -262,8 +277,68 @@ const Activities = () => {
                     })
                 }]}>
                     <Text style={styles.headerTitle}>{t('activities.title')}</Text>
-                    <Ionicons name="filter" size={24} color="white" />
+                    <TouchableOpacity onPress={() => setShowFilterMenu(!showFilterMenu)} activeOpacity={0.7}>
+                        <Ionicons name="filter" size={24} color={(hideFailedTx || filterType !== 'all') ? "#ffda34" : "white"} />
+                    </TouchableOpacity>
                 </Animated.View>
+
+                {showFilterMenu && (
+                    <View style={styles.filterMenu}>
+                        <View style={styles.filterSection}>
+                            <Text style={styles.filterLabel}>Transaction Type</Text>
+                            <View style={styles.filterOptions}>
+                                <TouchableOpacity
+                                    style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
+                                    onPress={() => setFilterType('all')}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>All</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.filterChip, filterType === 'send' && styles.filterChipActive]}
+                                    onPress={() => setFilterType('send')}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[styles.filterChipText, filterType === 'send' && styles.filterChipTextActive]}>Send</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.filterChip, filterType === 'receive' && styles.filterChipActive]}
+                                    onPress={() => setFilterType('receive')}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[styles.filterChipText, filterType === 'receive' && styles.filterChipTextActive]}>Receive</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.filterChip, filterType === 'swap' && styles.filterChipActive]}
+                                    onPress={() => setFilterType('swap')}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[styles.filterChipText, filterType === 'swap' && styles.filterChipTextActive]}>Swap</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.filterChip, filterType === 'contract' && styles.filterChipActive]}
+                                    onPress={() => setFilterType('contract')}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[styles.filterChipText, filterType === 'contract' && styles.filterChipTextActive]}>Contract</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <View style={styles.filterDivider} />
+
+                        <TouchableOpacity
+                            style={styles.filterToggle}
+                            onPress={() => setHideFailedTx(!hideFailedTx)}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.filterToggleText}>Hide Failed Transactions</Text>
+                            <View style={[styles.toggle, hideFailedTx && styles.toggleActive]}>
+                                <View style={[styles.toggleDot, hideFailedTx && styles.toggleDotActive]} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <Animated.ScrollView
                     style={styles.scrollView}
@@ -575,6 +650,85 @@ const styles = StyleSheet.create({
         color: '#8B98A5',
         fontSize: 14,
         marginTop: 8,
+    },
+    filterMenu: {
+        backgroundColor: '#222327',
+        marginHorizontal: 20,
+        marginTop: 8,
+        borderRadius: 12,
+        padding: 12,
+    },
+    filterSection: {
+        marginBottom: 8,
+    },
+    filterLabel: {
+        color: '#8B98A5',
+        fontSize: 10,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        marginBottom: 8,
+    },
+    filterOptions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    filterChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: '#121315',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    filterChipActive: {
+        backgroundColor: '#ffda34',
+        borderColor: '#ffda34',
+    },
+    filterChipText: {
+        color: '#8B98A5',
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    filterChipTextActive: {
+        color: '#121315',
+    },
+    filterDivider: {
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        marginVertical: 8,
+    },
+    filterToggle: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    filterToggleText: {
+        color: 'white',
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    toggle: {
+        width: 40,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#121315',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        paddingHorizontal: 2,
+    },
+    toggleActive: {
+        backgroundColor: '#ffda34',
+        alignItems: 'flex-end',
+    },
+    toggleDot: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: '#ffda34',
+    },
+    toggleDotActive: {
+        backgroundColor: '#121315',
     },
 })
 

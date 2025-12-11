@@ -52,7 +52,7 @@ export default function SendCodeViaEmail({ code, tokenName, tokenSymbol, amount 
                 body: JSON.stringify({
                     to: email.trim(),
                     code: code,
-                    senderName: user?.email || 'A friend',
+                    senderName: (user as any)?.email || 'A friend',
                     subject: `Your ${tokenName} Transfer Code`,
                 }),
             })

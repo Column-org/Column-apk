@@ -27,6 +27,7 @@ export default function NFT() {
     const [checking, setChecking] = useState(false)
     const [totalTransfers, setTotalTransfers] = useState(0)
     const [escrowAddress, setEscrowAddress] = useState('')
+    const [featuresExpanded, setFeaturesExpanded] = useState(false)
 
     useEffect(() => {
         loadStats()
@@ -162,27 +163,43 @@ export default function NFT() {
 
                     {/* Features Info */}
                     <View style={styles.featuresContainer}>
-                        <Text style={styles.featuresTitle}>What you can check:</Text>
-                        <View style={styles.featureItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
-                            <Text style={styles.featureText}>Code validity (exists or not)</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
-                            <Text style={styles.featureText}>Transfer amount and sender</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
-                            <Text style={styles.featureText}>Claimability status</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
-                            <Text style={styles.featureText}>Creation and expiration dates</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                            <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
-                            <Text style={styles.featureText}>Supports both MOVE and FA tokens</Text>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.featuresTitleContainer}
+                            onPress={() => setFeaturesExpanded(!featuresExpanded)}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.featuresTitle}>What you can check:</Text>
+                            <Ionicons
+                                name={featuresExpanded ? "chevron-up" : "chevron-down"}
+                                size={20}
+                                color="white"
+                            />
+                        </TouchableOpacity>
+
+                        {featuresExpanded && (
+                            <>
+                                <View style={styles.featureItem}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
+                                    <Text style={styles.featureText}>Code validity (exists or not)</Text>
+                                </View>
+                                <View style={styles.featureItem}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
+                                    <Text style={styles.featureText}>Transfer amount and sender</Text>
+                                </View>
+                                <View style={styles.featureItem}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
+                                    <Text style={styles.featureText}>Claimability status</Text>
+                                </View>
+                                <View style={styles.featureItem}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
+                                    <Text style={styles.featureText}>Creation and expiration dates</Text>
+                                </View>
+                                <View style={styles.featureItem}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#ffda34" />
+                                    <Text style={styles.featureText}>Supports both MOVE and FA tokens</Text>
+                                </View>
+                            </>
+                        )}
                     </View>
                 </ScrollView>
             </View>
@@ -300,11 +317,16 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         padding: 20,
     },
+    featuresTitleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
     featuresTitle: {
         color: 'white',
         fontSize: 16,
         fontWeight: '700',
-        marginBottom: 16,
     },
     featureItem: {
         flexDirection: 'row',

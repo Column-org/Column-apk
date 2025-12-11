@@ -31,7 +31,7 @@ getStoredLanguage().then((language) => {
   i18n
     .use(initReactI18next)
     .init({
-      compatibilityJSON: 'v3',
+      compatibilityJSON: 'v3' as any,
       resources: {
         en: { translation: en },
         es: { translation: es },

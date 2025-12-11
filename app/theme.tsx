@@ -39,27 +39,6 @@ export default function AppTheme() {
                         <TouchableOpacity
                             style={[
                                 styles.themeCard,
-                                selectedTheme === 'none' && styles.themeCardActive
-                            ]}
-                            onPress={() => handleSaveTheme('none')}
-                            activeOpacity={0.8}
-                        >
-                            <View style={[styles.themeImage, styles.noneTheme]}>
-                                <Ionicons name="close-circle-outline" size={48} color="#8B98A5" />
-                            </View>
-                            {selectedTheme === 'none' && (
-                                <View style={styles.selectedBadge}>
-                                    <Ionicons name="checkmark-circle" size={24} color="#ffda34" />
-                                </View>
-                            )}
-                            <View style={styles.themeOverlay}>
-                                <Text style={styles.themeName}>None</Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[
-                                styles.themeCard,
                                 selectedTheme === 'parthenon2' && styles.themeCardActive
                             ]}
                             onPress={() => handleSaveTheme('parthenon2')}

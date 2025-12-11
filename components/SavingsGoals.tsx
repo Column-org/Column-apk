@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         color: 'white',
-        fontSize: 20,
+        fontSize: 14,
         fontWeight: '700',
     },
     createButton: {

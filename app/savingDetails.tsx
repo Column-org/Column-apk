@@ -137,6 +137,9 @@ export default function SavingDetails() {
     const current = octasToMove(cycle.amount)
     const target = cycle.goalAmount > 0 ? octasToMove(cycle.goalAmount) : current
 
+    // Determine cycle type
+    const isTimeBased = cycle.goalAmount === 0
+
     // Calculate percentage based on cycle type (uses currentTime for real-time updates)
     const now = currentTime / 1000
     const hasStarted = now >= cycle.startTime
@@ -176,7 +179,6 @@ export default function SavingDetails() {
         hour12: true
     })
 
-    const isTimeBased = cycle.goalAmount === 0
     const isGoalReached = cycle.goalAmount > 0 && cycle.amount >= cycle.goalAmount
     const isExpired = Date.now() / 1000 > cycle.endTime
 
@@ -184,7 +186,7 @@ export default function SavingDetails() {
         return async (address: string, hash: string) => {
             const { signature } = await signRawHash({
                 address,
-                chainType: 'aptos',
+                chainType: 'aptos' as any,
                 hash: hash as `0x${string}`,
             })
             const publicKey = (user as any)?.linked_accounts?.find((account: any) =>

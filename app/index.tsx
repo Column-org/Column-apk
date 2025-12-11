@@ -25,12 +25,12 @@ export default function LoginScreen() {
         }
     }, [isReady, user?.id])
 
-    // Auto-redirect to PrivyUI after 20 seconds, but only after Privy is ready
+    // Auto-redirect to PrivyUI after 5 seconds, but only after Privy is ready
     React.useEffect(() => {
         if (isReady && !user?.id) {
             const timeoutId = setTimeout(() => {
                 setShowPrivyUI(true)
-            }, 20000) // 20 seconds
+            }, 5000) // 5 seconds
 
             return () => clearTimeout(timeoutId)
         }
@@ -69,7 +69,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#121315',
     },
     content: {
         flex: 1,

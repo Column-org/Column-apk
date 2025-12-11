@@ -44,7 +44,7 @@ export function useMovementWallet() {
         // Step 2: Sign hash using Privy
         const { signature } = await signRawHash({
           address: walletAddress,
-          chainType: "aptos",
+          chainType: "aptos" as any,
           hash,
         });
 

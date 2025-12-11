@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Modal, Pressable, Switch, Alert, Dimensions } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Modal, Pressable, Alert, Dimensions } from 'react-native'
 import React from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { usePrivy } from '@privy-io/expo'
@@ -39,6 +39,7 @@ const Settings = () => {
         const hours = minutes / 60
         return hours === 1 ? '1 hour' : `${hours} hours`
     }
+
 
     const handleToggleSecurity = () => {
         if (isSecurityEnabled) {
@@ -112,177 +113,183 @@ const Settings = () => {
                 {/* Account Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
+                    <View style={styles.sectionCard}>
+                        <TouchableOpacity
+                            style={styles.settingItem}
+                            onPress={() => setProfileExpanded(!profileExpanded)}
+                        >
+                            <View style={styles.settingLeft}>
+                                <Ionicons name="person-outline" size={22} color="#ffda34" />
+                                <Text style={styles.settingText}>{t('settings.profile')}</Text>
+                            </View>
+                            <Ionicons
+                                name={profileExpanded ? "chevron-up" : "chevron-down"}
+                                size={20}
+                                color="#8B98A5"
+                            />
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.settingItem}
-                        onPress={() => setProfileExpanded(!profileExpanded)}
-                    >
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="person-outline" size={22} color="#ffda34" />
-                            <Text style={styles.settingText}>{t('settings.profile')}</Text>
-                        </View>
-                        <Ionicons
-                            name={profileExpanded ? "chevron-up" : "chevron-down"}
-                            size={20}
-                            color="#8B98A5"
-                        />
-                    </TouchableOpacity>
-
-                    {profileExpanded && user && (
-                        <View style={styles.profileDropdown}>
-                            {/* Email */}
-                            {(user as any).email?.address && (
-                                <View style={styles.accountInfo}>
-                                    <Text style={styles.accountValue}>{(user as any).email.address}</Text>
-                                </View>
-                            )}
-                            {user.linked_accounts?.find((acc: any) => acc.type === 'email') && (
-                                <View style={styles.accountInfo}>
-                                    <Text style={styles.accountValue}>
-                                        {(user.linked_accounts.find((acc: any) => acc.type === 'email') as any).address}
-                                    </Text>
-                                </View>
-                            )}
-
-                            {/* Movement Wallet */}
-                            {user.linked_accounts && user.linked_accounts
-                                .filter((account: any) => account.type === 'wallet' && (account as any).chain_type === 'aptos')
-                                .map((account: any, index: number) => (
-                                    <View key={index} style={styles.accountInfo}>
+                        {profileExpanded && user && (
+                            <View style={styles.profileDropdown}>
+                                {/* Email */}
+                                {(user as any).email?.address && (
+                                    <View style={styles.accountInfo}>
+                                        <Text style={styles.accountValue}>{(user as any).email.address}</Text>
+                                    </View>
+                                )}
+                                {user.linked_accounts?.find((acc: any) => acc.type === 'email') && (
+                                    <View style={styles.accountInfo}>
                                         <Text style={styles.accountValue}>
-                                            {(account as any).address}
+                                            {(user.linked_accounts.find((acc: any) => acc.type === 'email') as any).address}
                                         </Text>
                                     </View>
-                                ))
-                            }
-                        </View>
-                    )}
+                                )}
 
+                                {/* Movement Wallet */}
+                                {user.linked_accounts && user.linked_accounts
+                                    .filter((account: any) => account.type === 'wallet' && (account as any).chain_type === 'aptos')
+                                    .map((account: any, index: number) => (
+                                        <View key={index} style={styles.accountInfo}>
+                                            <Text style={styles.accountValue}>
+                                                {(account as any).address}
+                                            </Text>
+                                        </View>
+                                    ))
+                                }
+                            </View>
+                        )}
+                    </View>
                 </View>
 
                 {/* Security Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Security</Text>
-
-                    <View style={styles.settingItem}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="finger-print" size={22} color="#ffda34" />
-                            <Text style={styles.settingText}>Biometric Lock</Text>
-                        </View>
-                        <Switch
-                            value={isBiometricEnabled}
-                            onValueChange={handleToggleBiometric}
-                            trackColor={{ false: '#3A3F4A', true: 'rgba(255, 195, 13, 0.3)' }}
-                            thumbColor={isBiometricEnabled ? '#ffda34' : '#8B98A5'}
-                            disabled={!isBiometricAvailable}
-                        />
-                    </View>
-
-                    {!isBiometricAvailable && (
-                        <Text style={styles.securityNote}>
-                            Biometric authentication is not available on this device
-                        </Text>
-                    )}
-
-                    {isPasscodeSet && (
-                        <View style={[styles.settingItem, { paddingTop: 4 }]}>
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="lock-closed-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>Passcode Lock</Text>
-                            </View>
-                            <Switch
-                                value={isSecurityEnabled && isPasscodeSet}
-                                onValueChange={handleToggleSecurity}
-                                trackColor={{ false: '#3A3F4A', true: 'rgba(255, 195, 13, 0.3)' }}
-                                thumbColor={isSecurityEnabled && isPasscodeSet ? '#ffda34' : '#8B98A5'}
-                            />
-                        </View>
-                    )}
-
-                    {(isSecurityEnabled || isBiometricEnabled) && (
+                    <View style={styles.sectionCard}>
                         <TouchableOpacity
-                            style={[styles.settingItem, { paddingTop: 4 }]}
-                            onPress={() => router.push('/lockTimeout')}
+                            style={styles.settingItem}
+                            onPress={handleToggleBiometric}
+                            disabled={!isBiometricAvailable}
+                            activeOpacity={0.7}
                         >
                             <View style={styles.settingLeft}>
-                                <Ionicons name="timer-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>Auto-Lock Timeout</Text>
+                                <Ionicons name="finger-print" size={22} color="#ffda34" />
+                                <Text style={styles.settingText}>Biometric Lock</Text>
                             </View>
-                            <View style={styles.settingRight}>
-                                <Text style={styles.settingValue}>{formatLockTimeout(lockTimeout)}</Text>
-                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            <View style={[styles.toggle, isBiometricEnabled && styles.toggleActive]}>
+                                <View style={[styles.toggleDot, isBiometricEnabled && styles.toggleDotActive]} />
                             </View>
                         </TouchableOpacity>
-                    )}
+
+                        {!isBiometricAvailable && (
+                            <Text style={styles.securityNote}>
+                                Biometric authentication is not available on this device
+                            </Text>
+                        )}
+
+                        {isPasscodeSet && (
+                            <TouchableOpacity
+                                style={[styles.settingItem, { paddingTop: 4 }]}
+                                onPress={handleToggleSecurity}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="lock-closed-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>Passcode Lock</Text>
+                                </View>
+                                <View style={[styles.toggle, isSecurityEnabled && isPasscodeSet && styles.toggleActive]}>
+                                    <View style={[styles.toggleDot, isSecurityEnabled && isPasscodeSet && styles.toggleDotActive]} />
+                                </View>
+                            </TouchableOpacity>
+                        )}
+
+                        {(isSecurityEnabled || isBiometricEnabled) && (
+                            <TouchableOpacity
+                                style={[styles.settingItem, { paddingTop: 4 }]}
+                                onPress={() => router.push('/lockTimeout')}
+                            >
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="timer-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>Auto-Lock Timeout</Text>
+                                </View>
+                                <View style={styles.settingRight}>
+                                    <Text style={styles.settingValue}>{formatLockTimeout(lockTimeout)}</Text>
+                                    <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
 
                 {/* Preferences Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('settings.preferences')}</Text>
+                    <View style={styles.sectionCard}>
+                        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/language')}>
+                            <View style={styles.settingLeft}>
+                                <Ionicons name="globe-outline" size={22} color="#ffda34" />
+                                <Text style={styles.settingText}>{t('settings.language')}</Text>
+                            </View>
+                            <View style={styles.settingRight}>
+                                <Text style={styles.settingValue}>
+                                    {i18n.language === 'es'
+                                        ? 'Español'
+                                        : i18n.language === 'zh'
+                                        ? '中文'
+                                        : 'English'}
+                                </Text>
+                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            </View>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/language')}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="globe-outline" size={22} color="#ffda34" />
-                            <Text style={styles.settingText}>{t('settings.language')}</Text>
-                        </View>
-                        <View style={styles.settingRight}>
-                            <Text style={styles.settingValue}>
-                                {i18n.language === 'es'
-                                    ? 'Español'
-                                    : i18n.language === 'zh'
-                                    ? '中文'
-                                    : 'English'}
-                            </Text>
+                        <NetworkSelector />
+
+                        <TouchableOpacity
+                            style={styles.settingItem}
+                            onPress={() => router.push('/theme')}
+                        >
+                            <View style={styles.settingLeft}>
+                                <Ionicons name="color-palette-outline" size={22} color="#ffda34" />
+                                <Text style={styles.settingText}>App Theme</Text>
+                            </View>
                             <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                        </View>
-                    </TouchableOpacity>
+                        </TouchableOpacity>
 
-                    <NetworkSelector />
-
-                    <TouchableOpacity
-                        style={styles.settingItem}
-                        onPress={() => router.push('/theme')}
-                    >
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="color-palette-outline" size={22} color="#ffda34" />
-                            <Text style={styles.settingText}>App Theme</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                    </TouchableOpacity>
-
-                    <View style={styles.settingItem}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="images-outline" size={22} color="#ffda34" />
-                            <Text style={styles.settingText}>Show NFT Collection</Text>
-                        </View>
-                        <Switch
-                            value={isNFTCollectionEnabled}
-                            onValueChange={setNFTCollectionEnabled}
-                            trackColor={{ false: '#3A3F4A', true: 'rgba(255, 195, 13, 0.3)' }}
-                            thumbColor={isNFTCollectionEnabled ? '#ffda34' : '#8B98A5'}
-                        />
+                        <TouchableOpacity
+                            style={styles.settingItem}
+                            onPress={() => setNFTCollectionEnabled(!isNFTCollectionEnabled)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.settingLeft}>
+                                <Ionicons name="images-outline" size={22} color="#ffda34" />
+                                <Text style={styles.settingText}>Show NFT Collection</Text>
+                            </View>
+                            <View style={[styles.toggle, isNFTCollectionEnabled && styles.toggleActive]}>
+                                <View style={[styles.toggleDot, isNFTCollectionEnabled && styles.toggleDotActive]} />
+                            </View>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Support Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
+                    <View style={styles.sectionCard}>
+                        <TouchableOpacity style={styles.settingItem}>
+                            <View style={styles.settingLeft}>
+                                <Ionicons name="help-circle-outline" size={22} color="#ffda34" />
+                                <Text style={styles.settingText}>{t('settings.helpCenter')}</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                        </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.settingItem}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="help-circle-outline" size={22} color="#ffda34" />
-                            <Text style={styles.settingText}>{t('settings.helpCenter')}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.settingItem}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="document-text-outline" size={22} color="#ffda34" />
-                            <Text style={styles.settingText}>{t('settings.termsPrivacy')}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                    </TouchableOpacity>
+                        <TouchableOpacity style={styles.settingItem}>
+                            <View style={styles.settingLeft}>
+                                <Ionicons name="document-text-outline" size={22} color="#ffda34" />
+                                <Text style={styles.settingText}>{t('settings.termsPrivacy')}</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={{ height: 100 }} />
@@ -349,7 +356,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         color: 'white',
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
     },
     section: {
@@ -358,9 +365,15 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         color: '#8B98A5',
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
         marginBottom: 12,
+    },
+    sectionCard: {
+        backgroundColor: '#222327',
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
     },
     settingItem: {
         flexDirection: 'row',
@@ -374,7 +387,7 @@ const styles = StyleSheet.create({
     },
     settingText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '500',
         marginLeft: 15,
     },
@@ -385,7 +398,7 @@ const styles = StyleSheet.create({
     },
     settingValue: {
         color: '#8B98A5',
-        fontSize: 14,
+        fontSize: 13,
     },
     logoutButton: {
         flexDirection: 'row',
@@ -401,7 +414,7 @@ const styles = StyleSheet.create({
     },
     logoutText: {
         color: '#EF4444',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         marginLeft: 10,
     },
@@ -437,16 +450,16 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         color: 'white',
-        fontSize: 22,
+        fontSize: 18,
         fontWeight: 'bold',
         textAlign: 'center',
         marginBottom: 12,
     },
     modalMessage: {
         color: '#8B98A5',
-        fontSize: 15,
+        fontSize: 13,
         textAlign: 'center',
-        lineHeight: 22,
+        lineHeight: 20,
         marginBottom: 28,
     },
     modalButtons: {
@@ -464,7 +477,7 @@ const styles = StyleSheet.create({
     },
     modalCancelText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
     },
     modalLogoutButton: {
@@ -476,7 +489,7 @@ const styles = StyleSheet.create({
     },
     modalLogoutText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
     },
     profileDropdown: {
@@ -487,7 +500,7 @@ const styles = StyleSheet.create({
     },
     accountValue: {
         color: 'white',
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: '500',
     },
     dropdownLogoutButton: {
@@ -503,7 +516,7 @@ const styles = StyleSheet.create({
     },
     dropdownLogoutText: {
         color: '#EF4444',
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: '600',
     },
     languageDropdownItem: {
@@ -520,7 +533,7 @@ const styles = StyleSheet.create({
     },
     languageDropdownText: {
         color: 'white',
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: '500',
     },
     languageDropdownTextActive: {
@@ -538,6 +551,28 @@ const styles = StyleSheet.create({
         paddingLeft: 37,
         marginTop: -4,
         marginBottom: 4,
+    },
+    toggle: {
+        width: 40,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#121315',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        paddingHorizontal: 2,
+    },
+    toggleActive: {
+        backgroundColor: '#ffda34',
+        alignItems: 'flex-end',
+    },
+    toggleDot: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: '#ffda34',
+    },
+    toggleDotActive: {
+        backgroundColor: '#121315',
     },
 })
 

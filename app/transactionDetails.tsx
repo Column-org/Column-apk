@@ -93,7 +93,7 @@ const TransactionDetails = () => {
                 return 'Movement Testnet'
             case 'mainnet':
                 return 'Movement Mainnet'
-            case 'devnet':
+            case 'devnet' as any:
                 return 'Movement Devnet'
             default:
                 return 'Movement'

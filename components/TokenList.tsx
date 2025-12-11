@@ -206,7 +206,6 @@ export const TokenList = ({ refreshKey, onRefreshRef }: TokenListProps) => {
                         color="white"
                         style={isRefreshing ? styles.rotating : undefined}
                     />
-                    <Text style={styles.manageText}>Refresh</Text>
                 </TouchableOpacity>
             </View>
 
@@ -296,7 +295,7 @@ const styles = StyleSheet.create({
     },
     watchlistTitle: {
         color: 'white',
-        fontSize: 24,
+        fontSize: 14,
         fontWeight: 'bold',
     },
     manageButton: {
@@ -342,7 +341,7 @@ const styles = StyleSheet.create({
         height: 80,
         paddingHorizontal: 12,
         backgroundColor: '#222327',
-        borderRadius: 12,
+        borderRadius: 14,
         zIndex: 1,
     },
     watchlistDetails: {

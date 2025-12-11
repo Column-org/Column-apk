@@ -70,7 +70,7 @@ export default function CreateSavingCycle() {
         return async (address: string, hash: string) => {
             const { signature } = await signRawHash({
                 address,
-                chainType: 'aptos',
+                chainType: 'aptos' as any,
                 hash: hash as `0x${string}`,
             })
 

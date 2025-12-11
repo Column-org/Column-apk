@@ -53,8 +53,8 @@ export default function Send() {
         )
     }, [user?.linked_accounts])
 
-    const walletAddress = movementWallets[0]?.address || ''
-    const walletPublicKey = movementWallets[0]?.public_key || movementWallets[0]?.publicKey || ''
+    const walletAddress = (movementWallets[0] as any)?.address || ''
+    const walletPublicKey = (movementWallets[0] as any)?.public_key || (movementWallets[0] as any)?.publicKey || ''
 
     // Listen for selected token from params FIRST (higher priority)
     useEffect(() => {
@@ -125,8 +125,8 @@ export default function Send() {
         return async (address: string, hash: string) => {
             const { signature } = await signRawHash({
                 address,
-                chainType: 'aptos',
-                hash,
+                chainType: 'aptos' as any,
+                hash: hash as `0x${string}`,
             })
 
             if (!signature) {
@@ -256,18 +256,12 @@ export default function Send() {
                         <Ionicons name="close" size={28} color="white" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('send.title')}</Text>
-                    <View style={styles.headerIcons}>
-                        <TouchableOpacity
-                            onPress={() => router.push('/cancelTransfer')}
-                            activeOpacity={0.7}
-                            style={styles.iconButton}
-                        >
-                            <Ionicons name="close-circle-outline" size={28} color="#EF4444" />
-                        </TouchableOpacity>
-                        <TouchableOpacity activeOpacity={0.7} style={styles.iconButton}>
-                            <Ionicons name="information-circle-outline" size={28} color="white" />
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                        onPress={() => router.push('/cancelTransfer')}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="close-circle-outline" size={28} color="#EF4444" />
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.tabContainer}>

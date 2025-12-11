@@ -45,7 +45,7 @@ export default function EmailCodeSender({ code, tokenName, tokenSymbol, amount }
                     to: email.trim(),
                     code: code,
                     walletAddress: walletAddress,
-                    senderName: user?.email || user?.phone?.number || 'A friend',
+                    senderName: (user as any)?.email || (user as any)?.phone?.number || 'A friend',
                     subject: `Your ${tokenName} Transfer Code`,
                 }),
             })

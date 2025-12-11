@@ -5,13 +5,13 @@
     "slug": "Column",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Column.png",
+    "icon": "./assets/AppIcon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/Column.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#121315"
     },
     "ios": {
       "usesAppleSignIn": true,
@@ -28,7 +28,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Column.png",
+        "foregroundImage": "./assets/AppIcon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.column.app",

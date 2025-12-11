@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../services/movement_service/nftService'
 import { useNetwork } from '../context/NetworkContext'
+import { SkeletonLoader } from './SkeletonLoader'
 
 interface NFTListProps {
     walletAddress: string
@@ -76,10 +77,17 @@ export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
             </View>
 
             {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#ffda34" />
-                    <Text style={styles.loadingText}>Loading NFTs...</Text>
-                </View>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.scrollContent}
+                >
+                    {[...Array(3)].map((_, index) => (
+                        <View key={index} style={styles.nftSkeletonCard}>
+                            <SkeletonLoader width={160} height={160} borderRadius={12} />
+                        </View>
+                    ))}
+                </ScrollView>
             ) : error ? (
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error}</Text>
@@ -89,8 +97,7 @@ export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
                 </View>
             ) : nfts.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No NFTs found</Text>
-                    <Text style={styles.emptySubtext}>Your NFT collection will appear here</Text>
+                    <Text style={styles.emptyText}>No NFTs Found</Text>
                 </View>
             ) : (
                 <ScrollView
@@ -110,40 +117,23 @@ export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
                                 onPress={() => handleNFTPress(nft)}
                                 activeOpacity={0.7}
                             >
-                                <View style={styles.nftImageContainer}>
-                                    {imageUrl ? (
-                                        <Image
-                                            source={{ uri: imageUrl }}
-                                            style={styles.nftImage}
-                                            resizeMode="cover"
-                                        />
-                                    ) : (
-                                        <View style={styles.nftImagePlaceholder}>
-                                            <Text style={styles.placeholderText}>NFT</Text>
-                                        </View>
-                                    )}
+                                {imageUrl ? (
+                                    <Image
+                                        source={{ uri: imageUrl }}
+                                        style={styles.nftImage}
+                                        resizeMode="cover"
+                                    />
+                                ) : (
+                                    <View style={styles.nftImagePlaceholder}>
+                                        <Text style={styles.placeholderText}>NFT</Text>
+                                    </View>
+                                )}
 
-                                    {/* Overlay gradient */}
-                                    <LinearGradient
-                                        colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0.85)'] as const}
-                                        style={styles.nftOverlay}
-                                    >
-                                        <View style={styles.nftInfo}>
-                                            <Text style={styles.nftName} numberOfLines={1}>
-                                                {nftName}
-                                            </Text>
-                                            <Text style={styles.nftCollection} numberOfLines={1}>
-                                                {collectionName}
-                                            </Text>
-                                        </View>
-                                    </LinearGradient>
-
-                                    {parseInt(nft.amount) > 1 && (
-                                        <View style={styles.amountBadge}>
-                                            <Text style={styles.amountText}>×{nft.amount}</Text>
-                                        </View>
-                                    )}
-                                </View>
+                                {parseInt(nft.amount) > 1 && (
+                                    <View style={styles.amountBadge}>
+                                        <Text style={styles.amountText}>×{nft.amount}</Text>
+                                    </View>
+                                )}
                             </TouchableOpacity>
                         )
                     })}
@@ -167,7 +157,7 @@ const styles = StyleSheet.create({
     },
     title: {
         color: 'white',
-        fontSize: 20,
+        fontSize: 14,
         fontWeight: '700',
     },
     count: {
@@ -181,16 +171,12 @@ const styles = StyleSheet.create({
     },
     nftCard: {
         width: 160,
+        height: 160,
         backgroundColor: '#1A1F28',
         borderRadius: 12,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.05)',
-    },
-    nftImageContainer: {
-        width: '100%',
-        height: 200,
-        backgroundColor: '#2A2F3A',
         position: 'relative',
     },
     nftImage: {
@@ -283,8 +269,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        color: 'white',
-        fontSize: 16,
+        color: '#8B98A5',
+        fontSize: 12,
         fontWeight: '600',
         marginBottom: 8,
     },
@@ -292,5 +278,9 @@ const styles = StyleSheet.create({
         color: '#8B98A5',
         fontSize: 14,
         textAlign: 'center',
+    },
+    nftSkeletonCard: {
+        width: 160,
+        marginRight: 12,
     },
 })

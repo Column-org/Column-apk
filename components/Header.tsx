@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Dimensions } from 'react-native'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Dimensions, Animated } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { Ionicons } from '@expo/vector-icons'
 import { usePrivy } from '@privy-io/expo'
@@ -12,7 +12,11 @@ import { useTheme } from '../hooks/useTheme'
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
-export const Header = () => {
+interface HeaderProps {
+    onModalStateChange?: (isOpen: boolean) => void
+}
+
+export const Header = ({ onModalStateChange }: HeaderProps) => {
     const { user, logout } = usePrivy()
     const { createWallet } = useCreateWallet()
     const { clearAllSecurity } = useSecurity()
@@ -21,6 +25,7 @@ export const Header = () => {
     const [modalVisible, setModalVisible] = useState(false)
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [isCreatingWallet, setIsCreatingWallet] = useState(false)
+    const slideAnim = useRef(new Animated.Value(100)).current
 
     // Filter Movement wallets from linked accounts
     const movementWallets = useMemo(() => {
@@ -37,7 +42,7 @@ export const Header = () => {
                 setIsCreatingWallet(true)
                 try {
                     await createWallet({
-                        chainType: 'aptos',
+                        chainType: 'aptos' as any,
                     })
                 } catch (error) {
                     console.error('Failed to create Movement wallet:', error)
@@ -81,8 +86,31 @@ export const Header = () => {
     const handleCopyAddress = async () => {
         if (walletAddress) {
             await Clipboard.setStringAsync(walletAddress)
+
+            // Animate the "Copied!" notification
+            Animated.sequence([
+                // Slide in from right
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                // Stay visible
+                Animated.delay(1500),
+                // Slide back out
+                Animated.timing(slideAnim, {
+                    toValue: 100,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+            ]).start()
         }
     }
+
+    // Notify parent when modal state changes
+    useEffect(() => {
+        onModalStateChange?.(modalVisible)
+    }, [modalVisible, onModalStateChange])
 
     return (
         <>
@@ -117,9 +145,27 @@ export const Header = () => {
                     </TouchableOpacity>
                 )}
                 {!isCreatingWallet && walletAddress && (
-                    <TouchableOpacity onPress={handleCopyAddress} style={styles.actionButton}>
-                        <Ionicons name="copy-outline" size={20} color="#8B98A5" />
-                    </TouchableOpacity>
+                    <View style={styles.copyContainer}>
+                        <TouchableOpacity onPress={handleCopyAddress} style={styles.actionButton}>
+                            <Ionicons name="copy-outline" size={20} color="#8B98A5" />
+                        </TouchableOpacity>
+
+                        {/* Animated "Copied!" notification */}
+                        <Animated.View
+                            style={[
+                                styles.copiedNotification,
+                                {
+                                    transform: [{ translateX: slideAnim }],
+                                    opacity: slideAnim.interpolate({
+                                        inputRange: [0, 100],
+                                        outputRange: [1, 0],
+                                    }),
+                                },
+                            ]}
+                        >
+                            <Text style={styles.copiedText}>Copied!</Text>
+                        </Animated.View>
+                    </View>
                 )}
             </View>
 
@@ -244,6 +290,32 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         padding: 8,
+    },
+    copyContainer: {
+        position: 'relative',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    copiedNotification: {
+        position: 'absolute',
+        right: 40,
+        backgroundColor: '#ffda34',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    copiedText: {
+        color: '#121315',
+        fontSize: 12,
+        fontWeight: '600',
     },
     modalOverlay: {
         flex: 1,

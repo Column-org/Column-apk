@@ -49,7 +49,8 @@ export default function GeneratedCodeCard({ code, tokenName, onCopySuccess, onEm
                     <Ionicons name="share-outline" size={22} color="#ffda34" />
                 </TouchableOpacity>
 
-                {onEmailShare && (
+                {/* Email share temporarily disabled */}
+                {/* {onEmailShare && (
                     <TouchableOpacity
                         style={styles.actionButton}
                         onPress={onEmailShare}
@@ -57,7 +58,7 @@ export default function GeneratedCodeCard({ code, tokenName, onCopySuccess, onEm
                     >
                         <Ionicons name="mail-outline" size={22} color="#ffda34" />
                     </TouchableOpacity>
-                )}
+                )} */}
             </View>
         </View>
     )

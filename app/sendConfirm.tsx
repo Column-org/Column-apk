@@ -28,7 +28,10 @@ export default function SendConfirm() {
         if (params.amount) {
             setAmount(params.amount as string)
         }
-    }, [params.token, params.amount])
+        if (params.scannedAddress) {
+            setRecipientAddress(params.scannedAddress as string)
+        }
+    }, [params.token, params.amount, params.scannedAddress])
 
     const handleScan = () => {
         // TODO: Implement QR code scanner

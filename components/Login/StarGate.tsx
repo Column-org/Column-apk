@@ -1,18 +1,41 @@
-import React from 'react'
-import { View, StyleSheet, Text, Image } from 'react-native'
+import React, { useEffect, useRef } from 'react'
+import { View, StyleSheet, Text, Animated } from 'react-native'
 
 export default function StarGate() {
+    const fadeAnim = useRef(new Animated.Value(0)).current
+    const scaleAnim = useRef(new Animated.Value(0.8)).current
+
+    useEffect(() => {
+        // Fade in and scale animation
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 1000,
+                useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                tension: 20,
+                friction: 7,
+                useNativeDriver: true,
+            }),
+        ]).start()
+    }, [])
+
     return (
         <View style={styles.container}>
-            <View style={styles.logoContainer}>
-                <Image
-                    source={require('../../assets/Column.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-            </View>
-            <Text style={styles.title}>Column</Text>
-            <Text style={styles.subtitle}>Secure Crypto Wallet</Text>
+            <Animated.View
+                style={[
+                    styles.content,
+                    {
+                        opacity: fadeAnim,
+                        transform: [{ scale: scaleAnim }],
+                    },
+                ]}
+            >
+                <Text style={styles.welcome}>Welcome to</Text>
+                <Text style={styles.title}>Column</Text>
+            </Animated.View>
         </View>
     )
 }
@@ -22,25 +45,21 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        backgroundColor: '#121315',
     },
-    logoContainer: {
-        marginBottom: 30,
+    content: {
+        alignItems: 'center',
     },
-    logo: {
-        width: 120,
-        height: 120,
+    welcome: {
+        fontSize: 24,
+        color: '#8B98A5',
+        marginBottom: 10,
+        letterSpacing: 1,
     },
     title: {
-        fontSize: 48,
+        fontSize: 56,
         fontWeight: 'bold',
         color: '#ffda34',
-        marginBottom: 10,
-        letterSpacing: 2,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#8B98A5',
-        letterSpacing: 1,
+        letterSpacing: 3,
     },
 })

@@ -42,8 +42,8 @@ export default function Receive() {
         )
     }, [user?.linked_accounts])
 
-    const walletAddress = movementWallets[0]?.address || ''
-    const walletPublicKey = movementWallets[0]?.public_key || movementWallets[0]?.publicKey || ''
+    const walletAddress = (movementWallets[0] as any)?.address || ''
+    const walletPublicKey = (movementWallets[0] as any)?.public_key || (movementWallets[0] as any)?.publicKey || ''
 
     // Format address for display
     const formatAddress = (address: string) => {
@@ -95,7 +95,7 @@ export default function Receive() {
         return async (address: string, hash: string) => {
             const { signature } = await signRawHash({
                 address,
-                chainType: 'aptos',
+                chainType: 'aptos' as any,
                 hash: hash as `0x${string}`,
             })
 
@@ -223,9 +223,7 @@ export default function Receive() {
                         <Ionicons name="close" size={28} color="white" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('receive.title')}</Text>
-                    <TouchableOpacity activeOpacity={0.7}>
-                        <Ionicons name="information-circle-outline" size={28} color="white" />
-                    </TouchableOpacity>
+                    <View style={{ width: 28 }} />
                 </View>
 
                 <View style={styles.tabContainer}>

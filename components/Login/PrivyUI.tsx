@@ -8,7 +8,8 @@ import {
   Pressable,
   ScrollView,
   Dimensions,
-  Image
+  Image,
+  ImageBackground
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect, useRef } from "react";
@@ -122,130 +123,68 @@ export default function PrivyUI() {
 
   return (
     <View style={styles.container}>
-      {/* Animated background elements */}
-      {/* <Animated.View
-        style={[
-          styles.bgCircle1,
-          { transform: [{ rotate }] }
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.bgCircle2,
-          { transform: [{ rotate: rotate }] }
-        ]}
-      /> */}
+      {/* Content Area */}
+      <View style={styles.contentArea}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../assets/Collumn-Login.png')}
+            style={styles.centerImage}
+            resizeMode="contain"
+          />
+        </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          {/* Title Section */}
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>Welcome to Column</Text>
-          </View>
-
-          {/* Login Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.loginButton,
-              pressed && styles.loginButtonPressed,
-              isLoading && styles.loginButtonDisabled
+        {/* Error Message */}
+        {error && (
+          <Animated.View
+            style={[
+              styles.errorContainer,
+              { opacity: fadeAnim }
             ]}
-            onPress={handleLogin}
-            disabled={isLoading}
           >
-            <View style={styles.buttonGradient}>
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <Animated.View
-                    style={{ transform: [{ rotate: rotate }] }}
-                  >
-                    <Ionicons name="sync" size={20} color="#121315" />
-                  </Animated.View>
-                  <Text style={styles.buttonText}>Connecting...</Text>
-                </View>
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Image
-                    source={require('../../assets/Column.png')}
-                    style={styles.logoIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.buttonText}>Login</Text>
-                </View>
-              )}
-            </View>
-          </Pressable>
+            <Ionicons name="warning" size={20} color="#dc2626" />
+            <Text style={styles.errorText}>{error}</Text>
+          </Animated.View>
+        )}
+      </View>
 
-          {/* Supported Methods */}
-          {/* <View style={styles.methodsContainer}>
-            <Text style={styles.methodsTitle}>Supported login methods</Text>
-            <View style={styles.methodsGrid}>
-              {loginMethods.map((method, index) => (
-                <Animated.View
-                  key={index}
-                  style={[
-                    styles.methodTag,
-                    {
-                      opacity: fadeAnim,
-                      transform: [{
-                        translateY: fadeAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [20, 0],
-                        })
-                      }]
-                    }
-                  ]}
-                >
-                  <Ionicons name={method.icon as any} size={16} color="#64748b" />
-                  <Text style={styles.methodTagText}>{method.name}</Text>
-                </Animated.View>
-              ))}
+      {/* Bottom Button Area */}
+      <View style={styles.bottomArea}>
+        <View style={styles.titleSection}>
+          <Text style={styles.title}>Column</Text>
+          <Text style={styles.subtitle}>Create a new wallet or add an existing one</Text>
+        </View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.loginButton,
+            pressed && styles.loginButtonPressed,
+            isLoading && styles.loginButtonDisabled
+          ]}
+          onPress={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Animated.View
+                style={{ transform: [{ rotate: rotate }] }}
+              >
+                <Ionicons name="sync" size={24} color="#121315" />
+              </Animated.View>
+              <Text style={styles.buttonText}>Connecting...</Text>
             </View>
-          </View> */}
-
-          {/* Error Message */}
-          {error && (
-            <Animated.View 
-              style={[
-                styles.errorContainer,
-                { opacity: fadeAnim }
-              ]}
-            >
-              <Ionicons name="warning" size={20} color="#dc2626" />
-              <Text style={styles.errorText}>{error}</Text>
-            </Animated.View>
+          ) : (
+            <Text style={styles.buttonText}>Login</Text>
           )}
+        </Pressable>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <View style={styles.footerContent}>
-              <Ionicons name="shield-checkmark" size={16} color="#5b21b6" />
-              <Text style={styles.footerText}>
-                Secured by{" "}
-                <Text style={styles.footerLink}>Privy</Text>
-              </Text>
-            </View>
-          </View>
-
-          {/* Terms */}
-          {/* <View style={styles.terms}>
-            <Text style={styles.termsText}>
-              By connecting, you agree to our Terms of Service
-            </Text>
-          </View> */}
-        </Animated.View>
-      </ScrollView>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Ionicons name="shield-checkmark" size={16} color="#64748b" />
+          <Text style={styles.footerText}>
+            Secured by{" "}
+            <Text style={styles.footerLink}>Privy</Text>
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -253,89 +192,69 @@ export default function PrivyUI() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
-    position: 'relative',
+    backgroundColor: '#121315',
+    justifyContent: 'space-between',
   },
-  scrollContent: {
-    flexGrow: 1,
+  contentArea: {
+    flex: 1,
     justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     alignItems: 'center',
-    zIndex: 1,
+    paddingHorizontal: 24,
   },
-  logoIcon: {
-    width: 28,
-    height: 28,
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerImage: {
+    width: 280,
+    height: 280,
   },
   titleSection: {
-    marginBottom: 48,
     alignItems: 'center',
     width: '100%',
+    marginBottom: 32,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#ffda34',
+    color: '#ffffff',
     marginBottom: 12,
     textAlign: 'center',
-    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#475569',
+    fontSize: 14,
+    color: '#8B98A5',
     textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  bottomArea: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   loginButton: {
-    width: 200,
-    alignSelf: 'center',
-    marginBottom: 32,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#5b21b6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 5,
+    width: '100%',
+    backgroundColor: '#ffda34',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   loginButtonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
+    opacity: 0.8,
   },
   loginButtonDisabled: {
     opacity: 0.6,
-  },
-  buttonGradient: {
-    backgroundColor: '#ffda34',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    flexDirection: 'row',
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   buttonText: {
     color: '#121315',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
   methodsContainer: {
     width: '100%',
@@ -391,10 +310,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   footer: {
-    marginTop: 32,
-    marginBottom: 16,
-  },
-  footerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -406,7 +321,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footerLink: {
-    color: '#5b21b6',
+    color: '#64748b',
     fontWeight: '600',
   },
   terms: {

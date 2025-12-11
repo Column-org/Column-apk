@@ -85,8 +85,8 @@ export default function SendStatus() {
                 try {
                     const signatureResult = await signRawHash({
                         address,
-                        chainType: 'aptos',
-                        hash,
+                        chainType: 'aptos' as any,
+                        hash: hash as `0x${string}`,
                     })
                     
                     if (!signatureResult.signature) {
@@ -158,7 +158,7 @@ export default function SendStatus() {
         }
     }, [params.token, params.amount, params.recipient, walletAddress, walletPublicKey, signRawHash, network]) // Only run when these change
 
-    const getGradientColors = () => {
+    const getGradientColors = (): readonly [string, string, ...string[]] => {
         switch (status) {
             case 'sending':
                 return ['#ffda34', '#121315']
