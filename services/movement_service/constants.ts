@@ -7,11 +7,11 @@ export const SAVING_CYCLE_MODULE = "saving_cycle";
 
 // Backend Environment Configuration
 // Change USE_LOCAL_BACKEND to switch between local and production
-export const USE_LOCAL_BACKEND = true; // Set to true for local testing
+export const USE_LOCAL_BACKEND = false; // Set to false for production
 
 export const BACKEND_URLS = {
   local: "http://10.216.57.245:3000",
-  production: "https://column-backend.vercel.app"
+  production: "https://column-backend-2.onrender.com"
 };
 
 // Automatically select backend URL based on environment
