@@ -30,6 +30,7 @@ export default function SavingDetails() {
     const [alertMessage, setAlertMessage] = useState('')
     const [availableBalance, setAvailableBalance] = useState<number>(0)
     const [decimals, setDecimals] = useState<number>(8)
+    const [assetSymbol, setAssetSymbol] = useState<string>('MOVE')
     const [currentTime, setCurrentTime] = useState(Date.now())
 
     const cycleId = params.cycleId !== undefined ? Number(params.cycleId) : null
@@ -95,8 +96,15 @@ export default function SavingDetails() {
                 const balance = parseFloat(cycleAsset.amount) / Math.pow(10, cycleAsset.metadata.decimals)
                 setAvailableBalance(balance)
                 setDecimals(cycleAsset.metadata.decimals)
+                setAssetSymbol(cycleAsset.metadata.symbol)
             } else {
                 setAvailableBalance(0)
+                // Fallback to USDC symbol if address matches, otherwise MOVE/GMOON
+                if (cycle.assetAddress.toLowerCase() === '0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7') {
+                    setAssetSymbol('USDC.e')
+                } else {
+                    setAssetSymbol('GMOON')
+                }
             }
         } catch (error) {
             console.error('Error loading balance:', error)
@@ -213,7 +221,7 @@ export default function SavingDetails() {
 
         // Check actual wallet balance
         if (amountToAdd > availableBalance) {
-            alert(`Insufficient balance. You have ${availableBalance.toFixed(2)} GMOON available.`)
+            alert(`Insufficient balance. You have ${availableBalance.toFixed(2)} ${assetSymbol} available.`)
             return
         }
 
@@ -388,7 +396,7 @@ export default function SavingDetails() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Add Funds</Text>
-                        <Text style={styles.modalSubtitle}>Available: {availableBalance.toFixed(2)} GMOON</Text>
+                        <Text style={styles.modalSubtitle}>Available: {availableBalance.toFixed(2)} {assetSymbol}</Text>
                         <TextInput
                             style={styles.modalInput}
                             value={amount}
