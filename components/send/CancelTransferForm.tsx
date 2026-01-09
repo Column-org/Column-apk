@@ -29,10 +29,14 @@ export default function CancelTransferForm() {
         message: '',
     })
 
-    const movementWallet = user?.linked_accounts?.find(
-        (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-    ) as any
+    const movementWallets = React.useMemo(() => {
+        if (!user?.linked_accounts) return []
+        return user.linked_accounts.filter(
+            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
+        )
+    }, [user?.linked_accounts])
 
+    const movementWallet = movementWallets[0] as any
     const walletAddress = movementWallet?.address || ''
     const walletPublicKey = (movementWallet?.public_key || movementWallet?.publicKey || '') as string
 
@@ -183,7 +187,7 @@ export default function CancelTransferForm() {
             )
 
             if (result.success) {
-                await removePendingClaim(code.trim())
+                await removePendingClaim(walletAddress, code.trim())
                 setAlertModal({
                     visible: true,
                     type: 'success',
@@ -230,7 +234,7 @@ export default function CancelTransferForm() {
                     placeholder="Enter transfer code"
                     placeholderTextColor="#8B98A5"
                     value={code}
-                    onChangeText={setCode}
+                    onChangeText={(text) => setCode(text.toLowerCase())}
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading && !isValidating}

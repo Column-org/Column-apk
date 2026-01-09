@@ -141,7 +141,7 @@ export default function Receive() {
                     throw new Error(result.error || 'Claim failed')
                 }
 
-                await removePendingClaim(trimmed)
+                await removePendingClaim(walletAddress, trimmed)
                 setClaimCode('')
                 showSuccessMessage('Claim Successful!', result.transactionHash)
             } catch (error) {
@@ -248,41 +248,41 @@ export default function Receive() {
                 </View>
 
                 <View style={styles.content}>
-                {activeTab === 'qrcode' ? (
-                    <View style={styles.qrContainer}>
-                        <View style={styles.qrCodePlaceholder}>
-                            <QrCodeSvg
-                                value={walletAddress || 'No wallet connected'}
-                                frameSize={240}
-                                dotColor='#ffffff'
-                                backgroundColor='transparent'
-                            />
-                        </View>
-
-                        <View style={styles.walletInfo}>
-                            <View style={styles.walletTextContainer}>
-                                <Text style={styles.walletTitle}>Movement Wallet</Text>
-                                <Text style={styles.walletAddress}>{formatAddress(walletAddress)}</Text>
+                    {activeTab === 'qrcode' ? (
+                        <View style={styles.qrContainer}>
+                            <View style={styles.qrCodePlaceholder}>
+                                <QrCodeSvg
+                                    value={walletAddress || 'No wallet connected'}
+                                    frameSize={240}
+                                    dotColor='#ffffff'
+                                    backgroundColor='transparent'
+                                />
                             </View>
-                            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-                                <MaterialCommunityIcons name="wallet-outline" size={24} color="#ffda34" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ) : (
-                    <ClaimTransferForm
-                        code={claimCode}
-                        onChangeCode={setClaimCode}
-                        onSubmit={handleClaimTransfer}
-                        isSubmitting={isClaiming}
-                    />
-                )}
 
-                {activeTab === 'qrcode' && (
-                    <Text style={styles.warningText}>
-                        This address is for receiving Movement assets only.
-                    </Text>
-                )}
+                            <View style={styles.walletInfo}>
+                                <View style={styles.walletTextContainer}>
+                                    <Text style={styles.walletTitle}>Movement Wallet</Text>
+                                    <Text style={styles.walletAddress}>{formatAddress(walletAddress)}</Text>
+                                </View>
+                                <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+                                    <MaterialCommunityIcons name="wallet-outline" size={24} color="#ffda34" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ) : (
+                        <ClaimTransferForm
+                            code={claimCode}
+                            onChangeCode={setClaimCode}
+                            onSubmit={handleClaimTransfer}
+                            isSubmitting={isClaiming}
+                        />
+                    )}
+
+                    {activeTab === 'qrcode' && (
+                        <Text style={styles.warningText}>
+                            This address is for receiving Movement assets only.
+                        </Text>
+                    )}
                 </View>
 
                 <View style={{ flex: 1 }} />

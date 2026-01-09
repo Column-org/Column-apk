@@ -1,5 +1,5 @@
 import { View, ScrollView, StyleSheet, StatusBar, ImageBackground, Animated, RefreshControl, Dimensions } from 'react-native'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Header } from '../../components/Header'
 import { NetWorth } from '../../components/NetWorth'
@@ -29,25 +29,31 @@ const Home = () => {
     const [pendingClaimsCount, setPendingClaimsCount] = useState(0)
     const tokenListRefreshRef = useRef<(() => void) | null>(null)
 
-    const walletAddress = (user?.linked_accounts?.find((account: any) =>
-        account.type === 'wallet' && account.chain_type === 'aptos'
-    ) as any)?.address || ''
+    const movementWallets = useMemo(() => {
+        if (!user?.linked_accounts) return []
+        return user.linked_accounts.filter(
+            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
+        )
+    }, [user?.linked_accounts])
+
+    const walletAddress = (movementWallets[0] as any)?.address || ''
 
     const loadPendingClaims = useCallback(async () => {
+        if (!walletAddress) return
         try {
-            await fetchPendingClaims(network)
-            const count = await getPendingClaimsCount()
+            await fetchPendingClaims(walletAddress, network)
+            const count = await getPendingClaimsCount(walletAddress, network)
             setPendingClaimsCount(count)
         } catch (error) {
             console.warn('Failed to load pending claims count', error)
             try {
-                const fallbackCount = await getPendingClaimsCount()
+                const fallbackCount = await getPendingClaimsCount(walletAddress, network)
                 setPendingClaimsCount(fallbackCount)
             } catch {
                 setPendingClaimsCount(0)
             }
         }
-    }, [network])
+    }, [network, walletAddress])
 
     const onRefresh = async () => {
         setRefreshing(true)
@@ -117,62 +123,62 @@ const Home = () => {
                 </View>
 
                 <Animated.ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollViewContent}
-                showsVerticalScrollIndicator={false}
-                removeClippedSubviews={true}
-                overScrollMode="never"
-                alwaysBounceVertical={true}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: true }
-                )}
-                scrollEventThrottle={16}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor="#ffda34"
-                        colors={["#ffda34"]}
-                    />
-                }
-            >
-                {/* Background Image Section */}
-                {getThemeImage() ? (
-                    <ImageBackground
-                        source={getThemeImage()}
-                        style={styles.backgroundImageContainer}
-                        imageStyle={styles.backgroundImage}
-                    >
-                        {/* Dark Gradient Overlay at Bottom */}
-                        <LinearGradient
-                            colors={['transparent', 'rgba(15, 20, 25, 0.5)', '#121315']}
-                            style={styles.gradientOverlay}
-                            locations={[0, 0.6, 1]}
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollViewContent}
+                    showsVerticalScrollIndicator={false}
+                    removeClippedSubviews={true}
+                    overScrollMode="never"
+                    alwaysBounceVertical={true}
+                    onScroll={Animated.event(
+                        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                        { useNativeDriver: true }
+                    )}
+                    scrollEventThrottle={16}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor="#ffda34"
+                            colors={["#ffda34"]}
                         />
+                    }
+                >
+                    {/* Background Image Section */}
+                    {getThemeImage() ? (
+                        <ImageBackground
+                            source={getThemeImage()}
+                            style={styles.backgroundImageContainer}
+                            imageStyle={styles.backgroundImage}
+                        >
+                            {/* Dark Gradient Overlay at Bottom */}
+                            <LinearGradient
+                                colors={['transparent', 'rgba(15, 20, 25, 0.5)', '#121315']}
+                                style={styles.gradientOverlay}
+                                locations={[0, 0.6, 1]}
+                            />
 
-                        <View style={styles.headerSpacer} />
-                        <NetWorth refreshKey={refreshKey} />
-                    </ImageBackground>
-                ) : (
-                    <View style={styles.backgroundImageContainer}>
-                        <View style={styles.headerSpacer} />
-                        <NetWorth refreshKey={refreshKey} />
-                    </View>
-                )}
+                            <View style={styles.headerSpacer} />
+                            <NetWorth refreshKey={refreshKey} />
+                        </ImageBackground>
+                    ) : (
+                        <View style={styles.backgroundImageContainer}>
+                            <View style={styles.headerSpacer} />
+                            <NetWorth refreshKey={refreshKey} />
+                        </View>
+                    )}
 
-                <ActionButtons />
+                    <ActionButtons />
 
-                {/* Pending Claims Indicator */}
-                <PendingClaimsIndicator count={pendingClaimsCount} />
+                    {/* Pending Claims Indicator */}
+                    <PendingClaimsIndicator count={pendingClaimsCount} />
 
-                <TokenList refreshKey={refreshKey} onRefreshRef={(refreshFn) => { tokenListRefreshRef.current = refreshFn }} />
+                    <TokenList refreshKey={refreshKey} onRefreshRef={(refreshFn) => { tokenListRefreshRef.current = refreshFn }} />
 
-                {/* NFT Collection Section */}
-                {isNFTCollectionEnabled && <NFTList walletAddress={walletAddress} />}
+                    {/* NFT Collection Section */}
+                    {isNFTCollectionEnabled && <NFTList walletAddress={walletAddress} />}
 
-                <View style={{ height: 20 }} />
-            </Animated.ScrollView>
+                    <View style={{ height: 20 }} />
+                </Animated.ScrollView>
             </Animated.View>
         </View>
     )

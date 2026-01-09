@@ -64,12 +64,20 @@ export const SavingsGoals: React.FC = () => {
             // Convert cycles to goals format
             const formattedGoals: Goal[] = cycles.map((cycle, index) => {
                 const isTimeBased = cycle.goalAmount === 0
-                const current = octasToMove(cycle.amount)
+
+                // Determine decimals based on asset address
+                // USDC: 0xb890... (6 decimals)
+                // Default: 8 decimals
+                const decimals = cycle.assetAddress.toLowerCase() === '0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7'.toLowerCase()
+                    ? 6
+                    : 8;
+
+                const current = cycle.amount / Math.pow(10, decimals);
 
                 let target = current
                 if (!isTimeBased) {
                     // Goal-based: use goal amount
-                    target = octasToMove(cycle.goalAmount)
+                    target = cycle.goalAmount / Math.pow(10, decimals);
                 }
 
                 return {
@@ -85,7 +93,9 @@ export const SavingsGoals: React.FC = () => {
             })
 
             setGoals(formattedGoals)
-            setTotalSavings(octasToMove(total))
+            // Total savings across all assets - assume USDC decimals for now as it's the primary whitelisted asset 
+            // and the contract sums base units (which is technically a bug in the contract if assets mix)
+            setTotalSavings(total / Math.pow(10, 6))
         } catch (error) {
             console.warn('Error loading saving cycles:', error)
             setGoals([])
@@ -150,7 +160,7 @@ export const SavingsGoals: React.FC = () => {
             {/* Total Savings Card */}
             <View style={styles.totalCard}>
                 <Text style={styles.totalLabel}>Total Savings</Text>
-                <Text style={styles.totalAmount}>${totalSavings.toLocaleString()}.00</Text>
+                <Text style={styles.totalAmount}>${totalSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                 <Text style={styles.encouragement}>You are doing great!</Text>
             </View>
 
@@ -178,36 +188,36 @@ export const SavingsGoals: React.FC = () => {
                 </View>
             ) : (
                 <View style={styles.goalsGrid}>
-                {goals.map((goal) => (
-                    <TouchableOpacity
-                        key={goal.id}
-                        style={styles.goalCard}
-                        activeOpacity={0.7}
-                        onPress={() =>
-                            router.push({
-                                pathname: '/savingDetails',
-                                params: {
-                                    cycleId: goal.id,
-                                },
-                            })
-                        }
-                    >
-                        <Text style={styles.goalTitle} numberOfLines={1}>
-                            {goal.title}
-                        </Text>
-                        <Text style={styles.goalAmount}>
-                            <Text style={styles.currentAmount}>
-                                ${goal.current.toLocaleString()}
+                    {goals.map((goal) => (
+                        <TouchableOpacity
+                            key={goal.id}
+                            style={styles.goalCard}
+                            activeOpacity={0.7}
+                            onPress={() =>
+                                router.push({
+                                    pathname: '/savingDetails',
+                                    params: {
+                                        cycleId: goal.id,
+                                    },
+                                })
+                            }
+                        >
+                            <Text style={styles.goalTitle} numberOfLines={1}>
+                                {goal.title}
                             </Text>
-                            {!goal.isTimeBased && (
-                                <Text style={styles.targetAmount}>
-                                    /${goal.target.toLocaleString()}
+                            <Text style={styles.goalAmount}>
+                                <Text style={styles.currentAmount}>
+                                    ${goal.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </Text>
-                            )}
-                        </Text>
-                        {renderProgressBar(goal)}
-                    </TouchableOpacity>
-                ))}
+                                {!goal.isTimeBased && (
+                                    <Text style={styles.targetAmount}>
+                                        /${goal.target.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Text>
+                                )}
+                            </Text>
+                            {renderProgressBar(goal)}
+                        </TouchableOpacity>
+                    ))}
                 </View>
             )}
         </View>

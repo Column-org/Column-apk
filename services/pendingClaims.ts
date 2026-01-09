@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { MovementNetwork } from '../constants/networkConfig'
 import { TransferDetails, viewTransferDetails } from './movement_service/sendWithCode'
 import { octasToMove } from './movement_service/helpers'
+import { normalizeAddress } from '../utils/address'
 
 const STORAGE_KEY = 'pending-claims:v1'
 
@@ -29,39 +30,45 @@ export type PendingClaimWithStatus = PendingClaimRecord & {
   chainAmountDisplay?: string
 }
 
-async function readRecords(): Promise<PendingClaimRecord[]> {
+function getStorageKey(walletAddress: string): string {
+  return `pending-claims:${normalizeAddress(walletAddress)}:v1`
+}
+
+async function readRecords(walletAddress: string): Promise<PendingClaimRecord[]> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY)
+    const raw = await AsyncStorage.getItem(getStorageKey(walletAddress))
     if (!raw) return []
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
     return parsed
   } catch (error) {
-    console.warn('Failed to read pending claims from storage', error)
+    console.warn(`Failed to read pending claims for ${walletAddress}`, error)
     return []
   }
 }
 
-async function writeRecords(records: PendingClaimRecord[]): Promise<void> {
+async function writeRecords(walletAddress: string, records: PendingClaimRecord[]): Promise<void> {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(records))
+    await AsyncStorage.setItem(getStorageKey(walletAddress), JSON.stringify(records))
   } catch (error) {
-    console.warn('Failed to persist pending claims', error)
+    console.warn(`Failed to persist pending claims for ${walletAddress}`, error)
   }
 }
 
-export async function addPendingClaim(record: PendingClaimRecord): Promise<void> {
-  const existing = await readRecords()
+export async function addPendingClaim(walletAddress: string, record: PendingClaimRecord): Promise<void> {
+  if (!walletAddress) return
+  const existing = await readRecords(walletAddress)
   const filtered = existing.filter((entry) => entry.code !== record.code)
   filtered.unshift(record)
-  await writeRecords(filtered)
+  await writeRecords(walletAddress, filtered)
 }
 
-export async function removePendingClaim(code: string): Promise<void> {
-  const existing = await readRecords()
+export async function removePendingClaim(walletAddress: string, code: string): Promise<void> {
+  if (!walletAddress) return
+  const existing = await readRecords(walletAddress)
   const filtered = existing.filter((entry) => entry.code !== code)
   if (filtered.length !== existing.length) {
-    await writeRecords(filtered)
+    await writeRecords(walletAddress, filtered)
   }
 }
 
@@ -117,9 +124,11 @@ async function resolveClaimStatus(
 }
 
 export async function fetchPendingClaims(
+  walletAddress: string,
   network: MovementNetwork
 ): Promise<PendingClaimWithStatus[]> {
-  const allRecords = await readRecords()
+  if (!walletAddress) return []
+  const allRecords = await readRecords(walletAddress)
   if (!allRecords.length) return []
 
   const refreshedClaims: PendingClaimWithStatus[] = []
@@ -127,8 +136,14 @@ export async function fetchPendingClaims(
 
   for (const record of allRecords) {
     const status = await resolveClaimStatus(record)
+
+    // If unavailable, check if it's within the 5-minute (300,000ms) grace period
     if (status.status === 'unavailable') {
-      continue
+      const isRecent = Date.now() - record.savedAt < 300000
+      if (!isRecent) {
+        // Only skip (and thus remove) if it's NOT recent
+        continue
+      }
     }
 
     updatedRecords.push({
@@ -142,12 +157,13 @@ export async function fetchPendingClaims(
     }
   }
 
-  await writeRecords(updatedRecords)
+  await writeRecords(walletAddress, updatedRecords)
   return refreshedClaims
 }
 
-export async function getPendingClaimsCount(network?: MovementNetwork): Promise<number> {
-  const records = await readRecords()
+export async function getPendingClaimsCount(walletAddress: string, network?: MovementNetwork): Promise<number> {
+  if (!walletAddress) return 0
+  const records = await readRecords(walletAddress)
   if (!network) {
     return records.length
   }

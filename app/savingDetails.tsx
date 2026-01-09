@@ -5,9 +5,9 @@ import { Ionicons } from '@expo/vector-icons'
 import { usePrivy } from '@privy-io/expo'
 import { useSignRawHash } from '@privy-io/expo/extended-chains'
 import { useNetwork } from '../context/NetworkContext'
-import { getCycle, octasToMove, moveToOctas, SavingCycle } from '../services/movement_service/savingCycleService'
+import { getCycle, fromBaseUnit, toBaseUnit, SavingCycle } from '../services/movement_service/savingCycleService'
 import { topUpCycle, earlyWithdrawCycle, closeCycle } from '../services/movement_service/savingCycleFunctions'
-import { getFungibleAssets, formatAssetBalance } from '../services/movementAssets'
+import { getFungibleAssets } from '../services/movementAssets'
 import AlertModal from '../components/AlertModal'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
@@ -29,6 +29,7 @@ export default function SavingDetails() {
     const [alertType, setAlertType] = useState<'success' | 'error'>('success')
     const [alertMessage, setAlertMessage] = useState('')
     const [availableBalance, setAvailableBalance] = useState<number>(0)
+    const [decimals, setDecimals] = useState<number>(8)
     const [currentTime, setCurrentTime] = useState(Date.now())
 
     const cycleId = params.cycleId !== undefined ? Number(params.cycleId) : null
@@ -67,6 +68,11 @@ export default function SavingDetails() {
             console.log('Loading cycle:', { cycleId, walletAddress, network })
             const data = await getCycle(walletAddress, cycleId, network)
             console.log('Cycle data:', data)
+
+            if (data && data.assetAddress.toLowerCase() === '0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7') {
+                setDecimals(6)
+            }
+
             setCycle(data)
         } catch (error) {
             console.error('Error loading cycle:', error)
@@ -88,6 +94,7 @@ export default function SavingDetails() {
             if (cycleAsset) {
                 const balance = parseFloat(cycleAsset.amount) / Math.pow(10, cycleAsset.metadata.decimals)
                 setAvailableBalance(balance)
+                setDecimals(cycleAsset.metadata.decimals)
             } else {
                 setAvailableBalance(0)
             }
@@ -134,8 +141,8 @@ export default function SavingDetails() {
         )
     }
 
-    const current = octasToMove(cycle.amount)
-    const target = cycle.goalAmount > 0 ? octasToMove(cycle.goalAmount) : current
+    const current = fromBaseUnit(cycle.amount, decimals)
+    const target = cycle.goalAmount > 0 ? fromBaseUnit(cycle.goalAmount, decimals) : current
 
     // Determine cycle type
     const isTimeBased = cycle.goalAmount === 0
@@ -213,14 +220,14 @@ export default function SavingDetails() {
         setProcessing(true)
         console.log('Adding funds:', {
             amount: amountToAdd,
-            inOctas: moveToOctas(amountToAdd),
+            inBaseUnits: toBaseUnit(amountToAdd, decimals),
             cycleId: cycleId
         })
 
         const result = await topUpCycle(
             walletAddress,
             cycleId!,
-            moveToOctas(amountToAdd),
+            toBaseUnit(amountToAdd, decimals),
             buildSignHash(),
             network
         )
@@ -289,9 +296,9 @@ export default function SavingDetails() {
 
                         {/* Amount */}
                         <View style={styles.amountSection}>
-                            <Text style={styles.currentAmount}>${current.toLocaleString()}</Text>
+                            <Text style={styles.currentAmount}>${current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                             {!isTimeBased && (
-                                <Text style={styles.targetAmount}> / ${target.toLocaleString()}</Text>
+                                <Text style={styles.targetAmount}> / ${target.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                             )}
                         </View>
 
@@ -407,7 +414,7 @@ export default function SavingDetails() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Withdraw Funds</Text>
-                        <Text style={styles.modalSubtitle}>Balance: ${octasToMove(cycle.amount).toLocaleString()}</Text>
+                        <Text style={styles.modalSubtitle}>Balance: ${fromBaseUnit(cycle.amount, decimals).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                         {!isExpired && !isGoalReached && (
                             <Text style={styles.warningText}>⚠️ Early withdrawal penalty: {cycle.penaltyPercentage}%</Text>
                         )}

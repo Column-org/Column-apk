@@ -60,9 +60,14 @@ export default function PendingClaims() {
         message: '',
     })
 
-    const walletAddress = (user?.linked_accounts?.find(
-        (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-    ) as any)?.address || ''
+    const movementWallets = React.useMemo(() => {
+        if (!user?.linked_accounts) return []
+        return user.linked_accounts.filter(
+            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
+        )
+    }, [user?.linked_accounts])
+
+    const walletAddress = (movementWallets[0] as any)?.address || ''
 
     const showLoadError = useCallback((error: unknown) => {
         Alert.alert(
@@ -72,9 +77,10 @@ export default function PendingClaims() {
     }, [])
 
     const loadClaims = useCallback(async () => {
-        const result = await fetchPendingClaims(network)
+        if (!walletAddress) return
+        const result = await fetchPendingClaims(walletAddress, network)
         setClaims(result)
-    }, [network])
+    }, [network, walletAddress])
 
     const handleRefresh = useCallback(async () => {
         try {
@@ -216,19 +222,19 @@ export default function PendingClaims() {
                                 claim.status === 'ready'
                                     ? getTimeRemaining(claim)
                                     : claim.status === 'unknown'
-                                    ? 'Verifying...'
-                                    : 'Unavailable'
+                                        ? 'Verifying...'
+                                        : 'Unavailable'
                             const createdAt = formatDate(claim.chainCreatedAt ?? claim.createdAt)
                             const expiresAt = formatDate(claim.chainExpiration ?? claim.expiration)
 
                             return (
                                 <View key={claim.code} style={styles.claimCard}>
-                                <View style={styles.claimHeader}>
-                                    <View style={styles.claimIconContainer}>
-                                        <Ionicons name="arrow-down" size={24} color="#ffda34" />
-                                    </View>
-                                    <View style={styles.claimHeaderInfo}>
-                                        <Text style={styles.claimAmount}>
+                                    <View style={styles.claimHeader}>
+                                        <View style={styles.claimIconContainer}>
+                                            <Ionicons name="arrow-down" size={24} color="#ffda34" />
+                                        </View>
+                                        <View style={styles.claimHeaderInfo}>
+                                            <Text style={styles.claimAmount}>
                                                 {claimAmount}
                                             </Text>
                                             <Text style={styles.claimSender}>

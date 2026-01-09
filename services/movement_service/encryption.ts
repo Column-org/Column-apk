@@ -9,24 +9,29 @@
  */
 export function decryptCode(encryptedHex: string, senderAddress: string): string {
   try {
-    // Remove '0x' prefix and convert to lowercase
-    const cleanAddress = senderAddress.toLowerCase().startsWith('0x')
-      ? senderAddress.slice(2).toLowerCase()
-      : senderAddress.toLowerCase();
-
-    // Pad address to 64 characters (32 bytes)
+    // 1. Normalize senderAddress (ensure 32 bytes/64 chars hex)
+    const cleanAddress = senderAddress.toLowerCase().replace('0x', '');
     const paddedAddress = cleanAddress.padStart(64, '0');
+
+    // 2. Normalize encryptedHex (the code)
+    // Some indexers prepend 0x or strip leading zeros
+    let cleanHex = encryptedHex.toLowerCase().replace('0x', '');
+    if (cleanHex.length % 2 !== 0) {
+      cleanHex = '0' + cleanHex;
+    }
 
     // Convert hex string to bytes
     const encryptedBytes: number[] = [];
-    for (let i = 0; i < encryptedHex.length; i += 2) {
-      encryptedBytes.push(parseInt(encryptedHex.substr(i, 2), 16));
+    for (let i = 0; i < cleanHex.length; i += 2) {
+      const byteHex = cleanHex.substring(i, i + 2);
+      encryptedBytes.push(parseInt(byteHex, 16));
     }
 
-    // BCS serialization of Aptos address: just 32 bytes (NO length prefix for fixed-size types)
+    // Convert address hex to bytes
     const addressBytes: number[] = [];
     for (let i = 0; i < paddedAddress.length; i += 2) {
-      addressBytes.push(parseInt(paddedAddress.substr(i, 2), 16));
+      const byteHex = paddedAddress.substring(i, i + 2);
+      addressBytes.push(parseInt(byteHex, 16));
     }
 
     // XOR decrypt

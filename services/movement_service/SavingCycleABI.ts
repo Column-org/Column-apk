@@ -1,10 +1,23 @@
 import { MODULE_ADDRESS } from './constants';
 
-export const ABI ={
-  "address": "0xeb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75",
+export const ABI = {
+  "address": MODULE_ADDRESS,
   "name": "saving_cycle",
   "friends": [],
   "exposed_functions": [
+    {
+      "name": "calculate_fee_preview",
+      "visibility": "public",
+      "is_entry": false,
+      "is_view": true,
+      "generic_type_params": [],
+      "params": [
+        "u64"
+      ],
+      "return": [
+        "u64"
+      ]
+    },
     {
       "name": "close_cycle",
       "visibility": "public",
@@ -30,6 +43,7 @@ export const ABI ={
         "u64",
         "u64",
         "address",
+        "u64",
         "u64",
         "u64"
       ],
@@ -140,6 +154,30 @@ export const ABI ={
       "params": [
         "address",
         "u64"
+      ],
+      "return": [
+        "u64"
+      ]
+    },
+    {
+      "name": "get_penalty_tiers",
+      "visibility": "public",
+      "is_entry": false,
+      "is_view": true,
+      "generic_type_params": [],
+      "params": [],
+      "return": [
+        "vector<u64>"
+      ]
+    },
+    {
+      "name": "get_protocol_balance",
+      "visibility": "public",
+      "is_entry": false,
+      "is_view": true,
+      "generic_type_params": [],
+      "params": [
+        "address"
       ],
       "return": [
         "u64"
@@ -292,6 +330,34 @@ export const ABI ={
       ]
     },
     {
+      "name": "CreationFeeCollected",
+      "is_native": false,
+      "is_event": true,
+      "abilities": [
+        "drop",
+        "store"
+      ],
+      "generic_type_params": [],
+      "fields": [
+        {
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "name": "cycle_id",
+          "type": "u64"
+        },
+        {
+          "name": "fee_amount",
+          "type": "u64"
+        },
+        {
+          "name": "penalty_tier",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "CycleClosed",
       "is_native": false,
       "is_event": true,
@@ -408,6 +474,61 @@ export const ABI ={
         {
           "name": "penalty_amount",
           "type": "u64"
+        },
+        {
+          "name": "protocol_share",
+          "type": "u64"
+        },
+        {
+          "name": "burn_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "FeeAccounting",
+      "is_native": false,
+      "is_event": false,
+      "abilities": [
+        "key"
+      ],
+      "generic_type_params": [],
+      "fields": [
+        {
+          "name": "total_fees_collected",
+          "type": "u64"
+        },
+        {
+          "name": "fees_withdrawn",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "FeesWithdrawn",
+      "is_native": false,
+      "is_event": true,
+      "abilities": [
+        "drop",
+        "store"
+      ],
+      "generic_type_params": [],
+      "fields": [
+        {
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "name": "asset_address",
+          "type": "address"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "u64"
         }
       ]
     },
@@ -489,7 +610,7 @@ export const ABI ={
       "fields": [
         {
           "name": "cycles",
-          "type": "0x1::table::Table<u64, 0xeb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75::saving_cycle::SavingCycle>"
+          "type": `0x1::table::Table<u64, ${MODULE_ADDRESS}::saving_cycle::SavingCycle>`
         },
         {
           "name": "next_id",
@@ -500,6 +621,25 @@ export const ABI ={
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "VaultControl",
+      "is_native": false,
+      "is_event": false,
+      "abilities": [
+        "key"
+      ],
+      "generic_type_params": [],
+      "fields": [
+        {
+          "name": "vault_address",
+          "type": "address"
+        },
+        {
+          "name": "signer_cap",
+          "type": "0x1::account::SignerCapability"
+        }
+      ]
     }
   ]
-}
+};

@@ -458,14 +458,41 @@ export async function getCycleVersion(
     }
 }
 
-// Convert octas to MOVE
-export function octasToMove(octas: number): number {
-    return octas / 100000000
+// Convert base units to human readable amount
+export function fromBaseUnit(amount: number | string, decimals: number): number {
+    const val = typeof amount === 'string' ? parseInt(amount) : amount
+    return val / Math.pow(10, decimals)
 }
 
-// Convert MOVE to octas
+// Convert human readable amount to base units
+export function toBaseUnit(amount: number, decimals: number): number {
+    return Math.floor(amount * Math.pow(10, decimals))
+}
+
+// Legacy helpers for MOVE (8 decimals)
+export function octasToMove(octas: number): number {
+    return fromBaseUnit(octas, 8)
+}
+
 export function moveToOctas(move: number): number {
-    return Math.floor(move * 100000000)
+    return toBaseUnit(move, 8)
+}
+
+// Get Fungible Asset balance from backend
+export async function getFABalance(
+    ownerAddress: string,
+    assetAddress: string,
+    network: MovementNetwork = 'testnet'
+): Promise<string> {
+    try {
+        const response = await fetch(`${BACKEND_URL}/fa-balance/${ownerAddress}/${assetAddress}?network=${network}`)
+        if (!response.ok) return '0'
+        const data = await response.json()
+        return data.balance?.toString() || '0'
+    } catch (error) {
+        console.warn('Error fetching FA balance:', error)
+        return '0'
+    }
 }
 
 // Fetch allowed fungible assets from the indexer
@@ -549,7 +576,8 @@ export function buildCreateCyclePayload(
     endTime: number, // Unix timestamp in seconds
     assetAddress: string,
     depositAmount: number, // in octas
-    goalAmount: number // in octas (0 for time-based)
+    goalAmount: number, // in octas (0 for time-based)
+    penaltyPercentage: number // percentage (e.g. 5 for 5%)
 ) {
     return {
         function: `${MODULE_ADDRESS}::saving_cycle::create_cycle`,
@@ -562,6 +590,7 @@ export function buildCreateCyclePayload(
             assetAddress,
             depositAmount.toString(),
             goalAmount.toString(),
+            penaltyPercentage.toString(),
         ],
     }
 }
@@ -603,6 +632,7 @@ export async function createCycle(
     assetAddress: string,
     depositAmount: number, // in octas
     goalAmount: number, // in octas
+    penaltyPercentage: number, // percentage
     signHash: SignHashFn,
     network: MovementNetwork
 ): Promise<SavingCycleResult> {
@@ -622,6 +652,7 @@ export async function createCycle(
                 assetAddress,
                 depositAmount.toString(),
                 goalAmount.toString(),
+                penaltyPercentage.toString(),
             ],
             network,
         }

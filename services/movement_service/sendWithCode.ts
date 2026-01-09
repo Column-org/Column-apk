@@ -213,25 +213,27 @@ export async function viewTransferDetails(
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, network }),
+      body: JSON.stringify({ code: code.toLowerCase().replace('0x', ''), network }),
       signal: controller.signal,
     })
 
     clearTimeout(timeoutId)
+    console.log(`View Transfer Response [${code}]:`, response.status, response.ok)
 
     const contentType = response.headers.get('content-type')
     if (!contentType || !contentType.includes('application/json')) {
       const text = await response.text()
-      console.error('Non-JSON response from backend:', text.substring(0, 200))
+      console.error('Non-JSON response for', code, ':', text.substring(0, 200))
       return {
         success: false,
-        error: `Backend returned invalid response (${response.status}). Please check if the backend is running.`,
+        error: `Backend returned invalid response (${response.status}).`,
       }
     }
 
     if (!response.ok) {
       try {
         const error = await response.json()
+        console.warn(`View Transfer Error [${code}]:`, error)
         return {
           success: false,
           error: error.error || error.details || 'Failed to view transfer details',
@@ -245,12 +247,13 @@ export async function viewTransferDetails(
     }
 
     const details = await response.json()
+    console.log(`View Transfer Success [${code}]:`, details.type, details.amount)
     return {
       success: true,
       details,
     }
   } catch (error) {
-    console.error('View transfer failed:', error)
+    console.error('View transfer failed for', code, ':', error)
     if (error instanceof Error && error.name === 'AbortError') {
       return {
         success: false,
@@ -277,7 +280,7 @@ export async function claimTransferWithCode(
   transferType: 'move' | 'fa' = 'move'
 ): Promise<SendWithCodeResult> {
   const functionName =
-    transferType === 'fa'
+    transferType.toLowerCase() === 'fa'
       ? `${MODULE_ADDRESS}::sendmove::claim_fa_transfer`
       : `${MODULE_ADDRESS}::sendmove::claim_transfer`
 
@@ -300,7 +303,7 @@ export async function cancelTransferWithCode(
   transferType: 'move' | 'fa' = 'move'
 ): Promise<SendWithCodeResult> {
   const functionName =
-    transferType === 'fa'
+    transferType.toLowerCase() === 'fa'
       ? `${MODULE_ADDRESS}::sendmove::cancel_fa_transfer`
       : `${MODULE_ADDRESS}::sendmove::cancel_transfer`
 

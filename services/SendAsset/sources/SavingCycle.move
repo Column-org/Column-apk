@@ -6,6 +6,7 @@ module sendasset_system::saving_cycle {
     use aptos_framework::object;
     use aptos_framework::primary_fungible_store;
     use aptos_framework::timestamp;
+    use aptos_framework::account;
     use aptos_std::table::{Self, Table};
 
     /// Error codes
@@ -25,6 +26,9 @@ module sendasset_system::saving_cycle {
     const E_INVALID_ASSET: u64 = 14;
     const E_ZERO_AMOUNT: u64 = 15;
     const E_OVERFLOW: u64 = 16;
+    const E_INVALID_START_TIME: u64 = 17;
+    const E_INVALID_END_TIME: u64 = 18;
+    const E_INVALID_AMOUNT: u64 = 19;
 
     /// Default early withdrawal penalty (5%)
     const DEFAULT_PENALTY_PERCENTAGE: u64 = 5;
@@ -44,9 +48,27 @@ module sendasset_system::saving_cycle {
     /// Maximum u64 value for overflow checks
     const MAX_U64: u64 = 18446744073709551615;
 
+    /// Creation fee tiers
+    const TIER1_THRESHOLD: u64 = 100_000000;  // 100 USDC (6 decimals)
+    const TIER1_FLAT_FEE: u64 = 500000;       // 0.5 USDC
+    const TIER2_FEE_BPS: u64 = 50;            // 0.5% in basis points
+    const BASIS_POINTS: u64 = 10000;
+
+    /// Penalty tier options (user selectable)
+    const PENALTY_LOW: u64 = 3;
+    const PENALTY_STANDARD: u64 = 5;
+    const PENALTY_HIGH: u64 = 10;
+    const PENALTY_MAXIMUM: u64 = 20;
+
+    /// Protocol share of penalty (60% to protocol, 40% burned)
+    const PENALTY_PROTOCOL_SHARE_BPS: u64 = 6000;
+
+    /// Maximum creation fee (1000 USDC with 6 decimals)
+    const MAX_FEE_AMOUNT: u64 = 1000_000000;
+
     /// Hardcoded allowed asset addresses (FA only)
     const ALLOWED_ASSET_ADDRESSES: vector<address> = vector[
-        @0xbc460206050b3c3e1c8300d164913371eaf2178c91a919920b60dee378e7b35a,  // GMOON FA
+        @0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7,  // USDC
     ];
 
     /// Current contract version
@@ -78,7 +100,19 @@ module sendasset_system::saving_cycle {
         admin: address,
     }
 
-    /// Events
+    /// Fee accounting for transparency
+    struct FeeAccounting has key {
+        total_fees_collected: u64,
+        fees_withdrawn: u64,
+    }
+    
+    /// Global vault to isolate user savings from protocol fees
+    struct VaultControl has key {
+        vault_address: address,
+        signer_cap: account::SignerCapability,
+    }
+
+    // Events
     #[event]
     struct CycleCreated has drop, store {
         user: address,
@@ -111,6 +145,8 @@ module sendasset_system::saving_cycle {
         cycle_id: u64,
         amount_withdrawn: u64,
         penalty_amount: u64,
+        protocol_share: u64,
+        burn_amount: u64,
     }
 
     #[event]
@@ -125,11 +161,38 @@ module sendasset_system::saving_cycle {
         timestamp: u64,
     }
 
-    /// Initialize pause state on module deployment
+    #[event]
+    struct CreationFeeCollected has drop, store {
+        user: address,
+        cycle_id: u64,
+        fee_amount: u64,
+        penalty_tier: u64,
+    }
+
+    #[event]
+    struct FeesWithdrawn has drop, store {
+        admin: address,
+        asset_address: address,
+        amount: u64,
+        timestamp: u64,
+    }
+
+    /// Initialize pause state, fee accounting and vault on module deployment
     fun init_module(deployer: &signer) {
         move_to(deployer, PauseState {
             paused: false,
             admin: signer::address_of(deployer),
+        });
+        move_to(deployer, FeeAccounting {
+            total_fees_collected: 0,
+            fees_withdrawn: 0,
+        });
+        
+        // Create a resource account for the vault
+        let (vault_signer, vault_cap) = account::create_resource_account(deployer, b"SAVINGS_VAULT");
+        move_to(deployer, VaultControl {
+            vault_address: signer::address_of(&vault_signer),
+            signer_cap: vault_cap,
         });
     }
 
@@ -157,6 +220,30 @@ module sendasset_system::saving_cycle {
         a + b
     }
 
+    /// Calculate creation fee based on deposit amount with max limit
+    fun calculate_creation_fee(deposit_amount: u64): u64 {
+        let fee = if (deposit_amount <= TIER1_THRESHOLD) {
+            TIER1_FLAT_FEE
+        } else {
+            (deposit_amount * TIER2_FEE_BPS) / BASIS_POINTS
+        };
+        
+        // Cap fee at maximum
+        if (fee > MAX_FEE_AMOUNT) {
+            MAX_FEE_AMOUNT
+        } else {
+            fee
+        }
+    }
+
+    /// Validate penalty percentage
+    fun validate_penalty(penalty: u64): bool {
+        penalty == PENALTY_LOW || 
+        penalty == PENALTY_STANDARD || 
+        penalty == PENALTY_HIGH || 
+        penalty == PENALTY_MAXIMUM
+    }
+
     /// Create a new saving cycle with an initial deposit
     /// goal_amount: Set to 0 for regular time-based saving, or a target amount for goal-based saving
     public entry fun create_cycle(
@@ -167,16 +254,24 @@ module sendasset_system::saving_cycle {
         end_time: u64,
         asset_address: address,
         deposit_amount: u64,
-        goal_amount: u64
-    ) acquires UserCycles, PauseState {
+        goal_amount: u64,
+        penalty_percentage: u64
+    ) acquires UserCycles, PauseState, FeeAccounting, VaultControl {
         // Security checks
         assert_not_paused();
         assert!(deposit_amount >= MIN_DEPOSIT_AMOUNT, E_DEPOSIT_TOO_SMALL);
         assert!(deposit_amount > 0, E_ZERO_AMOUNT);
+        
+        // Timestamp validation
+        let now = timestamp::now_seconds();
+        assert!(start_time >= now, E_INVALID_START_TIME);
+        assert!(end_time > start_time, E_INVALID_END_TIME);
+        
         let duration_days = (end_time - start_time) / 86400;
         assert!(duration_days >= MIN_DURATION_DAYS, E_DURATION_TOO_SHORT);
         assert!(duration_days <= MAX_DURATION_DAYS, E_DURATION_TOO_LONG);
         assert!(vector::contains(&ALLOWED_ASSET_ADDRESSES, &asset_address), E_INVALID_ASSET);
+        assert!(validate_penalty(penalty_percentage), E_INVALID_PENALTY);
 
         let addr = signer::address_of(user);
 
@@ -190,9 +285,23 @@ module sendasset_system::saving_cycle {
         // Prevent storage spam
         assert!(user_cycles.active_count < MAX_CYCLES_PER_USER, E_TOO_MANY_CYCLES);
 
-        // Transfer FA from user to module
+        // Calculate and deduct creation fee
+        let fee_amount = calculate_creation_fee(deposit_amount);
+        assert!(fee_amount <= deposit_amount, E_INVALID_AMOUNT);
+        let net_deposit = deposit_amount - fee_amount;
+        
+        // Transfer FA from user: Split fee and saving
         let fa_metadata = object::address_to_object<Metadata>(asset_address);
-        primary_fungible_store::transfer(user, fa_metadata, @sendasset_system, deposit_amount);
+        let vault_ctrl = borrow_global<VaultControl>(@sendasset_system);
+        
+        // Fee goes directly to deployer (contract address)
+        primary_fungible_store::transfer(user, fa_metadata, @sendasset_system, fee_amount);
+        // Saving goes to vault address
+        primary_fungible_store::transfer(user, fa_metadata, vault_ctrl.vault_address, net_deposit);
+        
+        // Track fees for accounting
+        let fee_accounting = borrow_global_mut<FeeAccounting>(@sendasset_system);
+        fee_accounting.total_fees_collected = fee_accounting.total_fees_collected + fee_amount;
 
         // Create cycle
         let id = user_cycles.next_id;
@@ -206,9 +315,9 @@ module sendasset_system::saving_cycle {
             start_time,
             end_time,
             asset_address,
-            amount: deposit_amount,
+            amount: net_deposit,
             goal_amount,
-            penalty_percentage: DEFAULT_PENALTY_PERCENTAGE,
+            penalty_percentage,
         };
 
         table::add(&mut user_cycles.cycles, id, cycle);
@@ -222,6 +331,14 @@ module sendasset_system::saving_cycle {
             goal_amount,
             duration_days,
         });
+
+        // Emit fee collection event
+        aptos_framework::event::emit(CreationFeeCollected {
+            user: addr,
+            cycle_id: id,
+            fee_amount,
+            penalty_tier: penalty_percentage,
+        });
     }
 
     /// Top up deposit into an existing cycle (by id)
@@ -229,7 +346,7 @@ module sendasset_system::saving_cycle {
         user: &signer,
         cycle_id: u64,
         deposit_amount: u64
-    ) acquires UserCycles, PauseState {
+    ) acquires UserCycles, PauseState, VaultControl {
         // Security checks
         assert_not_paused();
         assert!(deposit_amount > 0, E_ZERO_AMOUNT);
@@ -249,9 +366,10 @@ module sendasset_system::saving_cycle {
         // Overflow protection
         let new_amount = safe_add(cycle.amount, deposit_amount);
 
-        // Transfer FA from user to module
+        // Transfer FA from user to vault
         let fa_metadata = object::address_to_object<Metadata>(cycle.asset_address);
-        primary_fungible_store::transfer(user, fa_metadata, @sendasset_system, deposit_amount);
+        let vault_ctrl = borrow_global<VaultControl>(@sendasset_system);
+        primary_fungible_store::transfer(user, fa_metadata, vault_ctrl.vault_address, deposit_amount);
 
         cycle.amount = new_amount;
 
@@ -270,7 +388,7 @@ module sendasset_system::saving_cycle {
     public entry fun close_cycle(
         user: &signer,
         cycle_id: u64
-    ) acquires UserCycles {
+    ) acquires UserCycles, VaultControl {
         // Note: Allow closing even when paused (users can exit during emergency)
         let addr = signer::address_of(user);
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -296,9 +414,11 @@ module sendasset_system::saving_cycle {
             completed = duration_elapsed || goal_reached;
         };
 
-        // Transfer FA back to user
+        // Transfer FA from vault back to user
         let fa_metadata = object::address_to_object<Metadata>(cycle.asset_address);
-        primary_fungible_store::transfer(user, fa_metadata, addr, cycle.amount);
+        let vault_ctrl = borrow_global<VaultControl>(@sendasset_system);
+        let vault_signer = account::create_signer_with_capability(&vault_ctrl.signer_cap);
+        primary_fungible_store::transfer(&vault_signer, fa_metadata, addr, cycle.amount);
 
         // Emit event
         aptos_framework::event::emit(CycleClosed {
@@ -313,7 +433,7 @@ module sendasset_system::saving_cycle {
     public entry fun early_withdraw(
         user: &signer,
         cycle_id: u64
-    ) acquires UserCycles {
+    ) acquires UserCycles, VaultControl, FeeAccounting {
         // Note: Allow early withdrawal even when paused (users can exit during emergency)
         let addr = signer::address_of(user);
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -322,16 +442,28 @@ module sendasset_system::saving_cycle {
         assert!(table::contains(&user_cycles.cycles, cycle_id), E_CYCLE_NOT_FOUND);
 
         let cycle = table::remove(&mut user_cycles.cycles, cycle_id);
+        assert!(user_cycles.active_count > 0, E_CYCLE_NOT_FOUND);
         user_cycles.active_count = user_cycles.active_count - 1;
 
         // Calculate penalty amount
         let penalty_amount = (cycle.amount * cycle.penalty_percentage) / 100;
+        let protocol_share = (penalty_amount * PENALTY_PROTOCOL_SHARE_BPS) / BASIS_POINTS;
+        let burn_amount = penalty_amount - protocol_share;
         let withdrawal_amount = cycle.amount - penalty_amount;
 
-        // Transfer withdrawal amount to user, penalty stays in module address
+        // Transfer withdrawal amount from vault to user
         let fa_metadata = object::address_to_object<Metadata>(cycle.asset_address);
-        primary_fungible_store::transfer(user, fa_metadata, addr, withdrawal_amount);
-        // Penalty remains at @sendasset_system (module address)
+        let vault_ctrl = borrow_global<VaultControl>(@sendasset_system);
+        let vault_signer = account::create_signer_with_capability(&vault_ctrl.signer_cap);
+        
+        primary_fungible_store::transfer(&vault_signer, fa_metadata, addr, withdrawal_amount);
+        
+        // Transfer penalty from vault to deployer automatically
+        primary_fungible_store::transfer(&vault_signer, fa_metadata, @sendasset_system, penalty_amount);
+        
+        // Track fees
+        let fee_accounting = borrow_global_mut<FeeAccounting>(@sendasset_system);
+        fee_accounting.total_fees_collected = fee_accounting.total_fees_collected + penalty_amount;
 
         // Emit event
         aptos_framework::event::emit(EarlyWithdrawal {
@@ -339,6 +471,8 @@ module sendasset_system::saving_cycle {
             cycle_id,
             amount_withdrawn: withdrawal_amount,
             penalty_amount,
+            protocol_share,
+            burn_amount,
         });
     }
 
@@ -366,14 +500,33 @@ module sendasset_system::saving_cycle {
         });
     }
 
-    /// Check if contract is currently paused
+    // Check if contract is currently paused
     #[view]
     public fun is_paused(): bool acquires PauseState {
         let pause_state = borrow_global<PauseState>(@sendasset_system);
         pause_state.paused
     }
 
-    /// View function to get cycle details
+    // Preview creation fee for a deposit amount
+    #[view]
+    public fun calculate_fee_preview(deposit_amount: u64): u64 {
+        calculate_creation_fee(deposit_amount)
+    }
+
+    // Get protocol balance (funds at the contract address)
+    #[view]
+    public fun get_protocol_balance(asset_address: address): u64 {
+        let fa_metadata = object::address_to_object<Metadata>(asset_address);
+        primary_fungible_store::balance(@sendasset_system, fa_metadata)
+    }
+
+    // Get available penalty tiers
+    #[view]
+    public fun get_penalty_tiers(): vector<u64> {
+        vector[PENALTY_LOW, PENALTY_STANDARD, PENALTY_HIGH, PENALTY_MAXIMUM]
+    }
+
+    // View function to get cycle details
     #[view]
     public fun get_cycle(addr: address, cycle_id: u64): (u8, String, String, u64, u64, address, u64, u64, u64) acquires UserCycles {
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -384,7 +537,7 @@ module sendasset_system::saving_cycle {
         (cycle.version, cycle.name, cycle.description, cycle.start_time, cycle.end_time, cycle.asset_address, cycle.amount, cycle.goal_amount, cycle.penalty_percentage)
     }
 
-    /// View function to check if cycle is expired
+    // View function to check if cycle is expired
     #[view]
     public fun is_cycle_expired(addr: address, cycle_id: u64): bool acquires UserCycles {
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -396,7 +549,7 @@ module sendasset_system::saving_cycle {
         now >= cycle.end_time
     }
 
-    /// View function to check if goal is reached
+    // View function to check if goal is reached
     #[view]
     public fun is_goal_reached(addr: address, cycle_id: u64): bool acquires UserCycles {
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -407,8 +560,8 @@ module sendasset_system::saving_cycle {
         cycle.amount >= cycle.goal_amount
     }
 
-    /// View function to get goal progress percentage
-    /// Returns 0 for regular time-based savings (goal_amount = 0)
+    // View function to get goal progress percentage
+    // Returns 0 for regular time-based savings (goal_amount = 0)
     #[view]
     public fun get_goal_progress(addr: address, cycle_id: u64): u64 acquires UserCycles {
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -422,8 +575,8 @@ module sendasset_system::saving_cycle {
         (cycle.amount * 100) / cycle.goal_amount
     }
 
-    /// View function to check saving mode type
-    /// Returns true if goal-based (goal_amount > 0), false if regular time-based (goal_amount = 0)
+    // View function to check saving mode type
+    // Returns true if goal-based (goal_amount > 0), false if regular time-based (goal_amount = 0)
     #[view]
     public fun is_goal_based(addr: address, cycle_id: u64): bool acquires UserCycles {
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -434,8 +587,8 @@ module sendasset_system::saving_cycle {
         cycle.goal_amount > 0
     }
 
-    /// View function to get cycle version
-    /// Useful for checking compatibility with new features
+    // View function to get cycle version
+    // Useful for checking compatibility with new features
     #[view]
     public fun get_cycle_version(addr: address, cycle_id: u64): u8 acquires UserCycles {
         assert!(exists<UserCycles>(addr), E_CYCLE_NOT_FOUND);
@@ -446,13 +599,13 @@ module sendasset_system::saving_cycle {
         cycle.version
     }
 
-    /// View function to get current contract version
+    // View function to get current contract version
     #[view]
     public fun get_contract_version(): u8 {
         CURRENT_VERSION
     }
 
-    /// View function to get all active cycles (not expired)
+    // View function to get all active cycles (not expired)
     #[view]
     public fun get_active_cycle_ids(addr: address): vector<u64> acquires UserCycles {
         if (!exists<UserCycles>(addr)) {
@@ -477,7 +630,7 @@ module sendasset_system::saving_cycle {
         result
     }
 
-    /// View function to get all cycle ids (active and expired)
+    // View function to get all cycle ids (active and expired)
     #[view]
     public fun get_all_cycle_ids(addr: address): vector<u64> acquires UserCycles {
         if (!exists<UserCycles>(addr)) {
@@ -498,7 +651,7 @@ module sendasset_system::saving_cycle {
         result
     }
 
-    /// View function to get total amount saved for a specific asset
+    // View function to get total amount saved for a specific asset
     #[view]
     public fun get_total_saved_by_asset(addr: address, asset_address: address): u64 acquires UserCycles {
         if (!exists<UserCycles>(addr)) {
@@ -522,7 +675,7 @@ module sendasset_system::saving_cycle {
         total
     }
 
-    /// View function to get total amount saved across all assets
+    // View function to get total amount saved across all assets
     #[view]
     public fun get_total_saved_all_assets(addr: address): u64 acquires UserCycles {
         if (!exists<UserCycles>(addr)) {

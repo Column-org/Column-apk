@@ -1,16 +1,16 @@
 import { FA5Style } from "@expo/vector-icons/build/FontAwesome5";
 
-export const MODULE_ADDRESS = "0x00eb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75";
+export const MODULE_ADDRESS = "0xfcd381dce435315523c7a0940729b3ff40ef9d5b0f206f214e8685f8bca2ca9c";
 
 export const CONTRACT_MODULE = "sendmove";
 export const SAVING_CYCLE_MODULE = "saving_cycle";
 
 // Backend Environment Configuration
 // Change USE_LOCAL_BACKEND to switch between local and production
-export const USE_LOCAL_BACKEND = false; // Set to false for production
+export const USE_LOCAL_BACKEND = true; // Set to true for local testing
 
 export const BACKEND_URLS = {
-  local: "http://10.148.185.245:3000",
+  local: "http://10.216.57.245:3000",
   production: "https://column-backend.vercel.app"
 };
 

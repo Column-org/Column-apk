@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { usePrivy } from '@privy-io/expo'
 import { useSignRawHash } from '@privy-io/expo/extended-chains'
 import { useNetwork } from '../context/NetworkContext'
-import { moveToOctas, createCycle } from '../services/movement_service/savingCycleService'
+import { toBaseUnit, fromBaseUnit, createCycle, getFABalance } from '../services/movement_service/savingCycleService'
 import AlertModal from '../components/AlertModal'
 import { DateRangePicker } from '../components/DateRangePicker'
 import { TOKEN_METADATA } from '../constants/tokenMetadata'
@@ -19,6 +19,7 @@ interface AllowedAsset {
     symbol: string
     decimals: number
     logoUrl?: string
+    amount?: string
 }
 
 export default function CreateSavingCycle() {
@@ -39,6 +40,7 @@ export default function CreateSavingCycle() {
         return future
     })
     const [creating, setCreating] = useState(false)
+    const [penaltyPercentage, setPenaltyPercentage] = useState(5) // Default 5%
     const [showAlert, setShowAlert] = useState(false)
     const [alertType, setAlertType] = useState<'success' | 'error'>('success')
     const [alertMessage, setAlertMessage] = useState('')
@@ -50,21 +52,39 @@ export default function CreateSavingCycle() {
         account.type === 'wallet' && (account as any).chain_type === 'aptos'
     ) as any)?.address || ''
 
+    // Hardcoded USDC asset logic
     useEffect(() => {
-        // Use GMOON token - the only allowed FA for saving cycles
-        setLoadingAssets(true)
-        const gmoonToken = TOKEN_METADATA['gmoon']
-        const asset: AllowedAsset = {
-            address: gmoonToken.faAddress,
-            name: gmoonToken.name,
-            symbol: gmoonToken.symbol,
-            decimals: gmoonToken.decimals,
-            logoUrl: gmoonToken.logoUrl
+        const loadBalance = async () => {
+            if (!walletAddress) return
+            setLoadingAssets(true)
+
+            try {
+                // USDC address from contract: 0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7
+                const usdcMetadata = '0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7'
+                console.log('Fetching USDC balance for:', walletAddress)
+                const balance = await getFABalance(walletAddress, usdcMetadata, network)
+                console.log('USDC balance raw:', balance)
+
+                const usdcAsset: AllowedAsset = {
+                    address: usdcMetadata,
+                    name: 'USDC.e',
+                    symbol: 'USDC.e',
+                    decimals: 6, // Standard USDC decimals
+                    logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+                    amount: balance
+                }
+
+                setAllowedAssets([usdcAsset])
+                setSelectedAsset(usdcAsset)
+            } catch (error) {
+                console.error('Failed to load USDC balance:', error)
+            } finally {
+                setLoadingAssets(false)
+            }
         }
-        setAllowedAssets([asset])
-        setSelectedAsset(asset)
-        setLoadingAssets(false)
-    }, [network])
+
+        loadBalance()
+    }, [walletAddress, network])
 
     const buildSignHash = () => {
         return async (address: string, hash: string) => {
@@ -144,8 +164,9 @@ export default function CreateSavingCycle() {
                 startTimestamp,
                 endTimestamp,
                 selectedAsset.address,
-                moveToOctas(parseFloat(initialDeposit)),
-                isGoalBased ? moveToOctas(parseFloat(goalAmount)) : 0,
+                toBaseUnit(parseFloat(initialDeposit), selectedAsset.decimals),
+                isGoalBased ? toBaseUnit(parseFloat(goalAmount), selectedAsset.decimals) : 0,
+                penaltyPercentage,
                 buildSignHash(),
                 network
             )
@@ -210,8 +231,13 @@ export default function CreateSavingCycle() {
                                     />
                                 )}
                                 <View style={styles.assetInfo}>
-                                    <Text style={styles.assetName}>{selectedAsset.name}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <Text style={styles.assetName}>{selectedAsset.name}</Text>
+                                    </View>
                                     <Text style={styles.assetSymbol}>{selectedAsset.symbol}</Text>
+                                    <Text style={styles.assetBalance}>
+                                        Balance: {selectedAsset.amount ? fromBaseUnit(selectedAsset.amount, selectedAsset.decimals).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                                    </Text>
                                 </View>
                             </View>
                         </View>
@@ -297,13 +323,39 @@ export default function CreateSavingCycle() {
                         onEndDateChange={setEndDateTime}
                     />
 
+                    {/* Penalty Selection */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Early Withdrawal Penalty</Text>
+                        <View style={styles.penaltyContainer}>
+                            {[3, 5, 10, 20].map((percent) => (
+                                <TouchableOpacity
+                                    key={percent}
+                                    style={[
+                                        styles.penaltyButton,
+                                        penaltyPercentage === percent && styles.penaltyButtonActive
+                                    ]}
+                                    onPress={() => setPenaltyPercentage(percent)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[
+                                        styles.penaltyText,
+                                        penaltyPercentage === percent && styles.penaltyTextActive
+                                    ]}>
+                                        {percent}%
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
                     {/* Info Card */}
                     <View style={styles.infoCard}>
                         <Ionicons name="information-circle" size={24} color="#ffda34" />
                         <View style={styles.infoTextContainer}>
-                            <Text style={styles.infoTitle}>Early Withdrawal Penalty</Text>
+                            <Text style={styles.infoTitle}>Creation Fee & Penalty</Text>
                             <Text style={styles.infoText}>
-                                Withdrawing before the duration ends will incur a 5% penalty
+                                A creation fee will be deducted from your initial deposit.
+                                Early withdrawals will incur a {penaltyPercentage}% penalty ({Math.floor(penaltyPercentage * 0.6 * 10) / 10}% to protocol, {Math.floor(penaltyPercentage * 0.4 * 10) / 10}% burned).
                             </Text>
                         </View>
                     </View>
@@ -470,5 +522,38 @@ const styles = StyleSheet.create({
         color: '#8B98A5',
         fontSize: 14,
         fontWeight: '500',
+    },
+    assetBalance: {
+        color: '#ffda34',
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 4,
+    },
+    penaltyContainer: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    penaltyButton: {
+        flex: 1,
+        backgroundColor: '#222327',
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#222327',
+    },
+    penaltyButtonActive: {
+        backgroundColor: 'rgba(255, 218, 52, 0.1)',
+        borderColor: '#ffda34',
+    },
+    penaltyText: {
+        color: '#8B98A5',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    penaltyTextActive: {
+        color: '#ffda34',
+        fontWeight: '700',
     },
 })

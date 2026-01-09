@@ -1,5 +1,7 @@
-export const ABI ={
-  "address": "0x00eb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75",
+import { MODULE_ADDRESS } from './constants';
+
+export const ABI = {
+  "address": MODULE_ADDRESS,
   "name": "sendmove",
   "friends": [],
   "exposed_functions": [
@@ -198,11 +200,11 @@ export const ABI ={
       "fields": [
         {
           "name": "move_claims",
-          "type": "vector<0xeb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75::sendmove::ClaimRecord>"
+          "type": `vector<${MODULE_ADDRESS}::sendmove::ClaimRecord>`
         },
         {
           "name": "fa_claims",
-          "type": "vector<0xeb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75::sendmove::FAClaimRecord>"
+          "type": `vector<${MODULE_ADDRESS}::sendmove::FAClaimRecord>`
         }
       ]
     },
@@ -432,11 +434,11 @@ export const ABI ={
       "fields": [
         {
           "name": "transfers",
-          "type": "0x1::table::Table<vector<u8>, 0xeb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75::sendmove::TokenTransfer>"
+          "type": `0x1::table::Table<vector<u8>, ${MODULE_ADDRESS}::sendmove::TokenTransfer>`
         },
         {
           "name": "fa_transfers",
-          "type": "0x1::table::Table<vector<u8>, 0xeb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75::sendmove::FATransferInfo>"
+          "type": `0x1::table::Table<vector<u8>, ${MODULE_ADDRESS}::sendmove::FATransferInfo>`
         },
         {
           "name": "sender_transfers",
@@ -599,4 +601,4 @@ export const ABI ={
       ]
     }
   ]
-}
+};

@@ -173,25 +173,25 @@ export default function Send() {
             const result =
                 selectedToken.asset_type === '0x1::aptos_coin::AptosCoin'
                     ? await createMoveTransferWithCode(
-                          {
-                              senderAddress: walletAddress,
-                              amount: displayAmount,
-                              expirationSeconds,
-                          },
-                          signHash,
-                          network
-                      )
+                        {
+                            senderAddress: walletAddress,
+                            amount: displayAmount,
+                            expirationSeconds,
+                        },
+                        signHash,
+                        network
+                    )
                     : await createFATransferWithCode(
-                          {
-                              senderAddress: walletAddress,
-                              assetType: selectedToken.asset_type,
-                              amount: displayAmount,
-                              decimals: selectedToken.metadata.decimals,
-                              expirationSeconds,
-                          },
-                          signHash,
-                          network
-                      )
+                        {
+                            senderAddress: walletAddress,
+                            assetType: selectedToken.asset_type,
+                            amount: displayAmount,
+                            decimals: selectedToken.metadata.decimals,
+                            expirationSeconds,
+                        },
+                        signHash,
+                        network
+                    )
 
             if (!result.success || !result.transactionHash) {
                 throw new Error(result.error || 'Transaction failed')
@@ -202,8 +202,9 @@ export default function Send() {
             setDisplayAmount('')
 
             if (result.code) {
-                await addPendingClaim({
-                    code: result.code,
+                const normalizedCode = result.code.toLowerCase()
+                await addPendingClaim(walletAddress, {
+                    code: normalizedCode,
                     type: selectedToken.asset_type === '0x1::aptos_coin::AptosCoin' ? 'move' : 'fa',
                     tokenSymbol: selectedToken.metadata.symbol,
                     tokenName: selectedToken.metadata.name,
@@ -306,7 +307,7 @@ export default function Send() {
                                 style={[
                                     styles.sendButton,
                                     (!selectedToken || !displayAmount || parseFloat(displayAmount) <= 0) &&
-                                        styles.sendButtonDisabled,
+                                    styles.sendButtonDisabled,
                                 ]}
                                 activeOpacity={0.7}
                                 disabled={!selectedToken || !displayAmount || parseFloat(displayAmount) <= 0}

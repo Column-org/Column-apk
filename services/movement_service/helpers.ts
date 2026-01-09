@@ -10,7 +10,10 @@ export const octasToMove = (octas: number): number => {
 
 export const extractCodeFromEvents = (events: any[], senderAddress: string): string | null => {
   try {
-    const transferEvent = events.find((event) => event.type.includes('TransferCreatedEvent'))
+    const transferEvent = events.find((event) =>
+      event.type.includes('::sendmove::TransferCreatedEvent') ||
+      event.type.includes('::sendmove::FATransferCreatedEvent')
+    )
     if (transferEvent?.data?.code) {
       return decryptCode(transferEvent.data.code, senderAddress)
     }

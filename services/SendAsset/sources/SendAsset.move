@@ -94,7 +94,7 @@ module sendasset_system::sendmove {
 
     // ==================== EVENTS ====================
 
-    /// Emitted when a new MOVE token transfer is created.
+    // Emitted when a new MOVE token transfer is created.
     #[event]
     struct TransferCreatedEvent has drop, store {
         sender: address,        // Address that created the transfer
@@ -104,7 +104,7 @@ module sendasset_system::sendmove {
         expiration: u64,       // Expiration timestamp
     }
 
-    /// Emitted when a MOVE token transfer is successfully claimed.
+    // Emitted when a MOVE token transfer is successfully claimed.
     #[event]
     struct TransferClaimedEvent has drop, store {
         sender: address,       // Original sender
@@ -113,7 +113,7 @@ module sendasset_system::sendmove {
         claimed_at: u64,      // Claim timestamp
     }
 
-    /// Emitted when an expired MOVE transfer is automatically refunded to sender.
+    // Emitted when an expired MOVE transfer is automatically refunded to sender.
     #[event]
     struct TransferExpiredRefundEvent has drop, store {
         sender: address,       // Address receiving the refund
@@ -121,7 +121,7 @@ module sendasset_system::sendmove {
         refunded_at: u64,     // Refund timestamp
     }
 
-    /// Emitted when sender manually cancels an unclaimed MOVE transfer.
+    // Emitted when sender manually cancels an unclaimed MOVE transfer.
     #[event]
     struct TransferCancelledEvent has drop, store {
         sender: address,       // Address that cancelled
@@ -129,7 +129,7 @@ module sendasset_system::sendmove {
         cancelled_at: u64,    // Cancellation timestamp
     }
 
-    /// Emitted when a new Fungible Asset transfer is created.
+    // Emitted when a new Fungible Asset transfer is created.
     #[event]
     struct FATransferCreatedEvent has drop, store {
         sender: address,           // Address that created the transfer
@@ -140,7 +140,7 @@ module sendasset_system::sendmove {
         expiration: u64,          // Expiration timestamp
     }
 
-    /// Emitted when a Fungible Asset transfer is successfully claimed.
+    // Emitted when a Fungible Asset transfer is successfully claimed.
     #[event]
     struct FATransferClaimedEvent has drop, store {
         sender: address,           // Original sender
@@ -150,7 +150,7 @@ module sendasset_system::sendmove {
         claimed_at: u64,          // Claim timestamp
     }
 
-    /// Emitted when an expired FA transfer is automatically refunded to sender.
+    // Emitted when an expired FA transfer is automatically refunded to sender.
     #[event]
     struct FATransferExpiredRefundEvent has drop, store {
         sender: address,           // Address receiving the refund
@@ -159,7 +159,7 @@ module sendasset_system::sendmove {
         refunded_at: u64,         // Refund timestamp
     }
 
-    /// Emitted when sender manually cancels an unclaimed FA transfer.
+    // Emitted when sender manually cancels an unclaimed FA transfer.
     #[event]
     struct FATransferCancelledEvent has drop, store {
         sender: address,           // Address that cancelled
@@ -514,8 +514,8 @@ module sendasset_system::sendmove {
 
     // ==================== VIEW FUNCTIONS (MOVE TOKENS) ====================
 
-    /// Retrieves details of a MOVE token transfer without modifying state.
-    /// Returns: (sender_address, amount, created_timestamp, expiration_timestamp)
+    // Retrieves details of a MOVE token transfer without modifying state.
+    // Returns: (sender_address, amount, created_timestamp, expiration_timestamp)
     #[view]
     public fun get_transfer(code: String): (address, u64, u64, u64) acquires GlobalRegistry {
         let registry_addr = @sendasset_system;
@@ -531,8 +531,8 @@ module sendasset_system::sendmove {
         (transfer.sender, amount, transfer.created_at, transfer.expiration)
     }
 
-    /// Checks if a claim code corresponds to an existing MOVE transfer.
-    /// Returns false if registry doesn't exist or code not found.
+    // Checks if a claim code corresponds to an existing MOVE transfer.
+    // Returns false if registry doesn't exist or code not found.
     #[view]
     public fun check_code_exists(code: String): bool acquires GlobalRegistry {
         let registry_addr = @sendasset_system;
@@ -546,8 +546,8 @@ module sendasset_system::sendmove {
         table::contains(&registry.transfers, code_hash)
     }
 
-    /// Checks if a MOVE transfer is claimable (exists and not expired).
-    /// Returns true only if transfer exists and current time <= expiration.
+    // Checks if a MOVE transfer is claimable (exists and not expired).
+    // Returns true only if transfer exists and current time <= expiration.
     #[view]
     public fun is_transfer_claimable(code: String): bool acquires GlobalRegistry {
         let registry_addr = @sendasset_system;
@@ -569,8 +569,8 @@ module sendasset_system::sendmove {
         now <= transfer.expiration
     }
 
-    /// Returns the total number of transfers created (both MOVE and FA).
-    /// This is a monotonically increasing counter.
+    // Returns the total number of transfers created (both MOVE and FA).
+    // This is a monotonically increasing counter.
     #[view]
     public fun get_total_transfers(): u64 acquires GlobalRegistry {
         let registry_addr = @sendasset_system;
@@ -807,8 +807,8 @@ module sendasset_system::sendmove {
 
     // ==================== VIEW FUNCTIONS (FUNGIBLE ASSETS) ====================
 
-    /// Retrieves details of a Fungible Asset transfer without modifying state.
-    /// Returns: (sender, asset_metadata_address, amount, created_timestamp, expiration_timestamp)
+    // Retrieves details of a Fungible Asset transfer without modifying state.
+    // Returns: (sender, asset_metadata_address, amount, created_timestamp, expiration_timestamp)
     #[view]
     public fun get_fa_transfer(code: String): (address, address, u64, u64, u64) acquires GlobalRegistry {
         let registry_addr = @sendasset_system;
@@ -823,8 +823,8 @@ module sendasset_system::sendmove {
         (transfer.sender, transfer.asset_metadata, transfer.amount, transfer.created_at, transfer.expiration)
     }
 
-    /// Checks if a claim code corresponds to an existing FA transfer.
-    /// Returns false if registry doesn't exist or code not found.
+    // Checks if a claim code corresponds to an existing FA transfer.
+    // Returns false if registry doesn't exist or code not found.
     #[view]
     public fun check_fa_code_exists(code: String): bool acquires GlobalRegistry {
         let registry_addr = @sendasset_system;
@@ -838,8 +838,8 @@ module sendasset_system::sendmove {
         table::contains(&registry.fa_transfers, code_hash)
     }
 
-    /// Checks if an FA transfer is claimable (exists and not expired).
-    /// Returns true only if transfer exists and current time <= expiration.
+    // Checks if an FA transfer is claimable (exists and not expired).
+    // Returns true only if transfer exists and current time <= expiration.
     #[view]
     public fun is_fa_transfer_claimable(code: String): bool acquires GlobalRegistry {
         let registry_addr = @sendasset_system;
@@ -861,8 +861,8 @@ module sendasset_system::sendmove {
         now <= transfer.expiration
     }
 
-    /// Returns the address of the resource account used for FA escrow.
-    /// Useful for checking the escrow account's balance or permissions.
+    // Returns the address of the resource account used for FA escrow.
+    // Useful for checking the escrow account's balance or permissions.
     #[view]
     public fun get_resource_escrow_address(): address {
         get_resource_account_address()

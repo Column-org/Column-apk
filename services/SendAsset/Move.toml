@@ -5,7 +5,7 @@ authors = []
 edition = "2.0"
 
 [addresses]
-sendasset_system= "0x00eb30f24eab56506b8abaea431fb0c6f6aa64622018298b54b1c3d40006fc75"
+sendasset_system= "0xfcd381dce435315523c7a0940729b3ff40ef9d5b0f206f214e8685f8bca2ca9c"
 
 [dev-addresses]
 
