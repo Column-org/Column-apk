@@ -11,7 +11,7 @@ export const USE_LOCAL_BACKEND = false; // Set to false for production
 
 export const BACKEND_URLS = {
   local: "http://10.216.57.245:3000",
-  production: "https://column-backend-2.onrender.com"
+  production: "https://column-backend.vercel.app"
 };
 
 // Automatically select backend URL based on environment
