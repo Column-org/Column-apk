@@ -1,89 +1,63 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
+import { useWallet } from '../context/WalletContext'
 import { getFungibleAssets, formatAssetBalance } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
 import { getMovePrice } from '../services/pythOracle'
 import { useBalanceVisibility } from '../context/BalanceVisibilityContext'
 import { SkeletonLoader } from './SkeletonLoader'
+import { useAssets } from '../hooks/useAssets'
 
 interface NetWorthProps {
     refreshKey?: number
 }
 
 export const NetWorth = ({ refreshKey }: NetWorthProps) => {
-    const { user } = usePrivy()
-    const { network } = useNetwork()
     const { isHidden, toggleVisibility } = useBalanceVisibility()
+    const { assets, movePrice, isLoading } = useAssets(refreshKey)
     const [totalValue, setTotalValue] = useState<number>(0)
     const [displayValue, setDisplayValue] = useState<number>(0)
     const [change24h, setChange24h] = useState<{ amount: number; percentage: number }>({ amount: 0, percentage: 0 })
-    const [isLoading, setIsLoading] = useState(true)
     const animatedValue = useRef(new Animated.Value(0)).current
 
-    // Get Movement wallet address from Privy
-    const movementWallet = user?.linked_accounts?.find(
-        (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-    ) as any
-    const walletAddress = movementWallet?.address
-
-    const calculateNetWorth = useCallback(async () => {
-        if (!walletAddress) {
-            setIsLoading(false)
+    useEffect(() => {
+        if (!assets || assets.length === 0) {
+            setTotalValue(0)
             return
         }
 
-        setIsLoading(true)
-        try {
-            const [assets, movePriceData] = await Promise.all([
-                getFungibleAssets(walletAddress, network),
-                getMovePrice()
-            ])
+        let totalUsdValue = 0
 
-            let totalUsdValue = 0
+        for (const asset of assets) {
+            const isMoveToken =
+                asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
+                asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
+                asset.metadata.name?.toLowerCase() === 'move coin' ||
+                asset.metadata.name?.toLowerCase() === 'movement'
 
-            // Calculate total value from all assets
-            for (const asset of assets) {
-                // Check if this is MOVE token (by asset type OR by name/symbol)
-                const isMoveToken =
-                    asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
-                    asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
-                    asset.metadata.name?.toLowerCase() === 'move coin' ||
-                    asset.metadata.name?.toLowerCase() === 'movement'
-
-                if (isMoveToken && movePriceData) {
-                    // MOVE token - use CoinGecko price
-                    const balance = parseFloat(formatAssetBalance(asset.amount, asset.metadata.decimals).replace(/,/g, ''))
-                    totalUsdValue += balance * movePriceData.price
-                }
-                // Add other token price calculations here when needed
+            if (isMoveToken && movePrice) {
+                const balance = parseFloat(formatAssetBalance(asset.amount, asset.metadata.decimals).replace(/,/g, ''))
+                totalUsdValue += balance * movePrice.price
             }
+        }
 
-            setTotalValue(totalUsdValue)
+        setTotalValue(totalUsdValue)
 
-            // No 24h change data from Pyth (would need historical data)
+        if (movePrice?.priceChange24h) {
+            // For now, only MOVE contributes to 24h change
+            const moveBalance = assets
+                .filter((a: any) => a.metadata.symbol?.toUpperCase() === 'MOVE')
+                .reduce((acc: number, a: any) => acc + parseFloat(formatAssetBalance(a.amount, a.metadata.decimals).replace(/,/g, '')), 0)
+
+            const oldPrice = movePrice.price / (1 + movePrice.priceChange24h / 100)
+            const changeAmount = (movePrice.price - oldPrice) * moveBalance
             setChange24h({
-                amount: 0,
-                percentage: 0
+                amount: changeAmount,
+                percentage: movePrice.priceChange24h
             })
-        } catch (error) {
-            console.error('Error calculating net worth:', error)
-        } finally {
-            setIsLoading(false)
         }
-    }, [walletAddress, network])
-
-    useEffect(() => {
-        calculateNetWorth()
-    }, [calculateNetWorth])
-
-    // Refresh when refreshKey changes (from pull-to-refresh)
-    useEffect(() => {
-        if (refreshKey && refreshKey > 0) {
-            calculateNetWorth()
-        }
-    }, [refreshKey, calculateNetWorth])
+    }, [assets, movePrice])
 
     // Animate the value from current display to new total
     useEffect(() => {

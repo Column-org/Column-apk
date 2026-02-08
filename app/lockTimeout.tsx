@@ -12,7 +12,6 @@ export default function LockTimeout() {
     const { lockTimeout, setLockTimeout } = useSecurity()
 
     const timeoutOptions = [
-        { label: 'Immediate', value: 0, description: 'Lock as soon as you leave the app' },
         { label: '1 minute', value: 1, description: 'Lock after 1 minute of inactivity' },
         { label: '5 minutes', value: 5, description: 'Lock after 5 minutes of inactivity' },
         { label: '30 minutes', value: 30, description: 'Lock after 30 minutes of inactivity' },

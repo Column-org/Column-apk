@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, TextInput, Modal, Dimensions } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
-import { useSignRawHash } from '@privy-io/expo/extended-chains'
+import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
 import { getCycle, fromBaseUnit, toBaseUnit, SavingCycle } from '../services/movement_service/savingCycleService'
 import { topUpCycle, earlyWithdrawCycle, closeCycle } from '../services/movement_service/savingCycleFunctions'
@@ -16,8 +15,7 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 export default function SavingDetails() {
     const router = useRouter()
     const params = useLocalSearchParams()
-    const { user } = usePrivy()
-    const { signRawHash } = useSignRawHash()
+    const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
     const [loading, setLoading] = useState(true)
     const [cycle, setCycle] = useState<SavingCycle | null>(null)
@@ -33,10 +31,8 @@ export default function SavingDetails() {
     const [assetSymbol, setAssetSymbol] = useState<string>('MOVE')
     const [currentTime, setCurrentTime] = useState(Date.now())
 
+
     const cycleId = params.cycleId !== undefined ? Number(params.cycleId) : null
-    const walletAddress = (user?.linked_accounts?.find((account: any) =>
-        account.type === 'wallet' && (account as any).chain_type === 'aptos'
-    ) as any)?.address || ''
 
     useEffect(() => {
         loadCycleData()
@@ -199,15 +195,18 @@ export default function SavingDetails() {
 
     const buildSignHash = () => {
         return async (address: string, hash: string) => {
-            const { signature } = await signRawHash({
-                address,
-                chainType: 'aptos' as any,
-                hash: hash as `0x${string}`,
-            })
-            const publicKey = (user as any)?.linked_accounts?.find((account: any) =>
-                account.type === 'wallet' && account.chain_type === 'aptos'
-            )?.public_key || ''
-            return { data: { signature, public_key: publicKey } }
+            const { signature } = await web3SignRawHash(hash as any)
+
+            if (!signature) {
+                throw new Error('No signature returned from signing function')
+            }
+
+            return {
+                data: {
+                    signature,
+                    public_key: walletPublicKey,
+                },
+            }
         }
     }
 
@@ -233,7 +232,7 @@ export default function SavingDetails() {
         })
 
         const result = await topUpCycle(
-            walletAddress,
+            walletAddress || '',
             cycleId!,
             toBaseUnit(amountToAdd, decimals),
             buildSignHash(),
@@ -259,8 +258,8 @@ export default function SavingDetails() {
     const handleWithdraw = async (early: boolean) => {
         setProcessing(true)
         const result = early
-            ? await earlyWithdrawCycle(walletAddress, cycleId!, buildSignHash(), network)
-            : await closeCycle(walletAddress, cycleId!, buildSignHash(), network)
+            ? await earlyWithdrawCycle(walletAddress || '', cycleId!, buildSignHash(), network)
+            : await closeCycle(walletAddress || '', cycleId!, buildSignHash(), network)
 
         setProcessing(false)
         setShowWithdraw(false)

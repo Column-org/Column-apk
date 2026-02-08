@@ -8,7 +8,15 @@
     "currency": "Currency",
     "support": "Support",
     "helpCenter": "Help Center",
-    "termsPrivacy": "Terms & Privacy"
+    "termsPrivacy": "Terms & Privacy",
+    "security": "Security",
+    "biometricLock": "Biometric Lock",
+    "passcodeLock": "Passcode Lock",
+    "autoLockTimeout": "Auto-Lock Timeout",
+    "recoveryPhrase": "Recovery Phrase",
+    "privateKey": "Private Key",
+    "appTheme": "App Theme",
+    "showNFTCollection": "Show NFT Collection"
   },
   "home": {
     "send": "Send",

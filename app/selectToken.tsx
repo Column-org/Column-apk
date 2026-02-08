@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Image, ActivityIndicator, Dimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
+import { useWallet } from '../context/WalletContext'
 import { getFungibleAssets, formatAssetBalance, FungibleAsset } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
 
@@ -11,21 +11,11 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
 export default function SelectToken() {
     const router = useRouter()
-    const { user } = usePrivy()
+    const { address: walletAddress } = useWallet()
     const { network } = useNetwork()
     const [assets, setAssets] = useState<FungibleAsset[]>([])
     const [loading, setLoading] = useState(true)
-    const [imageErrors, setImageErrors] = useState<{[key: number]: boolean}>({})
-
-    // Get Movement wallet address
-    const movementWallets = useMemo(() => {
-        if (!user?.linked_accounts) return []
-        return user.linked_accounts.filter(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-    }, [user?.linked_accounts])
-
-    const walletAddress = (movementWallets[0] as any)?.address || ''
+    const [imageErrors, setImageErrors] = useState<{ [key: number]: boolean }>({})
 
     useEffect(() => {
         const fetchAssets = async () => {

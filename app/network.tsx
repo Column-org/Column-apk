@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Dimensions, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useNetwork } from '../context/NetworkContext'
@@ -20,8 +20,8 @@ const NetworkPage = () => {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -68,7 +68,7 @@ const NetworkPage = () => {
                     })}
                 </View>
             </View>
-        </SafeAreaView>
+        </View>
     )
 }
 
@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
-        paddingBottom: IS_SMALL_SCREEN ? 12 : 24,
+        paddingTop: Platform.OS === 'ios' ? 50 : 60,
+        paddingBottom: Platform.OS === 'ios' ? 12 : 24,
         gap: 12,
     },
     backButton: {

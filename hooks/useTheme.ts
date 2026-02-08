@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const THEME_KEY = '@app_theme'
 
-export type ThemeType = 'none' | 'parthenon2' | 'parthenon' | 'catbg' | 'parthenon3' | 'grassroot'
+export type ThemeType = 'none' | 'parthenon2'
 
 // Simple event system for theme changes
 type ThemeListener = (theme: ThemeType) => void
@@ -47,12 +47,7 @@ export const useTheme = () => {
 
     const getThemeImage = () => {
         if (theme === 'none') return null
-        if (theme === 'catbg') return require('../assets/catbg.gif')
-        if (theme === 'parthenon3') return require('../assets/Parthenon3.webp')
-        if (theme === 'grassroot') return require('../assets/grassroot.jpg')
-        return theme === 'parthenon2'
-            ? require('../assets/parthenon2.webp')
-            : require('../assets/parthenon.png')
+        return require('../assets/parthenon2.webp')
     }
 
     return { theme, isLoading, getThemeImage }

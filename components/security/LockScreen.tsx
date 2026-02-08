@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Vibration, StatusBar } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSecurity } from '../../context/SecurityContext'
@@ -9,16 +9,18 @@ export default function LockScreen() {
   const [error, setError] = useState('')
   const [attempts, setAttempts] = useState(0)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const hasTriggeredInitialAuth = useRef(false)
 
   useEffect(() => {
-    // Auto-trigger biometric if it's the only security method
-    if (isBiometricEnabled && !isPasscodeSet && !isAuthenticating) {
+    // Auto-trigger biometric ONLY ONCE when component first mounts
+    if (isBiometricEnabled && !isPasscodeSet && !isAuthenticating && !hasTriggeredInitialAuth.current) {
+      hasTriggeredInitialAuth.current = true
       handleBiometric()
     }
-  }, [isBiometricEnabled, isPasscodeSet])
+  }, []) // Empty dependency array - only run on mount
 
   const handleBiometric = async () => {
-    if (isAuthenticating) return // Prevent multiple simultaneous authentication attempts
+    if (isAuthenticating) return
 
     setIsAuthenticating(true)
     try {

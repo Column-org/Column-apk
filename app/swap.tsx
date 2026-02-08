@@ -3,13 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Activi
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
-import { usePrivy } from '@privy-io/expo'
-import { useSignRawHash } from '@privy-io/expo/extended-chains'
 import { useNetwork } from '../context/NetworkContext'
 import { getSwapQuote, getTokens, formatTokenAmount, parseTokenAmount, MosaicToken, SwapQuote } from '../services/mosaic/mosaicService'
 import SwapTokenSelector from '../components/swap/SwapTokenSelector'
 import AlertModal from '../components/AlertModal'
 import BACKEND_CONFIG from '../config/backend'
+import { useWallet } from '../context/WalletContext'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -17,8 +16,7 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 export default function Swap() {
   const router = useRouter()
   const { t } = useTranslation()
-  const { user } = usePrivy()
-  const { signRawHash } = useSignRawHash()
+  const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
   const { network } = useNetwork()
 
   const [tokens, setTokens] = useState<MosaicToken[]>([])
@@ -43,15 +41,6 @@ export default function Swap() {
     message: '',
   })
 
-  // Get Movement wallet
-  const movementWallet = useMemo(() => {
-    if (!user?.linked_accounts) return null
-    return user.linked_accounts.find(
-      (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-    ) as any
-  }, [user?.linked_accounts])
-
-  const walletAddress = movementWallet?.address || ''
 
   // Load tokens on mount
   useEffect(() => {
@@ -133,7 +122,7 @@ export default function Swap() {
   }
 
   const handleSwap = async () => {
-    if (!quote || !fromToken || !toToken || !walletAddress || !movementWallet) {
+    if (!quote || !fromToken || !toToken || !walletAddress) {
       return
     }
 
@@ -163,15 +152,12 @@ export default function Swap() {
 
       const { hash, rawTxnHex } = await hashResponse.json()
 
-      // Step 2: Sign hash using Privy
-      const { signature } = await signRawHash({
-        address: walletAddress,
-        chainType: 'aptos' as any,
-        hash,
-      })
+      // Step 2: Sign hash
+      const { signature } = await web3SignRawHash(hash as any)
 
       // Step 3: Submit signed transaction
-      const publicKey = movementWallet.public_key || movementWallet.publicKey
+      const publicKey = walletPublicKey
+
       const submitResponse = await fetch(`${API_BASE_URL}/submit-transaction`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -357,8 +343,8 @@ export default function Swap() {
           ) : (
             <Text style={styles.swapButtonText}>
               {!fromToken || !toToken ? 'Select Tokens' :
-               !fromAmount || parseFloat(fromAmount) === 0 ? 'Enter Amount' :
-               'Swap Tokens'}
+                !fromAmount || parseFloat(fromAmount) === 0 ? 'Enter Amount' :
+                  'Swap Tokens'}
             </Text>
           )}
         </TouchableOpacity>

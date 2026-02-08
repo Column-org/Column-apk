@@ -4,15 +4,18 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { Header } from '../../components/Header'
 import { NetWorth } from '../../components/NetWorth'
 import { ActionButtons } from '../../components/ActionButtons'
+import { PortfolioTabs } from '../../components/PortfolioTabs'
 import { TokenList } from '../../components/TokenList'
 import { NFTList } from '../../components/NFTList'
 import PendingClaimsIndicator from '../../components/PendingClaimsIndicator'
 import { useTheme } from '../../hooks/useTheme'
 import { useNetwork } from '../../context/NetworkContext'
 import { usePreferences } from '../../context/PreferencesContext'
+import { useWallet } from '../../context/WalletContext'
 import { fetchPendingClaims, getPendingClaimsCount } from '../../services/pendingClaims'
+import { getFungibleAssets, formatAssetBalance, FungibleAsset } from '../../services/movementAssets'
 import { useFocusEffect } from 'expo-router'
-import { usePrivy } from '@privy-io/expo'
+import { useAssets } from '../../hooks/useAssets'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -22,21 +25,64 @@ const Home = () => {
     const scaleAnim = useRef(new Animated.Value(1)).current
     const { getThemeImage } = useTheme()
     const { network } = useNetwork()
-    const { user } = usePrivy()
+    const { address: walletAddress } = useWallet()
     const { isNFTCollectionEnabled } = usePreferences()
     const [refreshing, setRefreshing] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
     const [pendingClaimsCount, setPendingClaimsCount] = useState(0)
+    const [activeTab, setActiveTab] = useState<'tokens' | 'projects'>('tokens')
+    const [isTokenRefreshing, setIsTokenRefreshing] = useState(false)
     const tokenListRefreshRef = useRef<(() => void) | null>(null)
+    const { assets, movePrice, isLoading: isAssetsLoading, refetch } = useAssets(refreshKey)
 
-    const movementWallets = useMemo(() => {
-        if (!user?.linked_accounts) return []
-        return user.linked_accounts.filter(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-    }, [user?.linked_accounts])
+    const { tokens, projects } = useMemo(() => {
+        const t: FungibleAsset[] = []
+        const p: FungibleAsset[] = []
 
-    const walletAddress = (movementWallets[0] as any)?.address || ''
+        assets.forEach(asset => {
+            const name = asset.metadata.name?.toLowerCase() || ''
+            const symbol = asset.metadata.symbol?.toLowerCase() || ''
+            const type = asset.asset_type?.toLowerCase() || ''
+
+            const isProject = name.includes('podium') || symbol.includes('podium') ||
+                name.includes('pass') || symbol.includes('pass') ||
+                name.includes('nexus') || symbol.includes('nexus') ||
+                type.includes('podium') || type.includes('pass') || type.includes('nexus') ||
+                name.includes('bonk') || name.includes('hawk') || name.includes('moonwalk') || name.includes('kamino')
+
+            if (isProject) p.push(asset)
+            else t.push(asset)
+        })
+
+        return { tokens: t, projects: p }
+    }, [assets])
+
+    const calculateValues = useCallback((assetList: FungibleAsset[]) => {
+        if (!movePrice) return 0
+        return assetList.reduce((sum, asset) => {
+            const isMoveToken =
+                asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
+                asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
+                asset.metadata.name?.toLowerCase() === 'move coin' ||
+                asset.metadata.name?.toLowerCase() === 'movement'
+
+            if (isMoveToken) {
+                const balance = parseFloat(formatAssetBalance(asset.amount, asset.metadata.decimals).replace(/,/g, ''))
+                return sum + balance * movePrice.price
+            }
+            return sum
+        }, 0)
+    }, [movePrice])
+
+    const tokenBalanceSum = useMemo(() => {
+        const val = calculateValues(tokens)
+        return val > 0 ? `$ ${val.toFixed(2)}` : '$ 0.00'
+    }, [tokens, calculateValues])
+
+    const projectBalanceSum = useMemo(() => {
+        const val = calculateValues(projects)
+        return val > 0 ? `$ ${val.toFixed(2)}` : '$ 0.00'
+    }, [projects, calculateValues])
 
     const loadPendingClaims = useCallback(async () => {
         if (!walletAddress) return
@@ -55,14 +101,18 @@ const Home = () => {
         }
     }, [network, walletAddress])
 
-    const onRefresh = async () => {
-        setRefreshing(true)
-        // Trigger refresh by updating refresh key and calling TokenList refresh
-        setRefreshKey(prev => prev + 1)
+    const onTabRefresh = () => {
+        refetch()
         if (tokenListRefreshRef.current) {
             tokenListRefreshRef.current()
         }
-        // Keep refreshing state for at least 1 second for better UX
+    }
+
+    const onRefresh = async () => {
+        setRefreshing(true)
+        setRefreshKey(prev => prev + 1)
+        onTabRefresh()
+
         setTimeout(() => {
             setRefreshing(false)
         }, 1000)
@@ -110,7 +160,6 @@ const Home = () => {
                     transform: [{ scale: scaleAnim }],
                 }
             ]}>
-                {/* Sticky Header with Gradient */}
                 <Animated.View style={[styles.stickyHeader, { opacity: headerOpacity }]}>
                     <LinearGradient
                         colors={['#121315', 'rgba(15, 20, 25, 0.95)', 'rgba(15, 20, 25, 0)']}
@@ -119,7 +168,7 @@ const Home = () => {
                 </Animated.View>
 
                 <View style={styles.stickyHeaderContent}>
-                    <Header onModalStateChange={handleModalStateChange} />
+                    <Header />
                 </View>
 
                 <Animated.ScrollView
@@ -143,14 +192,12 @@ const Home = () => {
                         />
                     }
                 >
-                    {/* Background Image Section */}
                     {getThemeImage() ? (
                         <ImageBackground
                             source={getThemeImage()}
                             style={styles.backgroundImageContainer}
                             imageStyle={styles.backgroundImage}
                         >
-                            {/* Dark Gradient Overlay at Bottom */}
                             <LinearGradient
                                 colors={['transparent', 'rgba(15, 20, 25, 0.5)', '#121315']}
                                 style={styles.gradientOverlay}
@@ -168,14 +215,27 @@ const Home = () => {
                     )}
 
                     <ActionButtons />
+                    <View style={{ height: 20 }} />
+                    <PortfolioTabs
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                        onRefresh={onTabRefresh}
+                        isRefreshing={isTokenRefreshing}
+                    />
 
-                    {/* Pending Claims Indicator */}
                     <PendingClaimsIndicator count={pendingClaimsCount} />
 
-                    <TokenList refreshKey={refreshKey} onRefreshRef={(refreshFn) => { tokenListRefreshRef.current = refreshFn }} />
+                    <TokenList
+                        refreshKey={refreshKey}
+                        onRefreshRef={(refreshFn) => { tokenListRefreshRef.current = refreshFn }}
+                        onLoadingChange={setIsTokenRefreshing}
+                        filterMode={activeTab}
+                    />
 
-                    {/* NFT Collection Section */}
-                    {isNFTCollectionEnabled && <NFTList walletAddress={walletAddress} />}
+                    {/* NFT Collection Section - Only show in Tokens tab */}
+                    {isNFTCollectionEnabled && walletAddress && activeTab === 'tokens' && (
+                        <NFTList walletAddress={walletAddress} />
+                    )}
 
                     <View style={{ height: 20 }} />
                 </Animated.ScrollView>

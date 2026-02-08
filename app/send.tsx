@@ -3,16 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Alert,
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
-import { usePrivy } from '@privy-io/expo'
 import { FungibleAsset, getFungibleAssets } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
 import TokenSelector from '../components/send/TokenSelector'
 import AmountInput from '../components/send/AmountInput'
 import CodeTransferForm from '../components/send/CodeTransferForm'
-import { useSignRawHash } from '@privy-io/expo/extended-chains'
 import { createFATransferWithCode, createMoveTransferWithCode } from '../services/movement_service/sendWithCode'
 import { addPendingClaim } from '../services/pendingClaims'
 import AlertModal from '../components/AlertModal'
+import { useWallet } from '../context/WalletContext'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -20,10 +19,9 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 export default function Send() {
     const router = useRouter()
     const { t } = useTranslation()
-    const { user } = usePrivy()
+    const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
     const params = useLocalSearchParams()
-    const { signRawHash } = useSignRawHash()
     const [sendMode, setSendMode] = useState<'address' | 'code'>('address')
     const [selectedToken, setSelectedToken] = useState<FungibleAsset | null>(null)
     const [amount, setAmount] = useState('')
@@ -45,16 +43,6 @@ export default function Send() {
     })
     const hasInitialized = useRef(false)
 
-    // Get Movement wallet address
-    const movementWallets = useMemo(() => {
-        if (!user?.linked_accounts) return []
-        return user.linked_accounts.filter(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-    }, [user?.linked_accounts])
-
-    const walletAddress = (movementWallets[0] as any)?.address || ''
-    const walletPublicKey = (movementWallets[0] as any)?.public_key || (movementWallets[0] as any)?.publicKey || ''
 
     // Listen for selected token from params FIRST (higher priority)
     useEffect(() => {
@@ -123,14 +111,10 @@ export default function Send() {
         }
 
         return async (address: string, hash: string) => {
-            const { signature } = await signRawHash({
-                address,
-                chainType: 'aptos' as any,
-                hash: hash as `0x${string}`,
-            })
+            const { signature } = await web3SignRawHash(hash as any)
 
             if (!signature) {
-                throw new Error('No signature returned from signRawHash')
+                throw new Error('No signature returned from signing function')
             }
 
             return {
@@ -140,7 +124,7 @@ export default function Send() {
                 },
             }
         }
-    }, [signRawHash, walletPublicKey])
+    }, [web3SignRawHash, walletPublicKey])
 
     const handleCreateCodeTransfer = useCallback(async () => {
         if (!walletAddress) {

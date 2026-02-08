@@ -2,8 +2,8 @@ import { View, Text, ScrollView, StyleSheet, StatusBar, ActivityIndicator, Refre
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
-import { usePrivy } from '@privy-io/expo'
 import { useRouter } from 'expo-router'
+import { useWallet } from '../../context/WalletContext'
 import { SwipeableTabWrapper } from '../../components/SwipeableTabWrapper'
 import { useNetwork } from '../../context/NetworkContext'
 import { getTransactionHistory, Transaction } from '../../services/movement_service/transactionHistory'
@@ -14,25 +14,18 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
 const Activities = () => {
     const { t } = useTranslation()
-    const { user } = usePrivy()
+    const { address: walletAddress } = useWallet()
     const { network } = useNetwork()
     const router = useRouter()
+
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [showFilterMenu, setShowFilterMenu] = useState(false)
-    const [hideFailedTx, setHideFailedTx] = useState(false)
     const [filterType, setFilterType] = useState<'all' | 'send' | 'receive' | 'swap' | 'contract'>('all')
+    const [hideFailedTx, setHideFailedTx] = useState(false)
+    const [showFilterMenu, setShowFilterMenu] = useState(false)
     const scrollY = useRef(new Animated.Value(0)).current
-
-    const walletAddress = useMemo(() => {
-        if (!user?.linked_accounts) return ''
-        const movementWallet = user.linked_accounts.find(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-        return (movementWallet as any)?.address || ''
-    }, [user?.linked_accounts])
 
     const fetchTransactions = useCallback(async (showRefresh = false) => {
         if (!walletAddress) {
@@ -403,8 +396,8 @@ const Activities = () => {
                                     {dateKey === 'today'
                                         ? t('activities.today')
                                         : dateKey === 'yesterday'
-                                        ? t('activities.yesterday')
-                                        : dateKey}
+                                            ? t('activities.yesterday')
+                                            : dateKey}
                                 </Text>
                             </View>
                             {txs.map(renderTransactionItem)}

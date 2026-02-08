@@ -34,9 +34,10 @@
       }
     },
     "production": {
+      "distribution": "internal",
       "autoIncrement": true,
       "android": {
-        "buildType": "aab"
+        "buildType": "apk"
       },
       "ios": {
         "simulator": false,

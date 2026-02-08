@@ -1,116 +1,30 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Dimensions, Animated } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Dimensions, Animated, ScrollView } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
-import { useCreateWallet } from '@privy-io/expo/extended-chains'
 import { useRouter } from 'expo-router'
 import { useSecurity } from '../context/SecurityContext'
+import { useWallet } from '../context/WalletContext'
+import { useSidebar } from '../context/SidebarContext'
 import { BlurView } from 'expo-blur'
 import { useTheme } from '../hooks/useTheme'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
-interface HeaderProps {
-    onModalStateChange?: (isOpen: boolean) => void
-}
-
-export const Header = ({ onModalStateChange }: HeaderProps) => {
-    const { user, logout } = usePrivy()
-    const { createWallet } = useCreateWallet()
-    const { clearAllSecurity } = useSecurity()
+export const Header = () => {
+    const { address: walletAddress, allWallets } = useWallet()
+    const { openSidebar } = useSidebar()
     const { theme } = useTheme()
     const router = useRouter()
-    const [modalVisible, setModalVisible] = useState(false)
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-    const [isCreatingWallet, setIsCreatingWallet] = useState(false)
-    const slideAnim = useRef(new Animated.Value(100)).current
 
-    // Filter Movement wallets from linked accounts
-    const movementWallets = useMemo(() => {
-        if (!user?.linked_accounts) return []
-        return user.linked_accounts.filter(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-    }, [user?.linked_accounts])
-
-    // Create Movement wallet if user doesn't have one
-    useEffect(() => {
-        const createMovementWallet = async () => {
-            if (user && movementWallets.length === 0 && !isCreatingWallet) {
-                setIsCreatingWallet(true)
-                try {
-                    await createWallet({
-                        chainType: 'aptos' as any,
-                    })
-                } catch (error) {
-                    console.error('Failed to create Movement wallet:', error)
-                } finally {
-                    setIsCreatingWallet(false)
-                }
-            }
-        }
-        createMovementWallet()
-    }, [user, movementWallets.length, createWallet, isCreatingWallet])
+    const currentWallet = allWallets.find(w => w.address === walletAddress)
 
     // Format address for display
-    const formatAddress = (address: string) => {
+    const formatAddress = (address: string | null) => {
         if (!address) return 'No Wallet'
         return `${address.slice(0, 6)}...${address.slice(-4)}`
     }
-
-    const activeWallet = movementWallets[0]
-    const walletAddress = (activeWallet as any)?.address || ''
-
-    const handleLogoutClick = () => {
-        setShowLogoutConfirm(true)
-    }
-
-    const handleLogoutConfirm = async () => {
-        try {
-            await clearAllSecurity()
-            await logout()
-            setShowLogoutConfirm(false)
-            setModalVisible(false)
-            router.replace('/')
-        } catch (error) {
-            console.error('Logout error:', error)
-        }
-    }
-
-    const handleLogoutCancel = () => {
-        setShowLogoutConfirm(false)
-    }
-
-    const handleCopyAddress = async () => {
-        if (walletAddress) {
-            await Clipboard.setStringAsync(walletAddress)
-
-            // Animate the "Copied!" notification
-            Animated.sequence([
-                // Slide in from right
-                Animated.timing(slideAnim, {
-                    toValue: 0,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-                // Stay visible
-                Animated.delay(1500),
-                // Slide back out
-                Animated.timing(slideAnim, {
-                    toValue: 100,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-            ]).start()
-        }
-    }
-
-    // Notify parent when modal state changes
-    useEffect(() => {
-        onModalStateChange?.(modalVisible)
-    }, [modalVisible, onModalStateChange])
 
     return (
         <>
@@ -119,135 +33,58 @@ export const Header = ({ onModalStateChange }: HeaderProps) => {
                     <BlurView intensity={40} tint="dark" style={styles.blurContainer}>
                         <TouchableOpacity
                             style={[styles.walletSelector, styles.walletSelectorWithBlur]}
-                            onPress={() => setModalVisible(true)}
+                            onPress={openSidebar}
                         >
                             <View style={styles.profileIcon}>
-                                <Ionicons name="person-circle" size={36} color="#ffda34" />
+                                {currentWallet?.emoji ? (
+                                    <View style={styles.headerEmojiContainer}>
+                                        <Text style={styles.headerEmoji}>{currentWallet.emoji}</Text>
+                                    </View>
+                                ) : (
+                                    <Ionicons name="person-circle" size={36} color="#ffda34" />
+                                )}
                             </View>
-                            <Text style={styles.walletText}>
-                                {isCreatingWallet ? 'Creating...' : formatAddress(walletAddress)}
-                            </Text>
+                            <View>
+                                <Text style={styles.walletText}>
+                                    {currentWallet?.name || formatAddress(walletAddress)}
+                                </Text>
+                            </View>
                             <Ionicons name="chevron-down" size={16} color="white" />
                         </TouchableOpacity>
                     </BlurView>
                 ) : (
                     <TouchableOpacity
                         style={styles.walletSelector}
-                        onPress={() => setModalVisible(true)}
+                        onPress={openSidebar}
                     >
                         <View style={styles.profileIcon}>
-                            <Ionicons name="person-circle" size={36} color="#ffda34" />
+                            {currentWallet?.emoji ? (
+                                <View style={styles.headerEmojiContainer}>
+                                    <Text style={styles.headerEmoji}>{currentWallet.emoji}</Text>
+                                </View>
+                            ) : (
+                                <Ionicons name="person-circle" size={36} color="#ffda34" />
+                            )}
                         </View>
-                        <Text style={styles.walletText}>
-                            {isCreatingWallet ? 'Creating...' : formatAddress(walletAddress)}
-                        </Text>
+                        <View>
+                            <Text style={styles.walletText}>
+                                {currentWallet?.name || formatAddress(walletAddress)}
+                            </Text>
+                        </View>
                         <Ionicons name="chevron-down" size={16} color="white" />
                     </TouchableOpacity>
                 )}
-                {!isCreatingWallet && walletAddress && (
-                    <View style={styles.copyContainer}>
-                        <TouchableOpacity onPress={handleCopyAddress} style={styles.actionButton}>
-                            <Ionicons name="copy-outline" size={20} color="#8B98A5" />
-                        </TouchableOpacity>
-
-                        {/* Animated "Copied!" notification */}
-                        <Animated.View
-                            style={[
-                                styles.copiedNotification,
-                                {
-                                    transform: [{ translateX: slideAnim }],
-                                    opacity: slideAnim.interpolate({
-                                        inputRange: [0, 100],
-                                        outputRange: [1, 0],
-                                    }),
-                                },
-                            ]}
+                {walletAddress && (
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity
+                            onPress={() => router.push('/browser')}
+                            style={styles.actionButton}
                         >
-                            <Text style={styles.copiedText}>Copied!</Text>
-                        </Animated.View>
+                            <Ionicons name="globe-outline" size={22} color="#8B98A5" />
+                        </TouchableOpacity>
                     </View>
                 )}
             </View>
-
-            {/* Wallet Bottom Sheet Modal */}
-            <Modal
-                visible={modalVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setModalVisible(false)}
-                statusBarTranslucent
-            >
-                <Pressable
-                    style={styles.modalOverlay}
-                    onPress={() => setModalVisible(false)}
-                >
-                    <Pressable
-                        style={styles.bottomSheet}
-                        onPress={(e) => e.stopPropagation()}
-                    >
-                        <View style={styles.sheetHandle} />
-
-                        {!showLogoutConfirm ? (
-                            <>
-                                <Text style={styles.sheetTitle}>Wallets & Collections</Text>
-
-                                <View style={styles.walletItem}>
-                                    <View style={styles.walletItemLeft}>
-                                        <View style={styles.walletIconContainer}>
-                                            <Ionicons name="wallet" size={24} color="#ffda34" />
-                                        </View>
-                                        <View>
-                                            <Text style={styles.walletItemAddress}>
-                                                {formatAddress(walletAddress)}
-                                            </Text>
-                                            <Text style={styles.walletItemLabel}>Connected Wallet</Text>
-                                        </View>
-                                    </View>
-                                    <Ionicons name="link" size={20} color="#8B98A5" />
-                                </View>
-
-                                <View style={styles.divider} />
-
-                                <TouchableOpacity
-                                    style={styles.logoutButton}
-                                    onPress={handleLogoutClick}
-                                >
-                                    <View style={styles.logoutIconContainer}>
-                                        <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                                    </View>
-                                    <Text style={styles.logoutText}>Logout</Text>
-                                    <Ionicons name="chevron-forward" size={18} color="#EF4444" />
-                                </TouchableOpacity>
-                            </>
-                        ) : (
-                            <>
-                                <View style={styles.confirmContainer}>
-                                    <Text style={styles.confirmTitle}>Logout</Text>
-                                    <Text style={styles.confirmMessage}>
-                                        Are you sure you want to logout? You'll need to login again to access your wallet.
-                                    </Text>
-                                </View>
-
-                                <View style={styles.confirmButtons}>
-                                    <TouchableOpacity
-                                        style={styles.cancelButton}
-                                        onPress={handleLogoutCancel}
-                                    >
-                                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={styles.confirmLogoutButton}
-                                        onPress={handleLogoutConfirm}
-                                    >
-                                        <Text style={styles.confirmLogoutButtonText}>Logout</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </>
-                        )}
-                    </Pressable>
-                </Pressable>
-            </Modal>
         </>
     )
 }
@@ -283,6 +120,17 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
     },
+    headerEmojiContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerEmoji: {
+        fontSize: 20,
+    },
     headerActions: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -290,32 +138,6 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         padding: 8,
-    },
-    copyContainer: {
-        position: 'relative',
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    copiedNotification: {
-        position: 'absolute',
-        right: 40,
-        backgroundColor: '#ffda34',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    copiedText: {
-        color: '#121315',
-        fontSize: 12,
-        fontWeight: '600',
     },
     modalOverlay: {
         flex: 1,
@@ -345,12 +167,45 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         marginBottom: 24,
     },
+    sheetHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    addWalletButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(255, 218, 52, 0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 218, 52, 0.2)',
+    },
+    addWalletText: {
+        color: '#ffda34',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    walletList: {
+        maxHeight: SCREEN_HEIGHT * 0.4,
+    },
     walletItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
-        marginBottom: 16,
+        marginBottom: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    activeWalletItem: {
+        backgroundColor: 'rgba(255, 218, 52, 0.05)',
+        borderColor: 'rgba(255, 218, 52, 0.2)',
     },
     walletItemLeft: {
         flexDirection: 'row',
@@ -361,19 +216,60 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255, 195, 13, 0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    walletItemAddress: {
+    activeWalletIconContainer: {
+        backgroundColor: '#ffda34',
+    },
+    walletItemName: {
         color: 'white',
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 2,
     },
+    walletItemAddress: {
+        color: '#8B98A5',
+        fontSize: 13,
+    },
     walletItemLabel: {
         color: '#8B98A5',
         fontSize: 13,
+    },
+    activeBadge: {
+        backgroundColor: 'rgba(255, 218, 52, 0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 218, 52, 0.2)',
+    },
+    activeBadgeText: {
+        color: '#ffda34',
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 4,
+        gap: 12,
+    },
+    menuIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    menuText: {
+        flex: 1,
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
     },
     manageCollections: {
         flexDirection: 'row',

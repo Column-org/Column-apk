@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, StatusBar, Switch, ActivityIndicator, Dimensions, Image } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
-import { useSignRawHash } from '@privy-io/expo/extended-chains'
+import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
 import { toBaseUnit, fromBaseUnit, createCycle, getFABalance } from '../services/movement_service/savingCycleService'
 import AlertModal from '../components/AlertModal'
@@ -24,9 +23,8 @@ interface AllowedAsset {
 
 export default function CreateSavingCycle() {
     const router = useRouter()
-    const { user } = usePrivy()
+    const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
-    const { signRawHash } = useSignRawHash()
 
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
@@ -48,9 +46,7 @@ export default function CreateSavingCycle() {
     const [selectedAsset, setSelectedAsset] = useState<AllowedAsset | null>(null)
     const [loadingAssets, setLoadingAssets] = useState(true)
 
-    const walletAddress = (user?.linked_accounts?.find((account: any) =>
-        account.type === 'wallet' && (account as any).chain_type === 'aptos'
-    ) as any)?.address || ''
+
 
     // Hardcoded USDC asset logic
     useEffect(() => {
@@ -88,27 +84,16 @@ export default function CreateSavingCycle() {
 
     const buildSignHash = () => {
         return async (address: string, hash: string) => {
-            const { signature } = await signRawHash({
-                address,
-                chainType: 'aptos' as any,
-                hash: hash as `0x${string}`,
-            })
+            const { signature } = await web3SignRawHash(hash as any)
 
             if (!signature) {
-                throw new Error('No signature returned from signRawHash')
+                throw new Error('No signature returned from signing function')
             }
-
-            // Get public key from wallet
-            const publicKey = (user?.linked_accounts?.find((account: any) =>
-                account.type === 'wallet' && (account as any).chain_type === 'aptos'
-            ) as any)?.publicKey || (user?.linked_accounts?.find((account: any) =>
-                account.type === 'wallet' && (account as any).chain_type === 'aptos'
-            ) as any)?.public_key || ''
 
             return {
                 data: {
                     signature,
-                    public_key: publicKey,
+                    public_key: walletPublicKey,
                 },
             }
         }
@@ -158,7 +143,7 @@ export default function CreateSavingCycle() {
 
         try {
             const result = await createCycle(
-                walletAddress,
+                walletAddress || '',
                 name,
                 description,
                 startTimestamp,

@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import GeneratedCodeCard from '../components/send/GeneratedCodeCard'
-import EmailCodeSender from '../components/email/EmailCodeSender'
+// import EmailCodeSender from '../components/email/EmailCodeSender'
 import AlertModal from '../components/AlertModal'
 
 export default function ClaimCode() {
     const router = useRouter()
     const params = useLocalSearchParams()
-    const [showEmailForm, setShowEmailForm] = React.useState(false)
+    // const [showEmailForm, setShowEmailForm] = React.useState(false)
     const [alertModal, setAlertModal] = React.useState<{
         visible: boolean
         type: 'success' | 'error' | 'info'
@@ -83,12 +83,12 @@ export default function ClaimCode() {
                             message: 'Copied to clipboard',
                         })
                     }}
-                    onEmailShare={() => setShowEmailForm(!showEmailForm)}
+                // onEmailShare={() => setShowEmailForm(!showEmailForm)}
                 />
 
-                {showEmailForm && (
+                {/* showEmailForm && (
                     <EmailCodeSender code={code} tokenName={tokenName} tokenSymbol={tokenSymbol} amount={amount} />
-                )}
+                ) */}
 
                 <TouchableOpacity
                     style={styles.doneButton}

@@ -1,23 +1,25 @@
-import { View, Text, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Modal, Pressable, Alert, Dimensions } from 'react-native'
-import React from 'react'
+import { View, Text, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Modal, Pressable, Alert, Dimensions, Animated } from 'react-native'
+import React, { useRef } from 'react'
+import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { SwipeableTabWrapper } from '../../components/SwipeableTabWrapper'
 import { useSecurity } from '../../context/SecurityContext'
 import { usePreferences } from '../../context/PreferencesContext'
 import { NetworkSelector } from '../../components/NetworkSelector'
+import { useWallet } from '../../context/WalletContext'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
 const Settings = () => {
-    const { logout, user } = usePrivy()
+    const { logout: unifiedLogout, address } = useWallet()
     const router = useRouter()
     const { t, i18n } = useTranslation()
     const [logoutModalVisible, setLogoutModalVisible] = React.useState(false)
     const [profileExpanded, setProfileExpanded] = React.useState(false)
+    const scrollY = useRef(new Animated.Value(0)).current
     const {
         isSecurityEnabled,
         isBiometricEnabled,
@@ -33,7 +35,7 @@ const Settings = () => {
     const { isNFTCollectionEnabled, setNFTCollectionEnabled } = usePreferences()
 
     const formatLockTimeout = (minutes: number) => {
-        if (minutes === 0) return 'Immediate'
+        if (minutes <= 0) return '1 minute'
         if (minutes === 1) return '1 minute'
         if (minutes < 60) return `${minutes} minutes`
         const hours = minutes / 60
@@ -91,252 +93,263 @@ const Settings = () => {
     const handleLogout = async () => {
         try {
             await clearAllSecurity()
-            await logout()
+            await unifiedLogout()
             setLogoutModalVisible(false)
             router.replace('/')
         } catch (error) {
             console.error('Logout error:', error)
+            // Still try to navigate to home/entry to reset state
+            router.replace('/')
         }
     }
+
+    const handleExportPrivateKey = () => {
+        router.push('/private-key')
+    }
+
+    const handleExportSeedphrase = () => {
+        router.push('/recovery-phrase')
+    }
+
+    const headerOpacity = scrollY.interpolate({
+        inputRange: [0, 60],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+    })
+
+    const headerTranslateY = scrollY.interpolate({
+        inputRange: [0, 60],
+        outputRange: [10, 0],
+        extrapolate: 'clamp',
+    })
 
     return (
         <SwipeableTabWrapper>
             <View style={styles.container}>
                 <StatusBar barStyle="light-content" />
 
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>{t('settings.title')}</Text>
-                </View>
+                {/* Sticky Header Background */}
+                <Animated.View style={[
+                    styles.stickyHeader,
+                    {
+                        opacity: headerOpacity,
+                        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
+                    }
+                ]}>
+                    <LinearGradient
+                        colors={['#121315', 'rgba(18, 19, 21, 0.95)']}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <Animated.Text style={[
+                        styles.stickyHeaderTitle,
+                        { transform: [{ translateY: headerTranslateY }] }
+                    ]}>
+                        {t('settings.title')}
+                    </Animated.Text>
+                    <View style={styles.headerSeparator} />
+                </Animated.View>
 
-                {/* Account Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
-                    <View style={styles.sectionCard}>
-                        <TouchableOpacity
-                            style={styles.settingItem}
-                            onPress={() => setProfileExpanded(!profileExpanded)}
-                        >
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="person-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>{t('settings.profile')}</Text>
-                            </View>
-                            <Ionicons
-                                name={profileExpanded ? "chevron-up" : "chevron-down"}
-                                size={20}
-                                color="#8B98A5"
-                            />
-                        </TouchableOpacity>
-
-                        {profileExpanded && user && (
-                            <View style={styles.profileDropdown}>
-                                {/* Email */}
-                                {(user as any).email?.address && (
-                                    <View style={styles.accountInfo}>
-                                        <Text style={styles.accountValue}>{(user as any).email.address}</Text>
-                                    </View>
-                                )}
-                                {user.linked_accounts?.find((acc: any) => acc.type === 'email') && (
-                                    <View style={styles.accountInfo}>
-                                        <Text style={styles.accountValue}>
-                                            {(user.linked_accounts.find((acc: any) => acc.type === 'email') as any).address}
-                                        </Text>
-                                    </View>
-                                )}
-
-                                {/* Movement Wallet */}
-                                {user.linked_accounts && user.linked_accounts
-                                    .filter((account: any) => account.type === 'wallet' && (account as any).chain_type === 'aptos')
-                                    .map((account: any, index: number) => (
-                                        <View key={index} style={styles.accountInfo}>
-                                            <Text style={styles.accountValue}>
-                                                {(account as any).address}
-                                            </Text>
-                                        </View>
-                                    ))
-                                }
-                            </View>
-                        )}
+                <Animated.ScrollView
+                    style={styles.scrollView}
+                    showsVerticalScrollIndicator={false}
+                    onScroll={Animated.event(
+                        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                        { useNativeDriver: true }
+                    )}
+                    scrollEventThrottle={16}
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
                     </View>
-                </View>
 
-                {/* Security Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Security</Text>
-                    <View style={styles.sectionCard}>
-                        <TouchableOpacity
-                            style={styles.settingItem}
-                            onPress={handleToggleBiometric}
-                            disabled={!isBiometricAvailable}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="finger-print" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>Biometric Lock</Text>
-                            </View>
-                            <View style={[styles.toggle, isBiometricEnabled && styles.toggleActive]}>
-                                <View style={[styles.toggleDot, isBiometricEnabled && styles.toggleDotActive]} />
-                            </View>
-                        </TouchableOpacity>
-
-                        {!isBiometricAvailable && (
-                            <Text style={styles.securityNote}>
-                                Biometric authentication is not available on this device
-                            </Text>
-                        )}
-
-                        {isPasscodeSet && (
+                    {/* Account Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
+                        <View style={styles.sectionCard}>
                             <TouchableOpacity
-                                style={[styles.settingItem, { paddingTop: 4 }]}
-                                onPress={handleToggleSecurity}
+                                style={styles.settingItem}
+                                onPress={() => setProfileExpanded(!profileExpanded)}
+                            >
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="person-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.profile')}</Text>
+                                </View>
+                                <Ionicons
+                                    name={profileExpanded ? "chevron-up" : "chevron-down"}
+                                    size={20}
+                                    color="#8B98A5"
+                                />
+                            </TouchableOpacity>
+
+                            {profileExpanded && (
+                                <View style={styles.profileDropdown}>
+                                    <View style={styles.accountInfo}>
+                                        <Text style={styles.accountLabel}>Wallet Address</Text>
+                                        <Text style={styles.accountValue}>{address || 'No address connected'}</Text>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* Security Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('settings.security')}</Text>
+                        <View style={styles.sectionCard}>
+                            <TouchableOpacity
+                                style={styles.settingItem}
+                                onPress={handleToggleBiometric}
+                                disabled={!isBiometricAvailable}
                                 activeOpacity={0.7}
                             >
                                 <View style={styles.settingLeft}>
-                                    <Ionicons name="lock-closed-outline" size={22} color="#ffda34" />
-                                    <Text style={styles.settingText}>Passcode Lock</Text>
+                                    <Ionicons name="finger-print" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.biometricLock')}</Text>
                                 </View>
-                                <View style={[styles.toggle, isSecurityEnabled && isPasscodeSet && styles.toggleActive]}>
-                                    <View style={[styles.toggleDot, isSecurityEnabled && isPasscodeSet && styles.toggleDotActive]} />
+                                <View style={[styles.toggle, isBiometricEnabled && styles.toggleActive]}>
+                                    <View style={[styles.toggleDot, isBiometricEnabled && styles.toggleDotActive]} />
                                 </View>
                             </TouchableOpacity>
-                        )}
 
-                        {(isSecurityEnabled || isBiometricEnabled) && (
+                            {!isBiometricAvailable && (
+                                <Text style={styles.securityNote}>
+                                    Biometric authentication is not available on this device
+                                </Text>
+                            )}
+
+                            {isPasscodeSet && (
+                                <TouchableOpacity
+                                    style={[styles.settingItem, { paddingTop: 4 }]}
+                                    onPress={handleToggleSecurity}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.settingLeft}>
+                                        <Ionicons name="lock-closed-outline" size={22} color="#ffda34" />
+                                        <Text style={styles.settingText}>{t('settings.passcodeLock')}</Text>
+                                    </View>
+                                    <View style={[styles.toggle, isSecurityEnabled && isPasscodeSet && styles.toggleActive]}>
+                                        <View style={[styles.toggleDot, isSecurityEnabled && isPasscodeSet && styles.toggleDotActive]} />
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            {(isSecurityEnabled || isBiometricEnabled) && (
+                                <TouchableOpacity
+                                    style={[styles.settingItem, { paddingTop: 4 }]}
+                                    onPress={() => router.push('/lockTimeout')}
+                                >
+                                    <View style={styles.settingLeft}>
+                                        <Ionicons name="timer-outline" size={22} color="#ffda34" />
+                                        <Text style={styles.settingText}>{t('settings.autoLockTimeout')}</Text>
+                                    </View>
+                                    <View style={styles.settingRight}>
+                                        <Text style={styles.settingValue}>{formatLockTimeout(lockTimeout)}</Text>
+                                        <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            <View style={styles.separator} />
                             <TouchableOpacity
-                                style={[styles.settingItem, { paddingTop: 4 }]}
-                                onPress={() => router.push('/lockTimeout')}
+                                style={styles.settingItem}
+                                onPress={handleExportSeedphrase}
                             >
                                 <View style={styles.settingLeft}>
-                                    <Ionicons name="timer-outline" size={22} color="#ffda34" />
-                                    <Text style={styles.settingText}>Auto-Lock Timeout</Text>
+                                    <Ionicons name="key-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.recoveryPhrase')}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.settingItem}
+                                onPress={handleExportPrivateKey}
+                            >
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="shield-checkmark-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.privateKey')}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Preferences Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('settings.preferences')}</Text>
+                        <View style={styles.sectionCard}>
+                            <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/language')}>
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="globe-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.language')}</Text>
                                 </View>
                                 <View style={styles.settingRight}>
-                                    <Text style={styles.settingValue}>{formatLockTimeout(lockTimeout)}</Text>
+                                    <Text style={styles.settingValue}>
+                                        {i18n.language === 'es'
+                                            ? 'Español'
+                                            : i18n.language === 'zh'
+                                                ? '中文'
+                                                : 'English'}
+                                    </Text>
                                     <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
                                 </View>
                             </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
 
-                {/* Preferences Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('settings.preferences')}</Text>
-                    <View style={styles.sectionCard}>
-                        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/language')}>
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="globe-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>{t('settings.language')}</Text>
-                            </View>
-                            <View style={styles.settingRight}>
-                                <Text style={styles.settingValue}>
-                                    {i18n.language === 'es'
-                                        ? 'Español'
-                                        : i18n.language === 'zh'
-                                        ? '中文'
-                                        : 'English'}
-                                </Text>
+                            <NetworkSelector />
+
+                            <TouchableOpacity
+                                style={styles.settingItem}
+                                onPress={() => router.push('/theme')}
+                            >
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="color-palette-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.appTheme')}</Text>
+                                </View>
                                 <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                            </View>
-                        </TouchableOpacity>
-
-                        <NetworkSelector />
-
-                        <TouchableOpacity
-                            style={styles.settingItem}
-                            onPress={() => router.push('/theme')}
-                        >
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="color-palette-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>App Theme</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.settingItem}
-                            onPress={() => setNFTCollectionEnabled(!isNFTCollectionEnabled)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="images-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>Show NFT Collection</Text>
-                            </View>
-                            <View style={[styles.toggle, isNFTCollectionEnabled && styles.toggleActive]}>
-                                <View style={[styles.toggleDot, isNFTCollectionEnabled && styles.toggleDotActive]} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Support Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
-                    <View style={styles.sectionCard}>
-                        <TouchableOpacity style={styles.settingItem}>
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="help-circle-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>{t('settings.helpCenter')}</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.settingItem}>
-                            <View style={styles.settingLeft}>
-                                <Ionicons name="document-text-outline" size={22} color="#ffda34" />
-                                <Text style={styles.settingText}>{t('settings.termsPrivacy')}</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                <View style={{ height: 100 }} />
-            </ScrollView>
-
-            {/* Logout Modal */}
-            <Modal
-                visible={logoutModalVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setLogoutModalVisible(false)}
-            >
-                <Pressable
-                    style={styles.modalOverlay}
-                    onPress={() => setLogoutModalVisible(false)}
-                >
-                    <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-                        <View style={styles.modalIconContainer}>
-                            <View style={styles.modalIconCircle}>
-                                <Ionicons name="log-out-outline" size={32} color="#EF4444" />
-                            </View>
-                        </View>
-
-                        <Text style={styles.modalTitle}>{t('wallet.logout')}</Text>
-                        <Text style={styles.modalMessage}>
-                            {t('wallet.logoutConfirm')}
-                        </Text>
-
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={styles.modalCancelButton}
-                                onPress={() => setLogoutModalVisible(false)}
-                            >
-                                <Text style={styles.modalCancelText}>{t('wallet.cancel')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={styles.modalLogoutButton}
-                                onPress={handleLogout}
+                                style={styles.settingItem}
+                                onPress={() => setNFTCollectionEnabled(!isNFTCollectionEnabled)}
+                                activeOpacity={0.7}
                             >
-                                <Text style={styles.modalLogoutText}>{t('wallet.logout')}</Text>
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="images-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.showNFTCollection')}</Text>
+                                </View>
+                                <View style={[styles.toggle, isNFTCollectionEnabled && styles.toggleActive]}>
+                                    <View style={[styles.toggleDot, isNFTCollectionEnabled && styles.toggleDotActive]} />
+                                </View>
                             </TouchableOpacity>
                         </View>
-                    </Pressable>
-                </Pressable>
-            </Modal>
-        </View>
+                    </View>
+
+                    {/* Support Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
+                        <View style={styles.sectionCard}>
+                            <TouchableOpacity style={styles.settingItem}>
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="help-circle-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.helpCenter')}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.settingItem}>
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="document-text-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{t('settings.termsPrivacy')}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <View style={{ height: 100 }} />
+                </Animated.ScrollView>
+            </View>
         </SwipeableTabWrapper>
     )
 }
@@ -356,8 +369,32 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         color: 'white',
-        fontSize: 24,
+        fontSize: 32,
         fontWeight: 'bold',
+    },
+    stickyHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#121315',
+        paddingBottom: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    stickyHeaderTitle: {
+        color: 'white',
+        fontSize: 17,
+        fontWeight: '700',
+    },
+    headerSeparator: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
     },
     section: {
         paddingHorizontal: 20,
@@ -494,14 +531,37 @@ const styles = StyleSheet.create({
     },
     profileDropdown: {
         marginTop: 12,
+        gap: 12,
     },
     accountInfo: {
-        marginBottom: 16,
+        marginBottom: 8,
+    },
+    accountLabel: {
+        color: '#8B98A5',
+        fontSize: 11,
+        marginBottom: 4,
     },
     accountValue: {
         color: 'white',
         fontSize: 13,
         fontWeight: '500',
+    },
+    badgeRow: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    modeBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+    },
+    modeBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    web3Actions: {
+        marginTop: 8,
+        gap: 8,
     },
     dropdownLogoutButton: {
         flexDirection: 'row',
@@ -573,6 +633,11 @@ const styles = StyleSheet.create({
     },
     toggleDotActive: {
         backgroundColor: '#121315',
+    },
+    separator: {
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        marginVertical: 4,
     },
 })
 

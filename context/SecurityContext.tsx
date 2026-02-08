@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import * as SecureStore from 'expo-secure-store'
 import * as LocalAuthentication from 'expo-local-authentication'
 import { AppState, AppStateStatus } from 'react-native'
@@ -37,11 +37,31 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [isPasscodeSet, setIsPasscodeSet] = useState(false)
-  const [lockTimeout, setLockTimeoutState] = useState(0) // 0 = immediate, in minutes
-  const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now())
-  const [hasAuthenticatedThisSession, setHasAuthenticatedThisSession] = useState(false)
+  const [lockTimeout, setLockTimeoutState] = useState(1)
 
-  // Check biometric availability
+  const lastActiveTime = useRef<number>(Date.now())
+  const lastUnlockTime = useRef<number>(0)
+  const isAuthInProgress = useRef<boolean>(false)
+  const appStateListenerPaused = useRef<boolean>(false)
+
+  const settingsRef = useRef({
+    isSecurityEnabled,
+    isPasscodeSet,
+    isBiometricEnabled,
+    lockTimeout,
+    isLocked
+  })
+
+  useEffect(() => {
+    settingsRef.current = {
+      isSecurityEnabled,
+      isPasscodeSet,
+      isBiometricEnabled,
+      lockTimeout,
+      isLocked
+    }
+  }, [isSecurityEnabled, isPasscodeSet, isBiometricEnabled, lockTimeout, isLocked])
+
   useEffect(() => {
     const checkBiometric = async () => {
       const compatible = await LocalAuthentication.hasHardwareAsync()
@@ -51,7 +71,6 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     checkBiometric()
   }, [])
 
-  // Load security settings
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -65,10 +84,13 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         setIsPasscodeSet(!!passcode)
         setIsBiometricEnabled(biometricEnabled === 'true')
         setIsSecurityEnabled(securityEnabled === 'true')
-        setLockTimeoutState(timeout ? parseInt(timeout) : 0)
 
-        // Don't auto-lock on startup - let the AppContent component handle it based on user session
-        // The lock will be triggered by app state changes or manual lock
+        const storedTimeout = timeout ? parseInt(timeout) : 1
+        setLockTimeoutState(storedTimeout === 0 ? 1 : storedTimeout)
+
+        if (securityEnabled === 'true' && (passcode || biometricEnabled === 'true')) {
+          setIsLocked(true)
+        }
       } catch (error) {
         console.error('Error loading security settings:', error)
       }
@@ -76,36 +98,56 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     loadSettings()
   }, [])
 
-  // Handle app state changes for auto-lock
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      // CRITICAL: Skip ALL processing if listener is paused
+      if (appStateListenerPaused.current) {
+        console.log('[SecurityContext] AppState listener paused, ignoring state change:', nextAppState)
+        return
+      }
+
+      const { isSecurityEnabled, isPasscodeSet, isBiometricEnabled, lockTimeout, isLocked } = settingsRef.current
+
+      console.log('[SecurityContext] AppState changed to:', nextAppState, {
+        isSecurityEnabled,
+        isPasscodeSet,
+        isBiometricEnabled,
+        isLocked,
+        isAuthInProgress: isAuthInProgress.current
+      })
+
       if (nextAppState === 'active') {
-        // App came to foreground
-        if (isSecurityEnabled && (isPasscodeSet || isBiometricEnabled)) {
-          const timeDiff = (Date.now() - lastActiveTime) / 1000 / 60 // in minutes
-          // Only lock if we haven't authenticated in this session yet
-          // or if enough time has passed based on lockTimeout
-          if (!hasAuthenticatedThisSession || timeDiff >= lockTimeout) {
+        const now = Date.now()
+        const timeDiff = (now - lastActiveTime.current) / 1000 / 60
+        const timeSinceUnlock = (now - lastUnlockTime.current) / 1000
+
+        console.log('[SecurityContext] Active state check:', {
+          timeDiff: timeDiff.toFixed(2) + ' min',
+          timeSinceUnlock: timeSinceUnlock.toFixed(2) + ' sec',
+          lockTimeout: lockTimeout + ' min',
+          shouldLock: timeDiff >= lockTimeout && timeSinceUnlock > 10
+        })
+
+        // Only lock if enough time has passed AND we're not in auth flow
+        if (isSecurityEnabled && (isPasscodeSet || isBiometricEnabled) && !isLocked && !isAuthInProgress.current) {
+          if (timeDiff >= lockTimeout && timeSinceUnlock > 10) {
+            console.log('[SecurityContext] Auto-locking due to timeout')
             setIsLocked(true)
-            setHasAuthenticatedThisSession(false) // Reset for next authentication
           }
         }
-      } else if (nextAppState === 'background') {
-        // App went to background
-        setLastActiveTime(Date.now())
-        // Reset authentication flag when going to background
-        setHasAuthenticatedThisSession(false)
+      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        lastActiveTime.current = Date.now()
+        console.log('[SecurityContext] App backgrounded, recording time')
       }
     }
 
     const subscription = AppState.addEventListener('change', handleAppStateChange)
     return () => subscription.remove()
-  }, [isSecurityEnabled, isPasscodeSet, isBiometricEnabled, lockTimeout, lastActiveTime, hasAuthenticatedThisSession])
+  }, [])
 
   const setPasscode = useCallback(async (passcode: string) => {
     await SecureStore.setItemAsync(PASSCODE_KEY, passcode)
     setIsPasscodeSet(true)
-    // Ensure app stays unlocked after setting passcode
     setIsLocked(false)
   }, [])
 
@@ -127,21 +169,36 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const enableBiometric = useCallback(async () => {
     if (!isBiometricAvailable) return false
 
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Authenticate to enable biometrics',
-      fallbackLabel: 'Cancel',
-      disableDeviceFallback: true,
-    })
+    isAuthInProgress.current = true
+    appStateListenerPaused.current = true
 
-    if (result.success) {
-      await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true')
-      await SecureStore.setItemAsync(SECURITY_ENABLED_KEY, 'true')
-      setIsBiometricEnabled(true)
-      setIsSecurityEnabled(true)
-      setIsLocked(false)
-      return true
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to enable biometrics',
+        fallbackLabel: 'Cancel',
+        disableDeviceFallback: true,
+      })
+
+      if (result.success) {
+        await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true')
+        await SecureStore.setItemAsync(SECURITY_ENABLED_KEY, 'true')
+        setIsBiometricEnabled(true)
+        setIsSecurityEnabled(true)
+        setIsLocked(false)
+        lastUnlockTime.current = Date.now()
+        return true
+      }
+      return false
+    } finally {
+      // Reset activity time to prevent immediate re-lock
+      lastActiveTime.current = Date.now()
+      // Wait before re-enabling listener to allow app to stabilize
+      setTimeout(() => {
+        isAuthInProgress.current = false
+        appStateListenerPaused.current = false
+        console.log('[SecurityContext] Listener re-enabled after biometric enable')
+      }, 5000)
     }
-    return false
   }, [isBiometricAvailable])
 
   const disableBiometric = useCallback(async () => {
@@ -155,23 +212,39 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const authenticateWithBiometric = useCallback(async () => {
     if (!isBiometricEnabled || !isBiometricAvailable) return false
 
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock Satoshi Wallet',
-      fallbackLabel: 'Use passcode',
-      cancelLabel: 'Cancel',
-    })
+    isAuthInProgress.current = true
+    appStateListenerPaused.current = true
 
-    if (result.success) {
-      setIsLocked(false)
-      return true
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock Satoshi Wallet',
+        fallbackLabel: 'Use passcode',
+        cancelLabel: 'Cancel',
+      })
+
+      if (result.success) {
+        setIsLocked(false)
+        lastActiveTime.current = Date.now()
+        lastUnlockTime.current = Date.now()
+        return true
+      }
+      return false
+    } finally {
+      // Reset activity time to prevent immediate re-lock
+      lastActiveTime.current = Date.now()
+      // Critical: Wait before re-enabling the listener
+      setTimeout(() => {
+        isAuthInProgress.current = false
+        appStateListenerPaused.current = false
+        console.log('[SecurityContext] Listener re-enabled after biometric auth')
+      }, 5000)
     }
-    return false
   }, [isBiometricEnabled, isBiometricAvailable])
 
   const unlock = useCallback(() => {
     setIsLocked(false)
-    setLastActiveTime(Date.now())
-    setHasAuthenticatedThisSession(true) // Mark that user has authenticated in this session
+    lastActiveTime.current = Date.now()
+    lastUnlockTime.current = Date.now()
   }, [])
 
   const lock = useCallback(() => {
@@ -181,21 +254,20 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   }, [isSecurityEnabled, isPasscodeSet, isBiometricEnabled])
 
   const setLockTimeoutValue = useCallback(async (minutes: number) => {
-    await SecureStore.setItemAsync(LOCK_TIMEOUT_KEY, minutes.toString())
-    setLockTimeoutState(minutes)
+    const val = Math.max(1, minutes)
+    await SecureStore.setItemAsync(LOCK_TIMEOUT_KEY, val.toString())
+    setLockTimeoutState(val)
   }, [])
 
   const enableSecurity = useCallback(async () => {
-    // Check secure store directly to avoid state timing issues
     const passcode = await SecureStore.getItemAsync(PASSCODE_KEY)
     if (!passcode) {
       throw new Error('Passcode must be set before enabling security')
     }
     await SecureStore.setItemAsync(SECURITY_ENABLED_KEY, 'true')
     setIsSecurityEnabled(true)
-    // Don't lock immediately after enabling - user just authenticated
     setIsLocked(false)
-    setLastActiveTime(Date.now())
+    lastActiveTime.current = Date.now()
   }, [])
 
   const disableSecurity = useCallback(async () => {
@@ -205,21 +277,18 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const clearAllSecurity = useCallback(async () => {
-    // Clear all security-related data from SecureStore
     await Promise.all([
-      SecureStore.deleteItemAsync(PASSCODE_KEY).catch(() => {}),
-      SecureStore.deleteItemAsync(BIOMETRIC_ENABLED_KEY).catch(() => {}),
-      SecureStore.deleteItemAsync(SECURITY_ENABLED_KEY).catch(() => {}),
-      SecureStore.deleteItemAsync(LOCK_TIMEOUT_KEY).catch(() => {}),
+      SecureStore.deleteItemAsync(PASSCODE_KEY).catch(() => { }),
+      SecureStore.deleteItemAsync(BIOMETRIC_ENABLED_KEY).catch(() => { }),
+      SecureStore.deleteItemAsync(SECURITY_ENABLED_KEY).catch(() => { }),
+      SecureStore.deleteItemAsync(LOCK_TIMEOUT_KEY).catch(() => { }),
     ])
 
-    // Reset all security states
     setIsPasscodeSet(false)
     setIsBiometricEnabled(false)
     setIsSecurityEnabled(false)
     setIsLocked(false)
-    setLockTimeoutState(0)
-    setHasAuthenticatedThisSession(false)
+    setLockTimeoutState(1)
   }, [])
 
   return (

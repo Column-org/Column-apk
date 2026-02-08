@@ -6,6 +6,8 @@ interface PreferencesContextType {
     setNFTTabEnabled: (enabled: boolean) => Promise<void>
     isNFTCollectionEnabled: boolean
     setNFTCollectionEnabled: (enabled: boolean) => Promise<void>
+    isNotificationsEnabled: boolean
+    setNotificationsEnabled: (enabled: boolean) => Promise<void>
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -15,6 +17,7 @@ const PREFERENCES_STORAGE_KEY = '@app_preferences'
 export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isNFTTabEnabled, setIsNFTTabEnabled] = useState(true)
     const [isNFTCollectionEnabled, setIsNFTCollectionEnabled] = useState(true)
+    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true)
 
     useEffect(() => {
         loadPreferences()
@@ -27,6 +30,7 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 const preferences = JSON.parse(stored)
                 setIsNFTTabEnabled(preferences.isNFTTabEnabled ?? true)
                 setIsNFTCollectionEnabled(preferences.isNFTCollectionEnabled ?? true)
+                setIsNotificationsEnabled(preferences.isNotificationsEnabled ?? true)
             }
         } catch (error) {
             console.error('Failed to load preferences:', error)
@@ -57,8 +61,27 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
     }
 
+    const setNotificationsEnabled = async (enabled: boolean) => {
+        try {
+            setIsNotificationsEnabled(enabled)
+            const stored = await AsyncStorage.getItem(PREFERENCES_STORAGE_KEY)
+            const preferences = stored ? JSON.parse(stored) : {}
+            preferences.isNotificationsEnabled = enabled
+            await AsyncStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences))
+        } catch (error) {
+            console.error('Failed to save notification preference:', error)
+        }
+    }
+
     return (
-        <PreferencesContext.Provider value={{ isNFTTabEnabled, setNFTTabEnabled, isNFTCollectionEnabled, setNFTCollectionEnabled }}>
+        <PreferencesContext.Provider value={{
+            isNFTTabEnabled,
+            setNFTTabEnabled,
+            isNFTCollectionEnabled,
+            setNFTCollectionEnabled,
+            isNotificationsEnabled,
+            setNotificationsEnabled
+        }}>
             {children}
         </PreferencesContext.Provider>
     )

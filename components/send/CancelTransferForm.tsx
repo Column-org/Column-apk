@@ -1,8 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
-import { useSignRawHash } from '@privy-io/expo/extended-chains'
+import { useWallet } from '../../context/WalletContext'
 import { useNetwork } from '../../context/NetworkContext'
 import { cancelTransferWithCode, viewTransferDetails } from '../../services/movement_service/sendWithCode'
 import { removePendingClaim } from '../../services/pendingClaims'
@@ -10,8 +9,7 @@ import { compareAddresses } from '../../utils/address'
 import AlertModal from '../AlertModal'
 
 export default function CancelTransferForm() {
-    const { user } = usePrivy()
-    const { signRawHash } = useSignRawHash()
+    const { address: walletAddress, signRawHash: web3SignRawHash, walletPublicKey } = useWallet()
     const { network } = useNetwork()
     const [code, setCode] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -29,28 +27,13 @@ export default function CancelTransferForm() {
         message: '',
     })
 
-    const movementWallets = React.useMemo(() => {
-        if (!user?.linked_accounts) return []
-        return user.linked_accounts.filter(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-    }, [user?.linked_accounts])
-
-    const movementWallet = movementWallets[0] as any
-    const walletAddress = movementWallet?.address || ''
-    const walletPublicKey = (movementWallet?.public_key || movementWallet?.publicKey || '') as string
-
     const buildSignHash = useCallback(() => {
         if (!walletPublicKey) {
             throw new Error('Wallet public key not available')
         }
 
         return async (address: string, hash: string) => {
-            const { signature } = await signRawHash({
-                address,
-                chainType: 'aptos' as any,
-                hash: hash as `0x${string}`,
-            })
+            const { signature } = await web3SignRawHash(hash as any)
 
             if (!signature) {
                 throw new Error('No signature returned from signRawHash')
@@ -63,7 +46,7 @@ export default function CancelTransferForm() {
                 },
             }
         }
-    }, [signRawHash, walletPublicKey])
+    }, [web3SignRawHash, walletPublicKey])
 
     const handleValidateCode = async () => {
         if (!code.trim()) {
@@ -101,7 +84,7 @@ export default function CancelTransferForm() {
             }
 
             // Check if sender matches current wallet
-            if (!compareAddresses(result.details.sender, walletAddress)) {
+            if (!compareAddresses(result.details.sender, walletAddress || '')) {
                 setAlertModal({
                     visible: true,
                     type: 'error',

@@ -15,18 +15,37 @@ export interface FungibleAsset {
 }
 
 const sanitizeIconUri = (symbol: string | undefined, uri?: string | null) => {
-  if (!uri) {
-    return symbol === 'USDT.e'
+  // Hardcoded fixes for known broken/missing images
+  const brokenUrls = [
+    'bridge.movementnetwork.xyz/usdc.png',
+    'podium.fi/pass/'
+  ]
+
+  const isBroken = uri && brokenUrls.some(broken => uri.includes(broken))
+
+  if (!uri || isBroken) {
+    if (symbol?.toUpperCase().includes('USDC')) {
+      return 'https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png'
+    }
+    // Check if symbol OR original URI has "podium"
+    if (symbol?.toLowerCase().includes('podium') || (uri && uri.toLowerCase().includes('podium'))) {
+      return 'https://i.ibb.co/vzYyS2F/podium-pass.png'
+    }
+    return symbol === 'USDT.e' || symbol === 'USDT'
       ? 'https://assets.coingecko.com/coins/images/325/large/Tether.png'
       : MOVE_ICON_FALLBACK
   }
 
-  if (uri.endsWith('.svg')) {
-    return uri.replace('.svg', '.png')
+  if (symbol?.toUpperCase().includes('USDC')) {
+    return 'https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png'
   }
 
-  if (symbol === 'USDT.e') {
+  if (symbol?.toUpperCase().includes('USDT')) {
     return 'https://assets.coingecko.com/coins/images/325/large/Tether.png'
+  }
+
+  if (uri?.endsWith('.svg')) {
+    return uri.replace('.svg', '.png')
   }
 
   return uri
@@ -136,7 +155,7 @@ async function fetchNativeMoveBalance(walletAddress: string, network: MovementNe
       },
     } as FungibleAsset
   } catch (error) {
-    console.error('Error fetching native MOVE balance:', error)
+    // Silently ignore - expected when there's no MOVE balance or network issues
     return null
   } finally {
     clearTimeout(timeoutId)
@@ -242,48 +261,46 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
     const assets: FungibleAsset[] = []
 
     // Fetch CoinStore assets (legacy coins)
-    for (const resource of resources) {
-      if (!resource?.type?.startsWith('0x1::coin::CoinStore<')) continue
+    const coinStoreTasks = resources
+      .filter((r: any) => r?.type?.startsWith('0x1::coin::CoinStore<'))
+      .map(async (resource: any) => {
+        const match = resource.type.match(/^0x1::coin::CoinStore<(.*)>$/)
+        if (!match) return null
 
-      const match = resource.type.match(/^0x1::coin::CoinStore<(.*)>$/)
-      if (!match) continue
+        const coinType = match[1]
+        const amount = resource?.data?.coin?.value ?? '0'
+        if (!amount || amount === '0') return null
 
-      const coinType = match[1]
-      const amount = resource?.data?.coin?.value ?? '0'
-
-      if (!amount || amount === '0') continue
-
-      const info = await fetchCoinInfo(coinType, networkConfig)
-      const iconUri = coinType === '0x1::aptos_coin::AptosCoin' ? MOVE_ICON_FALLBACK : undefined
-
-      assets.push({
-        asset_type: coinType,
-        amount: amount.toString(),
-        metadata: {
-          name: info.name,
-          symbol: info.symbol,
-          decimals: info.decimals,
-          icon_uri: iconUri,
-        },
+        const info = await fetchCoinInfo(coinType, networkConfig)
+        return {
+          asset_type: coinType,
+          amount: amount.toString(),
+          metadata: {
+            name: info.name,
+            symbol: info.symbol,
+            decimals: info.decimals,
+            icon_uri: sanitizeIconUri(info.symbol, undefined),
+          },
+        } as FungibleAsset
       })
-    }
+
+    const coinAssets = (await Promise.all(coinStoreTasks)).filter((a): a is FungibleAsset => a !== null)
+    assets.push(...coinAssets)
 
     // Fetch Fungible Assets (FA standard) - direct resources
-    for (const resource of resources) {
-      if (!resource?.type?.startsWith('0x1::fungible_asset::FungibleStore')) continue
+    const faTasks = resources
+      .filter((r: any) => r?.type?.startsWith('0x1::fungible_asset::FungibleStore'))
+      .map(async (resource: any) => {
+        const assetType = resource?.data?.metadata?.inner
+        const amount = resource?.data?.balance ?? '0'
 
-      const assetType = resource?.data?.metadata?.inner
-      const amount = resource?.data?.balance ?? '0'
+        if (!assetType || !amount || amount === '0') return null
+        if (assets.some(a => a.asset_type === assetType)) return null
 
-      if (!assetType || !amount || amount === '0') continue
+        const metadata = await fetchFAMetadata(assetType, networkConfig)
+        if (!metadata) return null
 
-      // Skip if already added as CoinStore
-      if (assets.some(a => a.asset_type === assetType)) continue
-
-      const metadata = await fetchFAMetadata(assetType, networkConfig)
-
-      if (metadata) {
-        assets.push({
+        return {
           asset_type: assetType,
           amount: amount.toString(),
           metadata: {
@@ -292,9 +309,11 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
             decimals: metadata.decimals,
             icon_uri: sanitizeIconUri(metadata.symbol, undefined),
           },
-        })
-      }
-    }
+        } as FungibleAsset
+      })
+
+    const faAssets = (await Promise.all(faTasks)).filter((a): a is FungibleAsset => a !== null)
+    assets.push(...faAssets)
 
     // Fetch Fungible Assets stored in owned objects
     // Movement Network stores FA in separate object addresses
@@ -313,8 +332,8 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
       }
     }
 
-    // Fetch FA resources from owned objects
-    for (const objectAddr of ownedObjectAddresses) {
+    // Fetch FA resources from owned objects in parallel
+    const objectTasks = ownedObjectAddresses.map(async (objectAddr) => {
       try {
         const objController = new AbortController()
         const objTimeoutId = setTimeout(() => objController.abort(), 10000)
@@ -325,9 +344,10 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
 
         clearTimeout(objTimeoutId)
 
-        if (!objResponse.ok) continue
+        if (!objResponse.ok) return []
 
         const objResources = await objResponse.json()
+        const objectAssets: FungibleAsset[] = []
 
         for (const objResource of objResources) {
           if (objResource?.type !== '0x1::fungible_asset::FungibleStore') continue
@@ -336,14 +356,11 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
           const amount = objResource?.data?.balance ?? '0'
 
           if (!assetType || !amount || amount === '0') continue
-
-          // Skip if already added
           if (assets.some(a => a.asset_type === assetType)) continue
 
           const metadata = await fetchFAMetadata(assetType, networkConfig)
-
           if (metadata) {
-            assets.push({
+            objectAssets.push({
               asset_type: assetType,
               amount: amount.toString(),
               metadata: {
@@ -352,13 +369,20 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
                 decimals: metadata.decimals,
                 icon_uri: sanitizeIconUri(metadata.symbol, undefined),
               },
-            })
+            } as FungibleAsset)
           }
         }
+        return objectAssets
       } catch (error) {
         console.error(`Failed to fetch FA from object ${objectAddr}:`, error)
+        return []
       }
-    }
+    })
+
+    const allObjectAssets = await Promise.all(objectTasks)
+    allObjectAssets.forEach(itemAssets => {
+      assets.push(...itemAssets)
+    })
 
     return sortAssets(assets)
   } finally {

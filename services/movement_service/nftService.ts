@@ -138,18 +138,27 @@ export async function fetchNFTMetadata(tokenUri: string): Promise<NFTMetadata | 
     })
 
     if (!response.ok) {
-      console.warn(`Failed to fetch metadata from ${fetchUrl}`)
+      console.warn(`Failed to fetch metadata from ${fetchUrl}: ${response.status}`)
       return null
     }
 
-    const metadata = await response.json()
-
-    // Handle IPFS image URLs in metadata
-    if (metadata.image && metadata.image.startsWith('ipfs://')) {
-      metadata.image = metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return null
     }
 
-    return metadata
+    try {
+      const metadata = await response.json()
+
+      // Handle IPFS image URLs in metadata
+      if (metadata.image && typeof metadata.image === 'string' && metadata.image.startsWith('ipfs://')) {
+        metadata.image = metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+      }
+
+      return metadata
+    } catch (parseError) {
+      return null
+    }
   } catch (error) {
     console.warn('Error fetching NFT metadata:', error)
     return null

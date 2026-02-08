@@ -17,10 +17,9 @@
       "usesAppleSignIn": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.column.app",
-      "associatedDomains": [
-        "webcredentials:auth.privy.io"
-      ],
       "infoPlist": {
+        "NSCameraUsageDescription": "Allow Column to access your camera to scan QR codes for sending assets.",
+        "NSFaceIDUsageDescription": "Allow Column to use FaceID to securely unlock your wallet.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         }
@@ -43,10 +42,6 @@
           "autoVerify": true,
           "data": [
             {
-              "scheme": "https",
-              "host": "auth.privy.io"
-            },
-            {
               "scheme": "column"
             }
           ],
@@ -65,11 +60,14 @@
       "expo-router",
       "expo-secure-store",
       "expo-apple-authentication",
+      "expo-notifications",
+      "expo-camera",
+      "expo-local-authentication",
       [
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "17.5"
+            "deploymentTarget": "15.1"
           },
           "android": {
             "compileSdkVersion": 35
@@ -80,9 +78,6 @@
       "expo-font"
     ],
     "extra": {
-      "privyAppId": "cmikkk5n304ssjp0cnpbwwfg0",
-      "privyClientId": "client-WY6TNA2cfUt3qmhn2tBzTwtAiEzmquMi8AvxYtdiTmxDX",
-      "passkeyAssociatedDomain": "https://auth.privy.io",
       "router": {},
       "eas": {
         "projectId": "e4a63f50-bc06-49de-8541-80b9efffd032"

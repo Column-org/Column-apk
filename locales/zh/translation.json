@@ -8,7 +8,15 @@
     "currency": "货币",
     "support": "支持",
     "helpCenter": "帮助中心",
-    "termsPrivacy": "条款与隐私"
+    "termsPrivacy": "条款与隐私",
+    "security": "安全",
+    "biometricLock": "生物识别锁",
+    "passcodeLock": "密码锁",
+    "autoLockTimeout": "自动锁定时间",
+    "recoveryPhrase": "助记词",
+    "privateKey": "私钥",
+    "appTheme": "应用主题",
+    "showNFTCollection": "显示 NFT 收藏"
   },
   "home": {
     "send": "发送",

@@ -6,9 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { QrCodeSvg } from 'react-native-qr-svg'
 import { BlurView } from 'expo-blur'
 import { useTranslation } from 'react-i18next'
-import { usePrivy } from '@privy-io/expo'
 import * as Clipboard from 'expo-clipboard'
-import { useSignRawHash } from '@privy-io/expo/extended-chains'
+import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
 import { claimTransferWithCode } from '../services/movement_service/sendWithCode'
 import { removePendingClaim } from '../services/pendingClaims'
@@ -22,8 +21,7 @@ export default function Receive() {
     const router = useRouter()
     const params = useLocalSearchParams<{ claimCode?: string }>()
     const { t } = useTranslation()
-    const { user } = usePrivy()
-    const { signRawHash } = useSignRawHash()
+    const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
     const [activeTab, setActiveTab] = useState<'qrcode' | 'code'>('qrcode')
     const [claimCode, setClaimCode] = useState('')
@@ -34,19 +32,10 @@ export default function Receive() {
     const [showAlert, setShowAlert] = useState(false)
     const [alertMessage, setAlertMessage] = useState('')
 
-    // Get Movement wallet address
-    const movementWallets = useMemo(() => {
-        if (!user?.linked_accounts) return []
-        return user.linked_accounts.filter(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-    }, [user?.linked_accounts])
-
-    const walletAddress = (movementWallets[0] as any)?.address || ''
-    const walletPublicKey = (movementWallets[0] as any)?.public_key || (movementWallets[0] as any)?.publicKey || ''
+    // Public key handling
 
     // Format address for display
-    const formatAddress = (address: string) => {
+    const formatAddress = (address: string | null) => {
         if (!address) return 'No Wallet'
         return `${address.slice(0, 4)}...${address.slice(-4)}`
     }
@@ -93,14 +82,10 @@ export default function Receive() {
         }
 
         return async (address: string, hash: string) => {
-            const { signature } = await signRawHash({
-                address,
-                chainType: 'aptos' as any,
-                hash: hash as `0x${string}`,
-            })
+            const { signature } = await web3SignRawHash(hash as any)
 
             if (!signature) {
-                throw new Error('No signature returned from signRawHash')
+                throw new Error('No signature returned from signing function')
             }
 
             return {
@@ -110,7 +95,7 @@ export default function Receive() {
                 },
             }
         }
-    }, [signRawHash, walletPublicKey])
+    }, [web3SignRawHash, walletPublicKey])
 
     const handleClaimTransfer = useCallback(
         async (transferType: 'move' | 'fa') => {
@@ -141,7 +126,9 @@ export default function Receive() {
                     throw new Error(result.error || 'Claim failed')
                 }
 
-                await removePendingClaim(walletAddress, trimmed)
+                if (walletAddress) {
+                    await removePendingClaim(walletAddress, trimmed)
+                }
                 setClaimCode('')
                 showSuccessMessage('Claim Successful!', result.transactionHash)
             } catch (error) {

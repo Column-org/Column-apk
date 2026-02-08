@@ -1,8 +1,9 @@
 import { DEFAULT_NETWORK, MovementNetwork } from '../constants/networkConfig'
 import { BACKEND_URL } from './movement_service/constants'
+import * as NotificationService from './NotificationService'
 
 type TransferNetworkOptions = {
-  network?: MovementNetwork
+    network?: MovementNetwork
 }
 
 export interface TransferAssetParams {
@@ -39,7 +40,7 @@ export async function transferFungibleAsset(
         // For fungible assets, use the metadata object address in function args, not type args
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-        
+
         let hashResponse: Response
         try {
             hashResponse = await fetch(`${BACKEND_URL}/generate-hash`, {
@@ -104,6 +105,8 @@ export async function transferFungibleAsset(
             throw new Error(result.vmStatus || 'Transaction failed')
         }
 
+        NotificationService.triggerSendNotification(amount, 'Token', recipientAddress)
+
         return {
             success: true,
             transactionHash: result.transactionHash
@@ -136,7 +139,7 @@ export async function transferMove(
         // Step 1: Generate transaction hash from backend
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-        
+
         let hashResponse: Response
         try {
             hashResponse = await fetch(`${BACKEND_URL}/generate-hash`, {
@@ -199,6 +202,8 @@ export async function transferMove(
         if (!result.success) {
             throw new Error(result.vmStatus || 'Transaction failed')
         }
+
+        NotificationService.triggerSendNotification(amount, 'MOVE', recipientAddress)
 
         return {
             success: true,

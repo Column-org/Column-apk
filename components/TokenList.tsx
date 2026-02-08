@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Animated, PanResponder, ActivityIndicator, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
+import { useWallet } from '../context/WalletContext'
 import { useRouter } from 'expo-router'
-import { getFungibleAssets, formatAssetBalance, FungibleAsset } from '../services/movementAssets'
+import { formatAssetBalance, FungibleAsset } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
-import { getMovePrice, TokenPriceData } from '../services/pythOracle'
 import { useBalanceVisibility } from '../context/BalanceVisibilityContext'
 import { SkeletonLoader } from './SkeletonLoader'
+import { EmptyWalletState } from './EmptyWalletState'
+import { ProjectItem } from './ProjectItem'
+import { useAssets } from '../hooks/useAssets'
 
 const SwipeableToken = ({ icon, name, amount, value, iconUri, priceHistory, tokenPrice, isOpen, onOpen, onClose, asset, isHidden }: any) => {
     const router = useRouter()
@@ -124,92 +126,34 @@ const SwipeableToken = ({ icon, name, amount, value, iconUri, priceHistory, toke
 interface TokenListProps {
     refreshKey?: number
     onRefreshRef?: (refreshFn: () => void) => void
+    onLoadingChange?: (loading: boolean) => void
+    filterMode?: 'tokens' | 'projects'
 }
 
-export const TokenList = ({ refreshKey, onRefreshRef }: TokenListProps) => {
-    const { user } = usePrivy()
-    const { network } = useNetwork()
+export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMode = 'tokens' }: TokenListProps) => {
     const { isHidden } = useBalanceVisibility()
-    const [assets, setAssets] = useState<FungibleAsset[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [isRefreshing, setIsRefreshing] = useState(false)
-    const [movePrice, setMovePrice] = useState<TokenPriceData | null>(null)
+    const { assets, movePrice, isLoading, refetch } = useAssets(refreshKey)
     const [movePriceHistory, setMovePriceHistory] = useState<number[]>([])
     const [openTokenIndex, setOpenTokenIndex] = useState<number | null>(null)
 
-    // Get Movement wallet address from Privy
-    const movementWallet = user?.linked_accounts?.find(
-        (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-    ) as any
-    const walletAddress = movementWallet?.address
-
-    const fetchAssets = useCallback(async (showRefreshing = false) => {
-        if (!walletAddress) {
-            setIsLoading(false)
-            return
-        }
-
-        if (showRefreshing) {
-            setIsRefreshing(true)
-        } else {
-            setIsLoading(true)
-        }
-
-        try {
-            const [fetchedAssets, movePriceData] = await Promise.all([
-                getFungibleAssets(walletAddress, network),
-                getMovePrice()
-            ])
-            setAssets(fetchedAssets)
-            setMovePrice(movePriceData)
-            setMovePriceHistory([])
-        } catch (error) {
-            console.error('Error fetching assets:', error)
-        } finally {
-            setIsLoading(false)
-            setIsRefreshing(false)
-        }
-    }, [walletAddress, network])
-
-    // Expose refresh function to parent
+    // Sync refetch function with parent
     useEffect(() => {
         if (onRefreshRef) {
-            onRefreshRef(() => fetchAssets(true))
+            onRefreshRef(refetch)
         }
-    }, [onRefreshRef, walletAddress, fetchAssets])
+    }, [onRefreshRef, refetch])
 
+    // Sync loading state with parent
     useEffect(() => {
-        fetchAssets()
-    }, [fetchAssets])
-
-    // Refresh when refreshKey changes (from pull-to-refresh)
-    useEffect(() => {
-        if (refreshKey && refreshKey > 0) {
-            fetchAssets(true)
+        if (onLoadingChange) {
+            onLoadingChange(isLoading)
         }
-    }, [refreshKey, fetchAssets])
+    }, [isLoading, onLoadingChange])
 
     return (
         <View style={styles.watchlistSection}>
-            <View style={styles.watchlistHeader}>
-                <View style={styles.titleContainer}>
-                    <Text style={styles.watchlistTitle}>Tokens</Text>
-                </View>
-                <TouchableOpacity
-                    style={styles.manageButton}
-                    onPress={() => fetchAssets(true)}
-                    disabled={isRefreshing}
-                >
-                    <Ionicons
-                        name="refresh"
-                        size={16}
-                        color="white"
-                        style={isRefreshing ? styles.rotating : undefined}
-                    />
-                </TouchableOpacity>
-            </View>
 
-            {isLoading && !isRefreshing ? (
+            {isLoading ? (
                 <View style={styles.skeletonContainer}>
                     {[...Array(3)].map((_, index) => (
                         <View key={index} style={styles.skeletonItem}>
@@ -226,53 +170,112 @@ export const TokenList = ({ refreshKey, onRefreshRef }: TokenListProps) => {
                     ))}
                 </View>
             ) : assets.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Ionicons name="wallet-outline" size={48} color="#8B98A5" />
-                    <Text style={styles.emptyText}>No assets found</Text>
-                    <Text style={styles.emptySubtext}>
-                        {network === 'testnet'
-                            ? 'Get testnet tokens from the faucet'
-                            : 'Deposit assets to this wallet to see them here'}
-                    </Text>
-                </View>
-            ) : (
-                assets.map((asset, index) => {
-                    const formattedBalance = formatAssetBalance(asset.amount, asset.metadata.decimals)
+                <EmptyWalletState />
+            ) : filterMode === 'projects' ? (
+                (() => {
+                    // Dynamic Grouping Logic
+                    const groups: { [key: string]: FungibleAsset[] } = {};
 
-                    // Check if this is MOVE token (by asset type OR by name/symbol)
-                    const isMoveToken =
-                        asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
-                        asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
-                        asset.metadata.name?.toLowerCase() === 'move coin' ||
-                        asset.metadata.name?.toLowerCase() === 'movement'
+                    assets.forEach(asset => {
+                        const name = asset.metadata.name?.toLowerCase() || ''
+                        const symbol = asset.metadata.symbol?.toLowerCase() || ''
+                        const type = asset.asset_type?.toLowerCase() || ''
 
-                    // Calculate USD value for MOVE token
-                    let displayValue = formattedBalance
-                    let displayAmount = `${formattedBalance} ${asset.metadata.symbol}`
+                        let groupName = '';
+                        if (name.includes('podium') || symbol.includes('podium') || name.includes('pass') || symbol.includes('pass')) groupName = 'Podium';
+                        else if (name.includes('nexus') || symbol.includes('nexus')) groupName = 'Nexus';
+                        else if (name.includes('bonk') || symbol.includes('bonk')) groupName = 'Bonk Rewards';
+                        else if (name.includes('hawk') || symbol.includes('hawk')) groupName = 'HawkFi';
+                        else if (name.includes('moonwalk')) groupName = 'Moonwalk';
+                        else if (name.includes('kamino')) groupName = 'Kamino';
 
-                    if (isMoveToken && movePrice) {
-                        const usdValue = parseFloat(formattedBalance.replace(/,/g, '')) * movePrice.price
-                        displayValue = `$${usdValue.toFixed(2)}`
-                        displayAmount = formattedBalance // Remove "MOVE" text for Move Coin
+                        // If no specific group matches but it's clearly a "Project" asset
+                        if (!groupName && (name.includes('project') || symbol.includes('receipt') || type.includes('::position'))) {
+                            groupName = asset.metadata.name;
+                        }
+
+                        if (groupName) {
+                            if (!groups[groupName]) groups[groupName] = [];
+                            groups[groupName].push(asset);
+                        }
+                    });
+
+                    if (Object.keys(groups).length === 0) {
+                        return (
+                            <View style={styles.emptyContainer}>
+                                <Ionicons name="briefcase-outline" size={48} color="rgba(255, 218, 52, 0.2)" />
+                                <Text style={styles.emptyText}>No Projects Found</Text>
+                                <Text style={styles.emptySubtext}>Tokens found: {assets.map(a => a.metadata.symbol).join(', ') || 'none'}</Text>
+                            </View>
+                        );
                     }
 
-                    return (
-                        <SwipeableToken
-                            key={`${asset.asset_type}-${index}`}
-                            name={asset.metadata.name}
-                            amount={displayAmount}
-                            asset={asset}
-                            value={displayValue}
-                            iconUri={asset.metadata.icon_uri}
-                            priceHistory={isMoveToken ? movePriceHistory : null}
-                            tokenPrice={isMoveToken && movePrice ? movePrice.price : null}
-                            isOpen={openTokenIndex === index}
-                            onOpen={() => setOpenTokenIndex(index)}
-                            onClose={() => setOpenTokenIndex(null)}
+                    return Object.entries(groups).map(([groupName, groupAssets]) => (
+                        <ProjectItem
+                            key={groupName}
+                            name={groupName}
+                            iconUri={groupName === 'Nexus' || groupName === 'Podium'
+                                ? "https://nexus-five-gold.vercel.app/_next/image?url=%2Flogo.png&w=48&q=75"
+                                : groupAssets[0]?.metadata.icon_uri || ""}
+                            appUrl={groupName === 'Nexus' || groupName === 'Podium'
+                                ? "https://nexus-five-gold.vercel.app/dashboard"
+                                : "https://movement.market"} // Fallback
+                            assets={groupAssets}
                             isHidden={isHidden}
                         />
-                    )
-                })
+                    ));
+                })()
+            ) : (
+                assets
+                    .filter(asset => {
+                        const name = asset.metadata.name?.toLowerCase() || ''
+                        const symbol = asset.metadata.symbol?.toLowerCase() || ''
+                        const type = asset.asset_type?.toLowerCase() || ''
+
+                        const isProject = name.includes('podium') || symbol.includes('podium') ||
+                            name.includes('pass') || symbol.includes('pass') ||
+                            name.includes('nexus') || symbol.includes('nexus') ||
+                            type.includes('podium') || type.includes('pass') || type.includes('nexus');
+
+                        return !isProject
+                    })
+                    .map((asset, index) => {
+                        const formattedBalance = formatAssetBalance(asset.amount, asset.metadata.decimals)
+
+                        // Check if this is MOVE token (by asset type OR by name/symbol)
+                        const isMoveToken =
+                            asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
+                            asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
+                            asset.metadata.name?.toLowerCase() === 'move coin' ||
+                            asset.metadata.name?.toLowerCase() === 'movement'
+
+                        // Calculate USD value for MOVE token
+                        let displayValue = formattedBalance
+                        let displayAmount = `${formattedBalance} ${asset.metadata.symbol}`
+
+                        if (isMoveToken && movePrice) {
+                            const usdValue = parseFloat(formattedBalance.replace(/,/g, '')) * movePrice.price
+                            displayValue = `$${usdValue.toFixed(2)}`
+                            displayAmount = formattedBalance // Remove "MOVE" text for Move Coin
+                        }
+
+                        return (
+                            <SwipeableToken
+                                key={`${asset.asset_type}-${index}`}
+                                name={asset.metadata.name}
+                                amount={displayAmount}
+                                asset={asset}
+                                value={displayValue}
+                                iconUri={asset.metadata.icon_uri}
+                                priceHistory={isMoveToken ? movePriceHistory : null}
+                                tokenPrice={isMoveToken && movePrice ? movePrice.price : null}
+                                isOpen={openTokenIndex === index}
+                                onOpen={() => setOpenTokenIndex(index)}
+                                onClose={() => setOpenTokenIndex(null)}
+                                isHidden={isHidden}
+                            />
+                        )
+                    })
             )}
         </View>
     )

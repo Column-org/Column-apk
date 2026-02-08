@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, useFocusEffect } from 'expo-router'
-import { usePrivy } from '@privy-io/expo'
+import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
 import { getAllCycles, getTotalSavedAllAssets, octasToMove } from '../services/movement_service/savingCycleService'
 
@@ -19,16 +19,12 @@ interface Goal {
 
 export const SavingsGoals: React.FC = () => {
     const router = useRouter()
-    const { user } = usePrivy()
+    const { address: walletAddress } = useWallet()
     const { network } = useNetwork()
     const [goals, setGoals] = useState<Goal[]>([])
     const [loading, setLoading] = useState(true)
     const [totalSavings, setTotalSavings] = useState(0)
     const [currentTime, setCurrentTime] = useState(Date.now())
-
-    const walletAddress = (user?.linked_accounts?.find((account: any) =>
-        account.type === 'wallet' && (account as any).chain_type === 'aptos'
-    ) as any)?.address || ''
 
     const colors = ['#FF9500', '#007AFF', '#FF2D55', '#34C759', '#5856D6', '#FF2D55']
 

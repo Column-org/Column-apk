@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, Alert, RefreshControl } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { usePrivy } from '@privy-io/expo'
+import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
 import * as Clipboard from 'expo-clipboard'
 import { PendingClaimWithStatus, fetchPendingClaims } from '../services/pendingClaims'
@@ -43,7 +43,7 @@ function SkeletonCard() {
 
 export default function PendingClaims() {
     const router = useRouter()
-    const { user } = usePrivy()
+    const { address: walletAddress } = useWallet()
     const { network } = useNetwork()
     const [claims, setClaims] = useState<PendingClaimWithStatus[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -59,15 +59,6 @@ export default function PendingClaims() {
         title: '',
         message: '',
     })
-
-    const movementWallets = React.useMemo(() => {
-        if (!user?.linked_accounts) return []
-        return user.linked_accounts.filter(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        )
-    }, [user?.linked_accounts])
-
-    const walletAddress = (movementWallets[0] as any)?.address || ''
 
     const showLoadError = useCallback((error: unknown) => {
         Alert.alert(

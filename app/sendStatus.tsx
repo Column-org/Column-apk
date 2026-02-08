@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import { usePrivy } from '@privy-io/expo'
-import { useSignRawHash } from '@privy-io/expo/extended-chains'
+import { useWallet } from '../context/WalletContext'
 import { transferFungibleAsset, transferMove, TransferAssetParams, TransferResult } from '../services/transferAsset'
 import { FungibleAsset } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
@@ -14,23 +13,13 @@ type TransactionStatus = 'sending' | 'sent' | 'failed'
 export default function SendStatus() {
     const router = useRouter()
     const params = useLocalSearchParams()
-    const { user } = usePrivy()
-    const { signRawHash } = useSignRawHash()
+    const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
     const [status, setStatus] = useState<TransactionStatus>('sending')
     const [errorMessage, setErrorMessage] = useState<string>('')
     const [txHash, setTxHash] = useState<string>('')
 
-    // Get Movement wallet (with address and public_key)
-    const movementWallet = useMemo(() => {
-        if (!user?.linked_accounts) return null
-        return user.linked_accounts.find(
-            (account: any) => account.type === 'wallet' && account.chain_type === 'aptos'
-        ) as any
-    }, [user?.linked_accounts])
 
-    const walletAddress = movementWallet?.address || ''
-    const walletPublicKey = movementWallet?.public_key || ''
     const hasExecutedRef = useRef(false)
 
     useEffect(() => {
@@ -69,7 +58,7 @@ export default function SendStatus() {
 
             // Get public key from wallet object
             let publicKey = walletPublicKey
-            
+
             // If public_key is not on wallet object, fail gracefully
             if (!publicKey) {
                 if (isMounted) {
@@ -80,23 +69,19 @@ export default function SendStatus() {
                 return
             }
 
-            // Use Privy's signRawHash to sign the transaction hash
+            // Use unified signRawHash to sign the transaction hash
             const signHash = async (address: string, hash: string) => {
                 try {
-                    const signatureResult = await signRawHash({
-                        address,
-                        chainType: 'aptos' as any,
-                        hash: hash as `0x${string}`,
-                    })
-                    
-                    if (!signatureResult.signature) {
-                        throw new Error('No signature returned from signRawHash')
+                    const { signature } = await web3SignRawHash(hash as any)
+
+                    if (!signature) {
+                        throw new Error('No signature returned from signing function')
                     }
 
                     // Return format expected by transferAsset.ts
                     return {
                         data: {
-                            signature: signatureResult.signature,
+                            signature,
                             public_key: publicKey
                         }
                     }
@@ -156,7 +141,7 @@ export default function SendStatus() {
             isMounted = false
             if (timeoutId) clearTimeout(timeoutId)
         }
-    }, [params.token, params.amount, params.recipient, walletAddress, walletPublicKey, signRawHash, network]) // Only run when these change
+    }, [params.token, params.amount, params.recipient, walletAddress, walletPublicKey, web3SignRawHash, network]) // Only run when these change
 
     const getGradientColors = (): readonly [string, string, ...string[]] => {
         switch (status) {

@@ -1,17 +1,17 @@
 // hooks/useMovementWallet.ts
 import { useCallback } from "react";
-import { useSignRawHash } from "@privy-io/expo/extended-chains";
+import { useWallet } from "../context/WalletContext";
 import { useNetwork } from "../context/NetworkContext";
 import BACKEND_CONFIG from "../config/backend";
 
 const API_BASE_URL = BACKEND_CONFIG.BASE_URL;
 
 export function useMovementWallet() {
-  const { signRawHash } = useSignRawHash();
+  const { signRawHash: web3SignRawHash, walletPublicKey } = useWallet();
   const { network } = useNetwork();
 
   /**
-   * 🔹 Sign + Submit transaction using backend + Privy
+   * 🔹 Sign + Submit transaction using backend + Web3 Wallet
    */
   const signAndSubmitTransaction = useCallback(
     async (
@@ -41,12 +41,8 @@ export function useMovementWallet() {
 
         const { hash, rawTxnHex } = await hashResponse.json();
 
-        // Step 2: Sign hash using Privy
-        const { signature } = await signRawHash({
-          address: walletAddress,
-          chainType: "aptos" as any,
-          hash,
-        });
+        // Step 2: Sign hash using Web3 Wallet
+        const { signature } = await web3SignRawHash(hash);
 
         // Step 3: Submit signed transaction back to backend
         const submitResponse = await fetch(`${API_BASE_URL}/submit-transaction`, {
@@ -76,7 +72,7 @@ export function useMovementWallet() {
         throw error;
       }
     },
-    [signRawHash, network]
+    [web3SignRawHash, network]
   );
 
   /**

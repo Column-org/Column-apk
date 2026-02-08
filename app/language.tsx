@@ -1,17 +1,22 @@
 import React from 'react'
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, SafeAreaView, Dimensions, ScrollView } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
+import ISO6391 from 'iso-639-1'
+import { getLanguageFlag } from '../utils/languageFlags'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
-const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'es', name: 'Español' },
-    { code: 'zh', name: '中文' },
-]
+const allLanguageCodes = ISO6391.getAllCodes()
+
+const languages = allLanguageCodes.map(code => ({
+    code,
+    name: ISO6391.getNativeName(code),
+    englishName: ISO6391.getName(code),
+    flag: getLanguageFlag(code)
+}))
 
 const LanguagePage = () => {
     const router = useRouter()
@@ -38,7 +43,7 @@ const LanguagePage = () => {
             <View style={styles.content}>
                 <Text style={styles.description}>Choose your preferred language</Text>
 
-                <View style={styles.list}>
+                <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
                     {languages.map((language) => {
                         const isActive = i18n.language === language.code
                         return (
@@ -49,9 +54,17 @@ const LanguagePage = () => {
                                 activeOpacity={0.7}
                             >
                                 <View style={styles.languageInfo}>
-                                    <Text style={[styles.languageText, isActive && styles.languageTextActive]}>
-                                        {language.name}
-                                    </Text>
+                                    <View style={styles.flagContainer}>
+                                        <Text style={styles.flagText}>{language.flag}</Text>
+                                    </View>
+                                    <View>
+                                        <Text style={[styles.languageText, isActive && styles.languageTextActive]}>
+                                            {language.name}
+                                        </Text>
+                                        <Text style={styles.languageEnglishName}>
+                                            {language.englishName}
+                                        </Text>
+                                    </View>
                                     <Text style={styles.languageCode}>{language.code.toUpperCase()}</Text>
                                 </View>
                                 <View style={styles.languageAction}>
@@ -67,9 +80,9 @@ const LanguagePage = () => {
                             </TouchableOpacity>
                         )
                     })}
-                </View>
+                </ScrollView>
             </View>
-        </SafeAreaView>
+        </SafeAreaView >
     )
 }
 
@@ -108,7 +121,11 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     list: {
+        flex: 1,
+    },
+    listContent: {
         gap: 12,
+        paddingBottom: 40,
     },
     languageItem: {
         flexDirection: 'row',
@@ -123,8 +140,26 @@ const styles = StyleSheet.create({
     },
     languageInfo: {
         flexDirection: 'row',
-        alignItems: 'baseline',
-        gap: 8,
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    flagContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#1E2022',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    flagText: {
+        fontSize: 20,
+    },
+    languageEnglishName: {
+        color: '#8B98A5',
+        fontSize: 12,
     },
     languageText: {
         color: 'white',

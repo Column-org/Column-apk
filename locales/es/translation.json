@@ -8,7 +8,15 @@
     "currency": "Moneda",
     "support": "Soporte",
     "helpCenter": "Centro de Ayuda",
-    "termsPrivacy": "Términos y Privacidad"
+    "termsPrivacy": "Términos y Privacidad",
+    "security": "Seguridad",
+    "biometricLock": "Bloqueo Biométrico",
+    "passcodeLock": "Bloqueo con Código",
+    "autoLockTimeout": "Tiempo de Bloqueo Automático",
+    "recoveryPhrase": "Frase de Recuperación",
+    "privateKey": "Clave Privada",
+    "appTheme": "Tema de la App",
+    "showNFTCollection": "Mostrar Colección NFT"
   },
   "home": {
     "send": "Enviar",
