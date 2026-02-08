@@ -1,4 +1,4 @@
-import { View, ScrollView, StyleSheet, StatusBar, ImageBackground, Animated, RefreshControl, Dimensions } from 'react-native'
+import { View, ScrollView, StyleSheet, StatusBar, ImageBackground, Animated, RefreshControl, Dimensions, Image } from 'react-native'
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Header } from '../../components/Header'
@@ -16,6 +16,7 @@ import { fetchPendingClaims, getPendingClaimsCount } from '../../services/pendin
 import { getFungibleAssets, formatAssetBalance, FungibleAsset } from '../../services/movementAssets'
 import { useFocusEffect } from 'expo-router'
 import { useAssets } from '../../hooks/useAssets'
+import { SYMBOL_TO_ID } from '../../services/coinGecko'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -33,7 +34,7 @@ const Home = () => {
     const [activeTab, setActiveTab] = useState<'tokens' | 'projects'>('tokens')
     const [isTokenRefreshing, setIsTokenRefreshing] = useState(false)
     const tokenListRefreshRef = useRef<(() => void) | null>(null)
-    const { assets, movePrice, isLoading: isAssetsLoading, refetch } = useAssets(refreshKey)
+    const { assets, prices, movePrice, isLoading: isAssetsLoading, refetch } = useAssets(refreshKey)
 
     const { tokens, projects } = useMemo(() => {
         const t: FungibleAsset[] = []
@@ -58,21 +59,18 @@ const Home = () => {
     }, [assets])
 
     const calculateValues = useCallback((assetList: FungibleAsset[]) => {
-        if (!movePrice) return 0
+        if (!prices) return 0
         return assetList.reduce((sum, asset) => {
-            const isMoveToken =
-                asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
-                asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
-                asset.metadata.name?.toLowerCase() === 'move coin' ||
-                asset.metadata.name?.toLowerCase() === 'movement'
+            const cgId = SYMBOL_TO_ID[asset.metadata.symbol.toUpperCase()]
+            const priceData = cgId ? prices[cgId] : null
 
-            if (isMoveToken) {
+            if (priceData) {
                 const balance = parseFloat(formatAssetBalance(asset.amount, asset.metadata.decimals).replace(/,/g, ''))
-                return sum + balance * movePrice.price
+                return sum + balance * priceData.usd
             }
             return sum
         }, 0)
-    }, [movePrice])
+    }, [prices])
 
     const tokenBalanceSum = useMemo(() => {
         const val = calculateValues(tokens)
@@ -171,6 +169,21 @@ const Home = () => {
                     <Header />
                 </View>
 
+                {getThemeImage() && (
+                    <View style={styles.fixedBackgroundContainer}>
+                        <Image
+                            source={getThemeImage()}
+                            style={styles.fixedBackgroundImage}
+                            resizeMode="cover"
+                        />
+                        <LinearGradient
+                            colors={['transparent', 'rgba(15, 20, 25, 0.5)', '#121315']}
+                            style={styles.fixedGradientOverlay}
+                            locations={[0, 0.6, 1]}
+                        />
+                    </View>
+                )}
+
                 <Animated.ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollViewContent}
@@ -192,30 +205,10 @@ const Home = () => {
                         />
                     }
                 >
-                    {getThemeImage() ? (
-                        <ImageBackground
-                            source={getThemeImage()}
-                            style={styles.backgroundImageContainer}
-                            imageStyle={styles.backgroundImage}
-                        >
-                            <LinearGradient
-                                colors={['transparent', 'rgba(15, 20, 25, 0.5)', '#121315']}
-                                style={styles.gradientOverlay}
-                                locations={[0, 0.6, 1]}
-                            />
-
-                            <View style={styles.headerSpacer} />
-                            <NetWorth refreshKey={refreshKey} />
-                        </ImageBackground>
-                    ) : (
-                        <View style={styles.backgroundImageContainer}>
-                            <View style={styles.headerSpacer} />
-                            <NetWorth refreshKey={refreshKey} />
-                        </View>
-                    )}
+                    <View style={styles.headerSpacer} />
+                    <NetWorth refreshKey={refreshKey} />
 
                     <ActionButtons />
-                    <View style={{ height: 20 }} />
                     <PortfolioTabs
                         activeTab={activeTab}
                         onTabChange={setActiveTab}
@@ -283,6 +276,26 @@ const styles = StyleSheet.create({
     backgroundImageContainer: {
         width: '100%',
     },
+    fixedBackgroundContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: SCREEN_HEIGHT * 0.45,
+        zIndex: -1,
+    },
+    fixedBackgroundImage: {
+        width: '100%',
+        height: '100%',
+        opacity: 0.3,
+    },
+    fixedGradientOverlay: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '50%',
+    },
     backgroundImage: {
         opacity: 0.3,
         resizeMode: 'cover',
@@ -294,6 +307,6 @@ const styles = StyleSheet.create({
         bottom: 0,
         height: '50%',
     },
-})
+});
 
 export default Home

@@ -142,26 +142,39 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                                     </View>
                                 </View>
                             </View>
-                            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                                <Ionicons name="close" size={28} color="#FFFFFF" />
-                            </TouchableOpacity>
+                            <View style={styles.headerActions}>
+                                <TouchableOpacity
+                                    style={styles.switchHeaderButton}
+                                    onPress={() => {
+                                        onClose()
+                                        setTimeout(() => router.push('/account-center'), 250)
+                                    }}
+                                >
+                                    <View style={styles.switchBadge}>
+                                        <Text style={styles.switchBadgeText}>Switch</Text>
+                                    </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                                    <Ionicons name="close" size={28} color="#FFFFFF" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <ScrollView style={styles.menuContent} contentContainerStyle={styles.menuContentContainer}>
                             <View style={styles.menuItems}>
+                                <Text style={styles.sectionTitle}>Account</Text>
                                 <TouchableOpacity
-                                    style={styles.switchButton}
+                                    style={styles.sidebarOption}
                                     onPress={() => {
                                         onClose()
-                                        // Delay to let the fade animation complete before switching screens
                                         setTimeout(() => {
-                                            router.push('/account-center' as any)
+                                            router.push('/manage-account' as any)
                                         }, 250)
                                     }}
                                 >
-                                    <View style={styles.switchButtonContent}>
-                                        <Ionicons name="swap-horizontal" size={20} color="#ffda34" />
-                                        <Text style={styles.switchButtonText}>Switch Wallet</Text>
+                                    <View style={styles.optionLeft}>
+                                        <Ionicons name="wallet-outline" size={22} color="#8B98A5" />
+                                        <Text style={styles.sidebarOptionText}>Manage</Text>
                                     </View>
                                 </TouchableOpacity>
 
@@ -283,9 +296,27 @@ const styles = StyleSheet.create({
     backButton: {
         padding: 4,
     },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    switchHeaderButton: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    switchBadge: {},
+    switchBadgeText: {
+        color: '#ffda34',
+        fontSize: 13,
+        fontWeight: '600',
+    },
     closeButton: {
         padding: 8,
-        marginLeft: 10,
     },
     walletInfo: {
         flexDirection: 'row',
@@ -327,21 +358,14 @@ const styles = StyleSheet.create({
     copyButton: {
         padding: 4,
     },
-    switchButton: {
-        alignSelf: 'flex-start',
-        paddingVertical: 8,
-        paddingHorizontal: 0,
-        marginBottom: 20,
-    },
-    switchButtonContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    switchButtonText: {
-        color: '#ffda34',
-        fontSize: 15,
-        fontWeight: '600',
+    sectionTitle: {
+        color: '#8B98A5',
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1.2,
+        marginTop: 24,
+        marginBottom: 12,
     },
     sidebarOption: {
         flexDirection: 'row',
@@ -350,6 +374,11 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         paddingHorizontal: 0,
         marginBottom: 8,
+    },
+    optionLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
     },
     sidebarOptionText: {
         color: '#FFFFFF',

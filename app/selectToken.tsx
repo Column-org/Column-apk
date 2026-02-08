@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Image, ActivityIndicator, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Image, Dimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useWallet } from '../context/WalletContext'
 import { getFungibleAssets, formatAssetBalance, FungibleAsset } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
+import { SkeletonLoader } from '../components/SkeletonLoader'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -61,8 +62,17 @@ export default function SelectToken() {
                 overScrollMode="never"
             >
                 {loading ? (
-                    <View style={styles.loadingContainer}>
-                        <Text style={styles.loadingText}>Loading tokens...</Text>
+                    <View style={styles.tokenList}>
+                        {[...Array(6)].map((_, index) => (
+                            <View key={index} style={styles.skeletonItem}>
+                                <SkeletonLoader width={40} height={40} borderRadius={20} />
+                                <View style={styles.skeletonInfo}>
+                                    <SkeletonLoader width="60%" height={16} style={{ marginBottom: 8 }} />
+                                    <SkeletonLoader width="40%" height={12} />
+                                </View>
+                                <SkeletonLoader width={60} height={16} />
+                            </View>
+                        ))}
                     </View>
                 ) : (
                     <View style={styles.tokenList}>
@@ -210,5 +220,17 @@ const styles = StyleSheet.create({
         color: '#8B98A5',
         fontSize: 16,
         marginTop: 16,
+    },
+    skeletonItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#222327',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    skeletonInfo: {
+        flex: 1,
+        marginLeft: 12,
     },
 })

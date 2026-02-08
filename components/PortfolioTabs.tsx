@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     container: {
         width: '100%',
         paddingHorizontal: 28,
-        marginTop: 10,
+        marginTop: 12,
         marginBottom: 8,
     },
     buttonsWrapper: {

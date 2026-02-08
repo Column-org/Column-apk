@@ -8,6 +8,8 @@ import { useSecurity } from '../context/SecurityContext'
 import * as Clipboard from 'expo-clipboard'
 import * as LocalAuthentication from 'expo-local-authentication'
 
+import { SecurityWarning } from '../components/SecurityWarning'
+
 export default function PrivateKeyScreen() {
     const router = useRouter()
     const { exportPrivateKey } = useWallet()
@@ -16,10 +18,12 @@ export default function PrivateKeyScreen() {
     const [privateKey, setPrivateKey] = useState<string>('')
     const [isLoading, setIsLoading] = useState(true)
     const [isVisible, setIsVisible] = useState(false)
+    const [showWarning, setShowWarning] = useState(true)
 
-    useEffect(() => {
+    const handleConfirmWarning = async () => {
+        setShowWarning(false)
         authenticateAndLoad()
-    }, [])
+    }
 
     const authenticateAndLoad = async () => {
         if (!isBiometricEnabled) {
@@ -72,6 +76,16 @@ export default function PrivateKeyScreen() {
         Alert.alert('Copied', 'Private key copied to clipboard.')
     }
 
+    if (showWarning) {
+        return (
+            <SecurityWarning
+                title="Private Key"
+                buttonText="Show Private Key"
+                onConfirm={handleConfirmWarning}
+            />
+        )
+    }
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -89,26 +103,22 @@ export default function PrivateKeyScreen() {
                     </Text>
                 </View>
 
-                {isLoading ? (
-                    <Text style={styles.loadingText}>Loading...</Text>
-                ) : (
-                    <View style={styles.keyContainer}>
-                        <Pressable
-                            style={styles.blurContainer}
-                            onPress={() => setIsVisible(!isVisible)}
-                        >
-                            <Text style={[styles.keyText, !isVisible && styles.blurredText]}>
-                                {isVisible ? privateKey : '•'.repeat(privateKey.length || 64)}
-                            </Text>
-                            {!isVisible && (
-                                <View style={styles.tapToReveal}>
-                                    <Ionicons name="eye-outline" size={24} color="#ffda34" />
-                                    <Text style={styles.tapToRevealText}>Tap to reveal</Text>
-                                </View>
-                            )}
-                        </Pressable>
-                    </View>
-                )}
+                <View style={styles.keyContainer}>
+                    <Pressable
+                        style={styles.blurContainer}
+                        onPress={() => privateKey && setIsVisible(!isVisible)}
+                    >
+                        <Text style={[styles.keyText, !isVisible && styles.blurredText]}>
+                            {isVisible ? privateKey : '•'.repeat(privateKey.length || 64)}
+                        </Text>
+                        {!isVisible && (
+                            <View style={styles.tapToReveal}>
+                                <Ionicons name="eye-outline" size={24} color="#ffda34" />
+                                <Text style={styles.tapToRevealText}>Tap to reveal</Text>
+                            </View>
+                        )}
+                    </Pressable>
+                </View>
 
                 <View style={styles.warningCard}>
                     <Ionicons name="warning-outline" size={24} color="#FFD60A" />

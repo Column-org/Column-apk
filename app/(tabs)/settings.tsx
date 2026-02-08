@@ -14,7 +14,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
 const Settings = () => {
-    const { logout: unifiedLogout, address } = useWallet()
+    const { logout: unifiedLogout, address, publicKey } = useWallet()
     const router = useRouter()
     const { t, i18n } = useTranslation()
     const [logoutModalVisible, setLogoutModalVisible] = React.useState(false)
@@ -187,6 +187,12 @@ const Settings = () => {
                                     <View style={styles.accountInfo}>
                                         <Text style={styles.accountLabel}>Wallet Address</Text>
                                         <Text style={styles.accountValue}>{address || 'No address connected'}</Text>
+                                    </View>
+                                    <View style={styles.accountInfo}>
+                                        <Text style={styles.accountLabel}>Public Key</Text>
+                                        <Text style={styles.accountValue}>
+                                            {publicKey ? `${publicKey.slice(0, 16)}...${publicKey.slice(-16)}` : 'N/A'}
+                                        </Text>
                                     </View>
                                 </View>
                             )}

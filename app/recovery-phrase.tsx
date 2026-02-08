@@ -8,6 +8,8 @@ import { useSecurity } from '../context/SecurityContext'
 import * as Clipboard from 'expo-clipboard'
 import * as LocalAuthentication from 'expo-local-authentication'
 
+import { SecurityWarning } from '../components/SecurityWarning'
+
 export default function RecoveryPhraseScreen() {
     const router = useRouter()
     const { exportSeedphrase } = useWallet()
@@ -15,10 +17,12 @@ export default function RecoveryPhraseScreen() {
     const { isBiometricEnabled } = useSecurity()
     const [mnemonic, setMnemonic] = useState<string[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [showWarning, setShowWarning] = useState(true)
 
-    useEffect(() => {
+    const handleConfirmWarning = async () => {
+        setShowWarning(false)
         authenticateAndLoad()
-    }, [])
+    }
 
     const authenticateAndLoad = async () => {
         if (!isBiometricEnabled) {
@@ -69,6 +73,16 @@ export default function RecoveryPhraseScreen() {
         Alert.alert('Copied', 'Recovery phrase copied to clipboard.')
     }
 
+    if (showWarning) {
+        return (
+            <SecurityWarning
+                title="Recovery Phrase"
+                buttonText="Show Recovery Phrase"
+                onConfirm={handleConfirmWarning}
+            />
+        )
+    }
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -86,18 +100,14 @@ export default function RecoveryPhraseScreen() {
                     </Text>
                 </View>
 
-                {isLoading ? (
-                    <Text style={styles.loadingText}>Loading...</Text>
-                ) : (
-                    <View style={styles.mnemonicContainer}>
-                        {mnemonic.map((word, index) => (
-                            <View key={index} style={styles.wordBadge}>
-                                <Text style={styles.wordIndex}>{index + 1}</Text>
-                                <Text style={styles.wordText}>{word}</Text>
-                            </View>
-                        ))}
-                    </View>
-                )}
+                <View style={styles.mnemonicContainer}>
+                    {(mnemonic.length > 0 ? mnemonic : Array(12).fill('••••••')).map((word, index) => (
+                        <View key={index} style={styles.wordBadge}>
+                            <Text style={styles.wordIndex}>{index + 1}</Text>
+                            <Text style={styles.wordText}>{word}</Text>
+                        </View>
+                    ))}
+                </View>
 
                 <View style={styles.warningCard}>
                     <Ionicons name="warning-outline" size={24} color="#FFD60A" />

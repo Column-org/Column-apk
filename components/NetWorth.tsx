@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useWallet } from '../context/WalletContext'
-import { getFungibleAssets, formatAssetBalance } from '../services/movementAssets'
+import { formatAssetBalance } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
-import { getMovePrice } from '../services/pythOracle'
 import { useBalanceVisibility } from '../context/BalanceVisibilityContext'
 import { SkeletonLoader } from './SkeletonLoader'
 import { useAssets } from '../hooks/useAssets'
+import { SYMBOL_TO_ID } from '../services/coinGecko'
 
 interface NetWorthProps {
     refreshKey?: number
@@ -15,7 +15,7 @@ interface NetWorthProps {
 
 export const NetWorth = ({ refreshKey }: NetWorthProps) => {
     const { isHidden, toggleVisibility } = useBalanceVisibility()
-    const { assets, movePrice, isLoading } = useAssets(refreshKey)
+    const { assets, prices, isLoading } = useAssets(refreshKey)
     const [totalValue, setTotalValue] = useState<number>(0)
     const [displayValue, setDisplayValue] = useState<number>(0)
     const [change24h, setChange24h] = useState<{ amount: number; percentage: number }>({ amount: 0, percentage: 0 })
@@ -24,40 +24,39 @@ export const NetWorth = ({ refreshKey }: NetWorthProps) => {
     useEffect(() => {
         if (!assets || assets.length === 0) {
             setTotalValue(0)
+            setChange24h({ amount: 0, percentage: 0 })
             return
         }
 
         let totalUsdValue = 0
+        let totalOldUsdValue = 0
 
         for (const asset of assets) {
-            const isMoveToken =
-                asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
-                asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
-                asset.metadata.name?.toLowerCase() === 'move coin' ||
-                asset.metadata.name?.toLowerCase() === 'movement'
+            const cgId = SYMBOL_TO_ID[asset.metadata.symbol.toUpperCase()]
+            const priceData = cgId ? prices[cgId] : null
 
-            if (isMoveToken && movePrice) {
+            if (priceData) {
                 const balance = parseFloat(formatAssetBalance(asset.amount, asset.metadata.decimals).replace(/,/g, ''))
-                totalUsdValue += balance * movePrice.price
+                const currentVal = balance * priceData.usd
+                totalUsdValue += currentVal
+
+                const oldPrice = priceData.usd / (1 + (priceData.usd_24h_change || 0) / 100)
+                totalOldUsdValue += balance * oldPrice
             }
         }
 
         setTotalValue(totalUsdValue)
 
-        if (movePrice?.priceChange24h) {
-            // For now, only MOVE contributes to 24h change
-            const moveBalance = assets
-                .filter((a: any) => a.metadata.symbol?.toUpperCase() === 'MOVE')
-                .reduce((acc: number, a: any) => acc + parseFloat(formatAssetBalance(a.amount, a.metadata.decimals).replace(/,/g, '')), 0)
+        const totalChangeAmount = totalUsdValue - totalOldUsdValue
+        const totalChangePercentage = totalOldUsdValue > 0
+            ? (totalChangeAmount / totalOldUsdValue) * 100
+            : 0
 
-            const oldPrice = movePrice.price / (1 + movePrice.priceChange24h / 100)
-            const changeAmount = (movePrice.price - oldPrice) * moveBalance
-            setChange24h({
-                amount: changeAmount,
-                percentage: movePrice.priceChange24h
-            })
-        }
-    }, [assets, movePrice])
+        setChange24h({
+            amount: totalChangeAmount,
+            percentage: totalChangePercentage
+        })
+    }, [assets, prices])
 
     // Animate the value from current display to new total
     useEffect(() => {

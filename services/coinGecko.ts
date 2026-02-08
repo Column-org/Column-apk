@@ -9,6 +9,21 @@ export interface PriceHistory {
   prices: number[][]
 }
 
+export const SYMBOL_TO_ID: Record<string, string> = {
+  'MOVE': 'movement',
+  'MOVEMENT': 'movement',
+  'USDC': 'usd-coin',
+  'USDC.E': 'usd-coin',
+  'USDT': 'tether',
+  'USDT.E': 'tether',
+  'BTC': 'bitcoin',
+  'ETH': 'ethereum',
+  'WETH': 'ethereum',
+  'WBTC': 'bitcoin',
+  'SOL': 'solana',
+  'APT': 'aptos',
+}
+
 export async function getMoveTokenPrice(): Promise<TokenPrice | null> {
   try {
     const response = await fetch(
@@ -21,7 +36,6 @@ export async function getMoveTokenPrice(): Promise<TokenPrice | null> {
     )
 
     if (!response.ok) {
-      // Silently fail on rate limits (429) or other errors
       return null
     }
 
@@ -36,8 +50,42 @@ export async function getMoveTokenPrice(): Promise<TokenPrice | null> {
 
     return null
   } catch (error) {
-    // Silently fail
     return null
+  }
+}
+
+export async function getBatchTokenPrices(ids: string[]): Promise<Record<string, TokenPrice>> {
+  if (ids.length === 0) return {}
+
+  try {
+    const uniqueIds = Array.from(new Set(ids)).join(',')
+    const response = await fetch(
+      `${COINGECKO_API}/simple/price?ids=${uniqueIds}&vs_currencies=usd&include_24hr_change=true`,
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    )
+
+    if (!response.ok) return {}
+
+    const data = await response.json()
+    const result: Record<string, TokenPrice> = {}
+
+    for (const id of ids) {
+      if (data[id]) {
+        result[id] = {
+          usd: data[id].usd,
+          usd_24h_change: data[id].usd_24h_change || 0
+        }
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.warn('Batch price fetch failed', error)
+    return {}
   }
 }
 
@@ -53,20 +101,17 @@ export async function getMoveTokenPriceHistory(days: number = 7): Promise<number
     )
 
     if (!response.ok) {
-      // Silently fail on rate limits (429) or other errors
       return []
     }
 
     const data: PriceHistory = await response.json()
 
     if (data.prices) {
-      // Return just the price values (second element of each array)
       return data.prices.map(([, price]) => price)
     }
 
     return []
   } catch (error) {
-    // Silently fail
     return []
   }
 }

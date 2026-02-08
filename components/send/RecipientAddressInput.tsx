@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { BlurView } from 'expo-blur'
 import { AddressBookService, Contact } from '../../services/AddressBookService'
 
 interface RecipientAddressInputProps {
@@ -84,8 +83,9 @@ export default function RecipientAddressInput({ recipientAddress, onChangeAddres
                     transparent={true}
                     animationType="slide"
                     onRequestClose={() => setIsContactModalVisible(false)}
+                    statusBarTranslucent={true}
                 >
-                    <BlurView intensity={80} tint="dark" style={styles.modalOverlay}>
+                    <View style={styles.modalOverlay}>
                         <Pressable style={styles.modalBackdrop} onPress={() => setIsContactModalVisible(false)} />
                         <View style={styles.modalContent}>
                             <View style={styles.modalHeader}>
@@ -121,7 +121,7 @@ export default function RecipientAddressInput({ recipientAddress, onChangeAddres
                                 )}
                             </ScrollView>
                         </View>
-                    </BlurView>
+                    </View>
                 </Modal>
             </View>
             {addressStatus && (
@@ -192,9 +192,11 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
+        backgroundColor: 'transparent',
     },
     modalBackdrop: {
         ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'transparent',
     },
     modalContent: {
         backgroundColor: '#121315',

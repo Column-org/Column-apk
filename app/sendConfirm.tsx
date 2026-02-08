@@ -6,7 +6,6 @@ import { FungibleAsset, formatAssetBalance } from '../services/movementAssets'
 import RecipientAddressInput from '../components/send/RecipientAddressInput'
 import TransactionSummary from '../components/send/TransactionSummary'
 import { AddressBookService, Contact } from '../services/AddressBookService'
-import { BlurView } from 'expo-blur'
 
 const EMOJIS = ['👤', '💼', '🏠', '🏦', '🦊', '🐼', '🐱', '🐶', '🦄', '🌟'];
 
@@ -140,8 +139,9 @@ export default function SendConfirm() {
                     transparent={true}
                     animationType="slide"
                     onRequestClose={() => setIsSaveModalVisible(false)}
+                    statusBarTranslucent={true}
                 >
-                    <BlurView intensity={80} tint="dark" style={styles.modalOverlay}>
+                    <View style={styles.modalOverlay}>
                         <Pressable style={styles.modalBackdrop} onPress={() => setIsSaveModalVisible(false)} />
                         <View style={styles.modalContent}>
                             <View style={styles.modalHeader}>
@@ -181,7 +181,7 @@ export default function SendConfirm() {
                                 <Text style={styles.saveButtonText}>Save Contact</Text>
                             </TouchableOpacity>
                         </View>
-                    </BlurView>
+                    </View>
                 </Modal>
             </ScrollView>
         </View>
@@ -256,9 +256,11 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
+        backgroundColor: 'transparent',
     },
     modalBackdrop: {
         ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'transparent',
     },
     modalContent: {
         backgroundColor: '#121315',

@@ -10,8 +10,9 @@ import { SkeletonLoader } from './SkeletonLoader'
 import { EmptyWalletState } from './EmptyWalletState'
 import { ProjectItem } from './ProjectItem'
 import { useAssets } from '../hooks/useAssets'
+import { SYMBOL_TO_ID } from '../services/coinGecko'
 
-const SwipeableToken = ({ icon, name, amount, value, iconUri, priceHistory, tokenPrice, isOpen, onOpen, onClose, asset, isHidden }: any) => {
+const SwipeableToken = ({ name, amount, value, iconUri, tokenPrice, isOpen, onOpen, onClose, asset, isHidden }: any) => {
     const router = useRouter()
     const [translateX] = useState(new Animated.Value(0))
     const [imageError, setImageError] = useState(false)
@@ -88,35 +89,25 @@ const SwipeableToken = ({ icon, name, amount, value, iconUri, priceHistory, toke
                     <Image
                         source={{ uri: iconUri }}
                         style={styles.assetIcon}
-                        onError={(e) => {
-                            console.log('Image load error for:', iconUri, e.nativeEvent.error)
-                            setImageError(true)
-                        }}
+                        onError={() => setImageError(true)}
                     />
                 ) : (
                     <View style={[
                         styles.assetIconPlaceholder,
-                        name?.toLowerCase().includes('move') && styles.moveIconStyle
+                        (name?.toLowerCase().includes('move') || name?.toLowerCase() === 'movement') && styles.moveIconStyle
                     ]}>
                         <Text style={styles.assetIconText}>{name?.charAt(0) || '?'}</Text>
                     </View>
                 )}
                 <View style={styles.watchlistDetails}>
-                    <Text style={styles.watchlistName}>{name}</Text>
-                    {(name?.toLowerCase() === 'move coin' || name?.toLowerCase() === 'movement') && tokenPrice && (
-                        <Text style={styles.movePriceText}>{isHidden ? '••••' : `$${tokenPrice.toFixed(4)}`}</Text>
-                    )}
+                    <Text style={styles.watchlistName} numberOfLines={1}>{name}</Text>
+                    <Text style={styles.movePriceText}>{isHidden ? '••••' : `$${(tokenPrice || 0).toFixed(4)}`}</Text>
                 </View>
                 <View style={styles.watchlistRight}>
-                    {name?.toLowerCase() !== 'move coin' && name?.toLowerCase() !== 'movement' && (
+                    <View style={styles.moveRightSection}>
                         <Text style={styles.watchlistValue}>{isHidden ? '••••' : value}</Text>
-                    )}
-                    {(name?.toLowerCase() === 'move coin' || name?.toLowerCase() === 'movement') && (
-                        <View style={styles.moveRightSection}>
-                            <Text style={styles.watchlistValue}>{isHidden ? '••••' : value}</Text>
-                            <Text style={styles.moveBalanceText}>{isHidden ? '••••' : amount}</Text>
-                        </View>
-                    )}
+                        <Text style={styles.moveBalanceText}>{isHidden ? '••••' : amount}</Text>
+                    </View>
                 </View>
             </Animated.View>
         </View>
@@ -132,8 +123,7 @@ interface TokenListProps {
 
 export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMode = 'tokens' }: TokenListProps) => {
     const { isHidden } = useBalanceVisibility()
-    const { assets, movePrice, isLoading, refetch } = useAssets(refreshKey)
-    const [movePriceHistory, setMovePriceHistory] = useState<number[]>([])
+    const { assets, prices, isLoading, refetch } = useAssets(refreshKey)
     const [openTokenIndex, setOpenTokenIndex] = useState<number | null>(null)
 
     // Sync refetch function with parent
@@ -241,34 +231,25 @@ export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMod
                     })
                     .map((asset, index) => {
                         const formattedBalance = formatAssetBalance(asset.amount, asset.metadata.decimals)
+                        const symbol = asset.metadata.symbol.toUpperCase()
+                        const cgId = SYMBOL_TO_ID[symbol]
+                        const priceData = cgId ? prices[cgId] : null
 
-                        // Check if this is MOVE token (by asset type OR by name/symbol)
-                        const isMoveToken =
-                            asset.asset_type === '0x1::aptos_coin::AptosCoin' ||
-                            asset.metadata.symbol?.toUpperCase() === 'MOVE' ||
-                            asset.metadata.name?.toLowerCase() === 'move coin' ||
-                            asset.metadata.name?.toLowerCase() === 'movement'
+                        const balanceNum = parseFloat(formattedBalance.replace(/,/g, ''))
+                        const unitPrice = priceData?.usd || 0
+                        const usdValue = balanceNum * unitPrice
 
-                        // Calculate USD value for MOVE token
-                        let displayValue = formattedBalance
-                        let displayAmount = `${formattedBalance} ${asset.metadata.symbol}`
-
-                        if (isMoveToken && movePrice) {
-                            const usdValue = parseFloat(formattedBalance.replace(/,/g, '')) * movePrice.price
-                            displayValue = `$${usdValue.toFixed(2)}`
-                            displayAmount = formattedBalance // Remove "MOVE" text for Move Coin
-                        }
+                        const isMoveToken = symbol === 'MOVE' || symbol === 'MOVEMENT'
 
                         return (
                             <SwipeableToken
                                 key={`${asset.asset_type}-${index}`}
                                 name={asset.metadata.name}
-                                amount={displayAmount}
+                                amount={isMoveToken ? formattedBalance : `${formattedBalance} ${symbol}`}
                                 asset={asset}
-                                value={displayValue}
+                                value={`$${usdValue.toFixed(2)}`}
                                 iconUri={asset.metadata.icon_uri}
-                                priceHistory={isMoveToken ? movePriceHistory : null}
-                                tokenPrice={isMoveToken && movePrice ? movePrice.price : null}
+                                tokenPrice={unitPrice}
                                 isOpen={openTokenIndex === index}
                                 onOpen={() => setOpenTokenIndex(index)}
                                 onClose={() => setOpenTokenIndex(null)}

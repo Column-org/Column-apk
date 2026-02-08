@@ -3,15 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Alert,
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
-import { FungibleAsset, getFungibleAssets } from '../services/movementAssets'
+import { FungibleAsset, getFungibleAssets, formatAssetBalance } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
-import TokenSelector from '../components/send/TokenSelector'
-import AmountInput from '../components/send/AmountInput'
-import CodeTransferForm from '../components/send/CodeTransferForm'
 import { createFATransferWithCode, createMoveTransferWithCode } from '../services/movement_service/sendWithCode'
-import { addPendingClaim } from '../services/pendingClaims'
 import AlertModal from '../components/AlertModal'
 import { useWallet } from '../context/WalletContext'
+import TokenSelector from '../components/send/TokenSelector'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -22,49 +19,45 @@ export default function Send() {
     const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
     const params = useLocalSearchParams()
+
     const [sendMode, setSendMode] = useState<'address' | 'code'>('address')
     const [selectedToken, setSelectedToken] = useState<FungibleAsset | null>(null)
     const [amount, setAmount] = useState('')
-    const [displayAmount, setDisplayAmount] = useState('')
-    const [expirationHours, setExpirationHours] = useState('24')
     const [isSubmittingCode, setIsSubmittingCode] = useState(false)
     const [generatedCode, setGeneratedCode] = useState<string | null>(null)
+    const [expirationHours, setExpirationHours] = useState('24')
+
     const [alertModal, setAlertModal] = useState<{
         visible: boolean
         type: 'success' | 'error' | 'info'
         title: string
         message: string
-        details?: string[]
     }>({
         visible: false,
         type: 'success',
         title: '',
         message: '',
     })
+
     const hasInitialized = useRef(false)
 
-
-    // Listen for selected token from params FIRST (higher priority)
     useEffect(() => {
         if (params.token) {
             try {
                 const token = JSON.parse(params.token as string)
-                console.log('Setting selected token from params:', token.metadata.symbol)
                 setSelectedToken(token)
-                hasInitialized.current = true // Mark as initialized when token is selected
+                hasInitialized.current = true
             } catch (error) {
                 console.error('Error parsing token:', error)
             }
         }
     }, [params.token])
 
-    // Fetch assets when wallet is available and set first as default (only once, and only if no token from params)
     useEffect(() => {
         const fetchAssets = async () => {
             if (walletAddress && !hasInitialized.current && !params.token) {
                 try {
                     const fetchedAssets = await getFungibleAssets(walletAddress, network)
-                    // Set first asset as default if none selected
                     if (fetchedAssets.length > 0) {
                         setSelectedToken(fetchedAssets[0])
                         hasInitialized.current = true
@@ -77,264 +70,205 @@ export default function Send() {
         fetchAssets()
     }, [walletAddress, params.token, network])
 
-    // Handle number pad input
-    const handleNumberPress = (num: string) => {
-        if (num === 'CLEAR') {
-            setAmount('')
-            setDisplayAmount('')
-        } else if (num === '.') {
+    const handleKeypadPress = (val: string) => {
+        if (val === 'backspace') {
+            setAmount(prev => prev.slice(0, -1))
+        } else if (val === '.') {
             if (!amount.includes('.')) {
-                const newAmount = amount + num
-                setAmount(newAmount)
-                setDisplayAmount(newAmount)
+                setAmount(prev => prev + '.')
             }
-        } else if (num === 'DELETE') {
-            const newAmount = amount.slice(0, -1)
-            setAmount(newAmount)
-            setDisplayAmount(newAmount)
         } else {
-            const newAmount = amount + num
-            setAmount(newAmount)
-            setDisplayAmount(newAmount)
+            // Prevent leading zeros if not followed by a dot
+            if (amount === '0' && val !== '.') {
+                setAmount(val)
+            } else {
+                setAmount(prev => prev + val)
+            }
         }
     }
 
-    useEffect(() => {
-        if (sendMode === 'address' && generatedCode) {
-            setGeneratedCode(null)
-        }
-    }, [sendMode, generatedCode])
+    const setPercentage = (pct: number) => {
+        if (!selectedToken) return
+        const fullBalance = parseFloat(formatAssetBalance(selectedToken.amount, selectedToken.metadata.decimals).replace(/,/g, ''))
+        const val = (fullBalance * pct).toFixed(selectedToken.metadata.decimals)
+        setAmount(val.replace(/\.?0+$/, '')) // Clean up trailing zeros
+    }
 
     const buildSignHash = useCallback(() => {
-        if (!walletPublicKey) {
-            throw new Error('Wallet public key not available')
-        }
-
+        if (!walletPublicKey) throw new Error('Wallet public key not available')
         return async (address: string, hash: string) => {
             const { signature } = await web3SignRawHash(hash as any)
-
-            if (!signature) {
-                throw new Error('No signature returned from signing function')
-            }
-
-            return {
-                data: {
-                    signature,
-                    public_key: walletPublicKey,
-                },
-            }
+            if (!signature) throw new Error('No signature returned')
+            return { data: { signature, public_key: walletPublicKey } }
         }
     }, [web3SignRawHash, walletPublicKey])
 
     const handleCreateCodeTransfer = useCallback(async () => {
-        if (!walletAddress) {
-            Alert.alert('No Wallet', 'Connect your Movement wallet before creating a transfer.')
-            return
-        }
-
-        if (!selectedToken) {
-            Alert.alert('Select Token', 'Choose a token to send with a claim code.')
-            return
-        }
-
-        const parsedAmount = parseFloat(displayAmount)
-        if (!parsedAmount || parsedAmount <= 0) {
-            Alert.alert('Invalid amount', 'Enter a valid amount greater than zero.')
-            return
-        }
-
-        const parsedExpiration = parseFloat(expirationHours)
-        if (!parsedExpiration || parsedExpiration <= 0) {
-            Alert.alert('Invalid expiration', 'Enter a valid expiration time in hours.')
-            return
-        }
+        if (!walletAddress || !selectedToken) return
+        const parsedAmount = parseFloat(amount)
+        if (!parsedAmount || parsedAmount <= 0) return
 
         try {
             const signHash = buildSignHash()
-            const expirationSeconds = Math.floor(parsedExpiration * 3600)
-
             setIsSubmittingCode(true)
-            const result =
-                selectedToken.asset_type === '0x1::aptos_coin::AptosCoin'
-                    ? await createMoveTransferWithCode(
-                        {
-                            senderAddress: walletAddress,
-                            amount: displayAmount,
-                            expirationSeconds,
-                        },
-                        signHash,
-                        network
-                    )
-                    : await createFATransferWithCode(
-                        {
-                            senderAddress: walletAddress,
-                            assetType: selectedToken.asset_type,
-                            amount: displayAmount,
-                            decimals: selectedToken.metadata.decimals,
-                            expirationSeconds,
-                        },
-                        signHash,
-                        network
-                    )
-
-            if (!result.success || !result.transactionHash) {
-                throw new Error(result.error || 'Transaction failed')
-            }
-
-            setGeneratedCode(result.code || null)
-            setAmount('')
-            setDisplayAmount('')
-
-            if (result.code) {
-                const normalizedCode = result.code.toLowerCase()
-                await addPendingClaim(walletAddress, {
-                    code: normalizedCode,
-                    type: selectedToken.asset_type === '0x1::aptos_coin::AptosCoin' ? 'move' : 'fa',
-                    tokenSymbol: selectedToken.metadata.symbol,
-                    tokenName: selectedToken.metadata.name,
-                    amountDisplay: displayAmount,
-                    sender: walletAddress,
-                    network,
-                    assetMetadata: selectedToken.asset_type,
+            const result = selectedToken.asset_type === '0x1::aptos_coin::AptosCoin'
+                ? await createMoveTransferWithCode({ senderAddress: walletAddress, amount, expirationSeconds: 86400 }, signHash, network)
+                : await createFATransferWithCode({
+                    senderAddress: walletAddress,
+                    assetType: selectedToken.asset_type,
+                    amount,
                     decimals: selectedToken.metadata.decimals,
-                    createdAt: Math.floor(Date.now() / 1000),
-                    expiration: Math.floor(Date.now() / 1000) + expirationSeconds,
-                    savedAt: Date.now(),
-                })
+                    expirationSeconds: 86400
+                }, signHash, network)
 
-                // Navigate to claim code page
+            if (result.success && result.code) {
                 router.push({
                     pathname: '/claimCode',
-                    params: {
-                        code: result.code,
-                        tokenName: selectedToken.metadata.name,
-                        tokenSymbol: selectedToken.metadata.symbol,
-                        amount: displayAmount,
-                    },
+                    params: { code: result.code, tokenSymbol: selectedToken.metadata.symbol, amount }
                 })
             }
         } catch (error) {
-            setAlertModal({
-                visible: true,
-                type: 'error',
-                title: 'Failed',
-                message: '',
-            })
+            setAlertModal({ visible: true, type: 'error', title: 'Failed', message: 'Transfer failed' })
         } finally {
             setIsSubmittingCode(false)
         }
-    }, [walletAddress, selectedToken, displayAmount, expirationHours, network, buildSignHash])
+    }, [walletAddress, selectedToken, amount, network, buildSignHash])
+
+    const renderKeypad = () => (
+        <View style={styles.keypad}>
+            <View style={styles.keypadRow}>
+                {['1', '2', '3'].map(k => (
+                    <TouchableOpacity key={k} style={styles.key} onPress={() => handleKeypadPress(k)}>
+                        <Text style={styles.keyText}>{k}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+            <View style={styles.keypadRow}>
+                {['4', '5', '6'].map(k => (
+                    <TouchableOpacity key={k} style={styles.key} onPress={() => handleKeypadPress(k)}>
+                        <Text style={styles.keyText}>{k}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+            <View style={styles.keypadRow}>
+                {['7', '8', '9'].map(k => (
+                    <TouchableOpacity key={k} style={styles.key} onPress={() => handleKeypadPress(k)}>
+                        <Text style={styles.keyText}>{k}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+            <View style={styles.keypadRow}>
+                <TouchableOpacity style={styles.key} onPress={() => handleKeypadPress('.')}>
+                    <Text style={styles.keyText}>.</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.key} onPress={() => handleKeypadPress('0')}>
+                    <Text style={styles.keyText}>0</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.key} onPress={() => handleKeypadPress('backspace')}>
+                    <Ionicons name="backspace-outline" size={24} color="white" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#121315" />
+            <StatusBar barStyle="light-content" />
 
-            <ScrollView
-                style={styles.scrollView}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ flexGrow: 1 }}
-                removeClippedSubviews={true}
-                overScrollMode="never"
-            >
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-                        <Ionicons name="close" size={28} color="white" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{t('send.title')}</Text>
-                    <TouchableOpacity
-                        onPress={() => router.push('/cancelTransfer')}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="close-circle-outline" size={28} color="#EF4444" />
-                    </TouchableOpacity>
-                </View>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+                    <Ionicons name="chevron-back" size={24} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{t('send.title')}</Text>
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+                    <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
+            </View>
 
+            {/* Content */}
+            <View style={styles.mainContent}>
+                {/* Mode Selector */}
                 <View style={styles.tabContainer}>
                     <TouchableOpacity
                         style={[styles.tab, sendMode === 'address' && styles.activeTab]}
                         onPress={() => setSendMode('address')}
-                        activeOpacity={0.7}
                     >
-                        <Text style={[styles.tabText, sendMode === 'address' && styles.activeTabText]}>
-                            Address
-                        </Text>
+                        <Text style={[styles.tabText, sendMode === 'address' && styles.activeTabText]}>Address</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.tab, sendMode === 'code' && styles.activeTab]}
                         onPress={() => setSendMode('code')}
-                        activeOpacity={0.7}
                     >
-                        <Text style={[styles.tabText, sendMode === 'code' && styles.activeTabText]}>
-                            Code
-                        </Text>
+                        <Text style={[styles.tabText, sendMode === 'code' && styles.activeTabText]}>Code</Text>
                     </TouchableOpacity>
                 </View>
 
-                {sendMode === 'address' ? (
-                    <>
-                        <TokenSelector
-                            selectedToken={selectedToken}
-                            onPress={() => router.push('/selectToken')}
-                        />
+                <TokenSelector
+                    selectedToken={selectedToken}
+                    onPress={() => router.push('/selectToken')}
+                />
 
-                        <AmountInput
-                            displayAmount={displayAmount}
-                            selectedToken={selectedToken}
-                            onChangeAmount={(text) => {
-                                setAmount(text)
-                                setDisplayAmount(text)
-                            }}
-                        />
+                {/* Amount Section */}
+                <View style={styles.amountArea}>
+                    <TouchableOpacity style={styles.tokenDisplay} onPress={() => router.push('/selectToken')}>
+                        <Text style={styles.amountValueText}>
+                            {amount || '0'} <Text style={styles.symbolText}>{selectedToken?.metadata.symbol}</Text>
+                        </Text>
+                    </TouchableOpacity>
 
-                        <View style={styles.buttonContainer}>
+                    <View style={styles.usdPill}>
+                        <Text style={styles.usdText}>$ 0.00</Text>
+                        <Ionicons name="swap-vertical" size={14} color="#8B98A5" />
+                    </View>
+
+                    <Text style={styles.availableText}>
+                        {selectedToken ? formatAssetBalance(selectedToken.amount, selectedToken.metadata.decimals) : '0'} {selectedToken?.metadata.symbol} available
+                    </Text>
+                </View>
+
+                {/* Interactions */}
+                <View style={styles.bottomArea}>
+                    {/* Percentage buttons */}
+                    <View style={styles.percentageRow}>
+                        {[0.25, 0.5, 0.75, 1].map((pct, idx) => (
                             <TouchableOpacity
-                                style={[
-                                    styles.sendButton,
-                                    (!selectedToken || !displayAmount || parseFloat(displayAmount) <= 0) &&
-                                    styles.sendButtonDisabled,
-                                ]}
-                                activeOpacity={0.7}
-                                disabled={!selectedToken || !displayAmount || parseFloat(displayAmount) <= 0}
-                                onPress={() => {
-                                    if (!selectedToken) return
-
-                                    router.push({
-                                        pathname: '/sendConfirm',
-                                        params: {
-                                            token: JSON.stringify(selectedToken),
-                                            amount: displayAmount,
-                                        },
-                                    })
-                                }}
+                                key={idx}
+                                style={styles.pctBtn}
+                                onPress={() => setPercentage(pct)}
                             >
-                                <Text style={styles.sendButtonText}>Next</Text>
+                                <Text style={styles.pctText}>{pct === 1 ? 'Max' : `${pct * 100}%`}</Text>
                             </TouchableOpacity>
-                        </View>
-                    </>
-                ) : (
-                    <CodeTransferForm
-                        selectedToken={selectedToken}
-                        onSelectToken={() => router.push('/selectToken')}
-                        displayAmount={displayAmount}
-                        onChangeAmount={(text) => {
-                            setAmount(text)
-                            setDisplayAmount(text)
+                        ))}
+                    </View>
+
+                    {renderKeypad()}
+
+                    {/* Submit Button */}
+                    <TouchableOpacity
+                        style={[styles.nextBtn, (!amount || parseFloat(amount) <= 0) && styles.nextBtnDisabled]}
+                        disabled={!amount || parseFloat(amount) <= 0}
+                        onPress={() => {
+                            if (sendMode === 'address') {
+                                router.push({
+                                    pathname: '/sendConfirm',
+                                    params: { token: JSON.stringify(selectedToken), amount }
+                                })
+                            } else {
+                                handleCreateCodeTransfer()
+                            }
                         }}
-                        expirationHours={expirationHours}
-                        onChangeExpiration={setExpirationHours}
-                        onSubmit={handleCreateCodeTransfer}
-                        isSubmitting={isSubmittingCode}
-                        generatedCode={generatedCode}
-                    />
-                )}
-            </ScrollView>
+                    >
+                        <Text style={styles.nextBtnText}>{sendMode === 'address' ? 'Next' : 'Create Link'}</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
 
             <AlertModal
                 visible={alertModal.visible}
                 type={alertModal.type}
                 title={alertModal.title}
                 message={alertModal.message}
-                details={alertModal.details}
                 onClose={() => setAlertModal({ ...alertModal, visible: false })}
             />
         </View>
@@ -346,48 +280,43 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#121315',
     },
-    scrollView: {
-        flex: 1,
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
         paddingTop: IS_SMALL_SCREEN ? 16 : 50,
-        paddingBottom: 10,
+        paddingBottom: 16,
+    },
+    headerBtn: {
+        padding: 8,
     },
     headerTitle: {
         color: 'white',
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
     },
-    headerIcons: {
-        flexDirection: 'row',
-        gap: 12,
-        alignItems: 'center',
-    },
-    iconButton: {
-        padding: 4,
+    mainContent: {
+        flex: 1,
+        justifyContent: 'space-between',
+        paddingBottom: 20,
     },
     tabContainer: {
         flexDirection: 'row',
+        backgroundColor: '#1C1D21',
         marginHorizontal: 80,
-        marginTop: 20,
-        marginBottom: 30,
-        backgroundColor: '#222327',
-        borderRadius: 10,
-        padding: 3,
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 20,
     },
     tab: {
         flex: 1,
         paddingVertical: 8,
-        borderRadius: 8,
         alignItems: 'center',
-        backgroundColor: 'transparent',
+        borderRadius: 8,
     },
     activeTab: {
-        backgroundColor: '#121315',
+        backgroundColor: '#2A2B30',
     },
     tabText: {
         color: '#8B98A5',
@@ -397,68 +326,106 @@ const styles = StyleSheet.create({
     activeTabText: {
         color: 'white',
     },
-    amountInputContainer: {
-        width: '100%',
-        marginTop: 20,
+    amountArea: {
+        alignItems: 'center',
+        flex: 1,
+        justifyContent: 'center',
+        paddingTop: 20,
     },
-    amountInput: {
-        backgroundColor: '#222327',
-        borderRadius: 12,
-        padding: 16,
-        color: 'white',
-        fontSize: 24,
-        fontWeight: '600',
+    tokenDisplay: {
+        paddingVertical: 10,
+    },
+    amountValueText: {
+        color: '#FFFFFF',
+        fontSize: 64,
+        fontWeight: '700',
         textAlign: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
-    addressInputContainer: {
-        width: '100%',
-        marginTop: 20,
-    },
-    inputLabel: {
+    symbolText: {
         color: '#8B98A5',
-        fontSize: 14,
-        marginBottom: 8,
+        fontSize: 48,
         fontWeight: '500',
     },
-    addressTextInput: {
+    usdPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: '#222327',
-        borderRadius: 12,
-        padding: 16,
-        color: 'white',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 6,
+        marginTop: 12,
+    },
+    usdText: {
+        color: '#8B98A5',
         fontSize: 14,
-        minHeight: 80,
-        textAlignVertical: 'top',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        fontWeight: '600',
     },
-    codeTextInput: {
-        backgroundColor: '#222327',
-        borderRadius: 12,
-        padding: 16,
-        color: 'white',
-        fontSize: 16,
-        textAlign: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+    availableText: {
+        color: '#8B98A5',
+        fontSize: 15,
+        marginTop: 32,
+        fontWeight: '500',
     },
-    buttonContainer: {
+    bottomArea: {
+        width: '100%',
+    },
+    percentageRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 24,
         paddingHorizontal: 20,
-        paddingBottom: 20,
     },
-    sendButton: {
-        backgroundColor: '#ffda34',
-        paddingVertical: 16,
+    pctBtn: {
+        backgroundColor: '#222327',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         borderRadius: 12,
+        minWidth: 70,
         alignItems: 'center',
     },
-    sendButtonText: {
-        color: '#121315',
-        fontSize: 16,
+    pctText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    keypad: {
+        paddingHorizontal: 0,
+        marginBottom: 10,
+    },
+    keypadRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    key: {
+        flex: 1,
+        aspectRatio: 2.5,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 2,
+    },
+    keyText: {
+        color: 'white',
+        fontSize: 26,
+        fontWeight: '500',
+    },
+    nextBtn: {
+        backgroundColor: '#ffda34',
+        marginHorizontal: 20,
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    nextBtnText: {
+        color: '#000000',
+        fontSize: 18,
         fontWeight: '700',
     },
-    sendButtonDisabled: {
-        backgroundColor: '#3A3F4A',
+    nextBtnDisabled: {
+        backgroundColor: '#222327',
+        opacity: 0.5,
     },
 })
