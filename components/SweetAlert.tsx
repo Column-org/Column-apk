@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     },
     container: {
         width: Math.min(width * 0.85, 340),
-        backgroundColor: '#1A1F28',
+        backgroundColor: '#121315',
         borderRadius: 24,
         overflow: 'hidden',
         borderWidth: 1,

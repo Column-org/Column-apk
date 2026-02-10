@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { FungibleAsset, getFungibleAssets, formatAssetBalance } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
 import { createFATransferWithCode, createMoveTransferWithCode } from '../services/movement_service/sendWithCode'
-import AlertModal from '../components/AlertModal'
+import { useToast } from '../context/ToastContext'
 import { useWallet } from '../context/WalletContext'
 import TokenSelector from '../components/send/TokenSelector'
 
@@ -27,17 +27,7 @@ export default function Send() {
     const [generatedCode, setGeneratedCode] = useState<string | null>(null)
     const [expirationHours, setExpirationHours] = useState('24')
 
-    const [alertModal, setAlertModal] = useState<{
-        visible: boolean
-        type: 'success' | 'error' | 'info'
-        title: string
-        message: string
-    }>({
-        visible: false,
-        type: 'success',
-        title: '',
-        message: '',
-    })
+    const toast = useToast()
 
     const hasInitialized = useRef(false)
 
@@ -48,10 +38,11 @@ export default function Send() {
                 setSelectedToken(token)
                 hasInitialized.current = true
             } catch (error) {
-                console.error('Error parsing token:', error)
+                console.error('Send error:', error)
+                toast.show('Send Failed', { data: { message: error instanceof Error ? error.message : 'Unknown error' }, type: 'error' })
             }
         }
-    }, [params.token])
+    }, [params.token, toast])
 
     useEffect(() => {
         const fetchAssets = async () => {
@@ -122,17 +113,21 @@ export default function Send() {
                 }, signHash, network)
 
             if (result.success && result.code) {
+                toast.show('Success', { data: { message: 'Transfer code created!' }, type: 'success' })
                 router.push({
                     pathname: '/claimCode',
                     params: { code: result.code, tokenSymbol: selectedToken.metadata.symbol, amount }
                 })
+            } else {
+                toast.show('Failed', { data: { message: 'Transfer failed: No code generated.' }, type: 'error' })
             }
         } catch (error) {
-            setAlertModal({ visible: true, type: 'error', title: 'Failed', message: 'Transfer failed' })
+            console.error('Error creating code transfer:', error)
+            toast.show('Failed', { data: { message: error instanceof Error ? error.message : 'Transfer failed' }, type: 'error' })
         } finally {
             setIsSubmittingCode(false)
         }
-    }, [walletAddress, selectedToken, amount, network, buildSignHash])
+    }, [walletAddress, selectedToken, amount, network, buildSignHash, router, toast])
 
     const renderKeypad = () => (
         <View style={styles.keypad}>
@@ -249,6 +244,18 @@ export default function Send() {
                         style={[styles.nextBtn, (!amount || parseFloat(amount) <= 0) && styles.nextBtnDisabled]}
                         disabled={!amount || parseFloat(amount) <= 0}
                         onPress={() => {
+                            if (!selectedToken) {
+                                toast.show('Error', { data: { message: 'Please select a token.' }, type: 'error' })
+                                return
+                            }
+                            if (!amount || parseFloat(amount) <= 0) {
+                                toast.show('Error', { data: { message: 'Please enter a valid amount.' }, type: 'error' })
+                                return
+                            }
+                            if (!walletAddress) {
+                                toast.show('Error', { data: { message: 'Wallet not connected.' }, type: 'error' })
+                                return
+                            }
                             if (sendMode === 'address') {
                                 router.push({
                                     pathname: '/sendConfirm',
@@ -264,13 +271,7 @@ export default function Send() {
                 </View>
             </View>
 
-            <AlertModal
-                visible={alertModal.visible}
-                type={alertModal.type}
-                title={alertModal.title}
-                message={alertModal.message}
-                onClose={() => setAlertModal({ ...alertModal, visible: false })}
-            />
+
         </View>
     )
 }

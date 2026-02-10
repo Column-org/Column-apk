@@ -37,7 +37,7 @@ export interface TransactionHistoryResult {
 /**
  * Fetch token metadata from Mosaic API
  */
-async function getTokenMetadata(tokenAddress: string): Promise<{ symbol: string; decimals: number; logoURI?: string } | null> {
+export async function getTokenMetadata(tokenAddress: string): Promise<{ symbol: string; decimals: number; logoURI?: string } | null> {
   // Check cache first
   if (tokenMetadataCache[tokenAddress]) {
     return tokenMetadataCache[tokenAddress]
@@ -243,13 +243,15 @@ export async function getTransactionHistory(
   network: MovementNetwork,
   options: { limit?: number; start?: number } = {}
 ): Promise<TransactionHistoryResult> {
-  const { limit = 25, start = 0 } = options
+  const { limit = 25, start } = options
   const rpcUrl = NETWORK_CONFIGS[network].rpcUrl
 
   try {
-    const response = await fetch(
-      `${rpcUrl}/accounts/${walletAddress}/transactions?limit=${limit}&start=${start}`
-    )
+    let url = `${rpcUrl}/accounts/${walletAddress}/transactions?limit=${limit}`
+    if (start !== undefined) {
+      url += `&start=${start}`
+    }
+    const response = await fetch(url)
 
     if (!response.ok) {
       if (response.status === 404) {

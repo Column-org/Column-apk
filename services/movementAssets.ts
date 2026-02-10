@@ -144,13 +144,16 @@ async function fetchNativeMoveBalance(walletAddress: string, network: MovementNe
       return null
     }
 
+    // Standardize decimals: 8 for MOVE (Aptos/Movement standard)
+    const decimals = 8
+
     return {
       asset_type: '0x1::aptos_coin::AptosCoin',
       amount: balance.toString(),
       metadata: {
         name: 'Movement',
         symbol: 'MOVE',
-        decimals: 8,
+        decimals,
         icon_uri: MOVE_ICON_FALLBACK,
       },
     } as FungibleAsset

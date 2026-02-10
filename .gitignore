@@ -42,3 +42,8 @@ expo-backend/.env
 # generated native folders
 /ios
 /android
+
+# local development
+example/
+SDK/
+

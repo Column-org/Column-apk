@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Clipboard from 'expo-clipboard'
 
@@ -67,11 +67,7 @@ export default function AlertModal({
             onRequestClose={onClose}
             statusBarTranslucent
         >
-            <TouchableOpacity
-                style={styles.overlay}
-                activeOpacity={1}
-                onPress={onClose}
-            >
+            <View style={styles.overlay}>
                 <Animated.View
                     style={[
                         styles.content,
@@ -83,7 +79,7 @@ export default function AlertModal({
                     <View style={styles.row}>
                         <Ionicons
                             name={type === 'success' ? 'checkmark-circle' : type === 'error' ? 'close-circle' : 'information-circle'}
-                            size={32}
+                            size={28}
                             color={type === 'success' ? '#34C759' : type === 'error' ? '#EF4444' : '#ffda34'}
                         />
                         <View style={styles.textContainer}>
@@ -107,7 +103,7 @@ export default function AlertModal({
                         </View>
                     </View>
                 </Animated.View>
-            </TouchableOpacity>
+            </View>
         </Modal>
     )
 }
@@ -115,74 +111,74 @@ export default function AlertModal({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        alignItems: 'center',
     },
     content: {
-        backgroundColor: '#1A1F28',
-        minWidth: 280,
-        maxWidth: '90%',
-        minHeight: 70,
+        backgroundColor: '#121315',
+        minWidth: 300,
+        maxWidth: '92%',
         paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderRadius: 16,
+        paddingVertical: 14,
+        borderRadius: 18,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        alignSelf: 'center',
-        marginTop: 60,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        marginTop: Platform.OS === 'ios' ? 50 : 20,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
-            height: 4,
+            height: 10,
         },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
+        shadowOpacity: 0.4,
+        shadowRadius: 15,
+        elevation: 10,
     },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
         gap: 12,
     },
     textContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     title: {
         color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-        textAlign: 'center',
+        fontSize: 17,
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     message: {
         color: '#8B98A5',
-        fontSize: 11,
-        marginTop: 2,
+        fontSize: 13,
+        marginTop: 4,
+        lineHeight: 18,
     },
     codeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        marginTop: 4,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 6,
+        gap: 8,
+        marginTop: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        backgroundColor: 'rgba(255, 218, 52, 0.08)',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 218, 52, 0.15)',
     },
     codeText: {
-        color: 'white',
-        fontSize: 11,
-        fontFamily: 'monospace',
+        color: '#ffda34',
+        fontSize: 12,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+        fontWeight: '600',
         flex: 1,
     },
     copyButton: {
-        padding: 4,
+        padding: 6,
     },
     copiedText: {
         color: '#34C759',
-        fontSize: 10,
-        fontWeight: '600',
+        fontSize: 11,
+        fontWeight: '700',
     },
 })
 

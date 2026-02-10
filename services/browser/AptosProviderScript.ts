@@ -190,7 +190,8 @@ export const APTOS_INJECTION_SCRIPT = `
         version: '1.2.0',
         accounts: provider.accounts,
         chains: provider.chains,
-        features: provider.features
+        features: provider.features,
+        deeplinkProvider: 'column://'
     };
 
     const petraWallet = {
@@ -200,7 +201,8 @@ export const APTOS_INJECTION_SCRIPT = `
         version: '1.2.0',
         accounts: provider.accounts,
         chains: provider.chains,
-        features: provider.features
+        features: provider.features,
+        deeplinkProvider: 'petra://'
     };
 
     if (!window.aptosWalletStandard) {

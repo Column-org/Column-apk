@@ -214,8 +214,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }, [web3Account])
 
     const signAndSubmitTransaction = useCallback(async (payload: any) => {
+        console.log('WalletContext: signAndSubmitTransaction called with:', JSON.stringify(payload));
         if (web3Account) {
-            return await transactionService.executeTransaction(web3Account, payload)
+            try {
+                const hash = await transactionService.executeTransaction(web3Account, payload);
+                console.log('WalletContext: Transaction success:', hash);
+                return hash;
+            } catch (error: any) {
+                console.error('WalletContext: Transaction failed:', error);
+                throw error;
+            }
         }
         throw new Error('No wallet active')
     }, [web3Account, transactionService])

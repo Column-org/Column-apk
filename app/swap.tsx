@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useNetwork } from '../context/NetworkContext'
 import { getSwapQuote, getTokens, formatTokenAmount, parseTokenAmount, MosaicToken, SwapQuote } from '../services/mosaic/mosaicService'
 import SwapTokenSelector from '../components/swap/SwapTokenSelector'
-import AlertModal from '../components/AlertModal'
+import { useToast } from '../context/ToastContext'
 import BACKEND_CONFIG from '../config/backend'
 import { useWallet } from '../context/WalletContext'
 
@@ -29,17 +29,7 @@ export default function Swap() {
   const [isLoadingQuote, setIsLoadingQuote] = useState(false)
   const [isSwapping, setIsSwapping] = useState(false)
   const [slippage] = useState(50) // 0.5% default
-  const [alertModal, setAlertModal] = useState<{
-    visible: boolean
-    type: 'success' | 'error' | 'info'
-    title: string
-    message: string
-  }>({
-    visible: false,
-    type: 'success',
-    title: '',
-    message: '',
-  })
+  const toast = useToast()
 
 
   // Load tokens on mount
@@ -66,12 +56,7 @@ export default function Swap() {
       }
     } catch (error) {
       console.error('Error loading tokens:', error)
-      setAlertModal({
-        visible: true,
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to load tokens. Please try again.',
-      })
+      toast.show('Error', { data: { message: 'Failed to load tokens. Please try again.' }, type: 'error' })
     } finally {
       setIsLoadingTokens(false)
     }
@@ -110,12 +95,7 @@ export default function Swap() {
     } catch (error) {
       console.error('Error getting quote:', error)
       setQuote(null)
-      setAlertModal({
-        visible: true,
-        type: 'error',
-        title: 'Quote Error',
-        message: 'Failed to get swap quote. Please try different amounts or tokens.',
-      })
+      toast.show('Quote Error', { data: { message: 'Failed to get swap quote. Please try different amounts or tokens.' }, type: 'error' })
     } finally {
       setIsLoadingQuote(false)
     }
@@ -182,13 +162,11 @@ export default function Swap() {
       }
 
       // Success!
-      const toAmount = quote && toToken ? formatTokenAmount(quote.dstAmount, toToken.decimals) : 0
+      const toAmountValue = quote && toToken ? formatTokenAmount(quote.dstAmount, toToken.decimals) : 0
 
-      setAlertModal({
-        visible: true,
-        type: 'success',
-        title: 'Swap Successful!',
-        message: `Swapped ${fromAmount} ${fromToken.symbol} for ${toAmount.toFixed(6)} ${toToken.symbol}`,
+      toast.show('Swap Successful!', {
+        data: { message: `Swapped ${fromAmount} ${fromToken.symbol} for ${toAmountValue.toFixed(6)} ${toToken.symbol}` },
+        type: 'success'
       })
 
       // Reset form
@@ -198,11 +176,9 @@ export default function Swap() {
 
     } catch (error: any) {
       console.error('Swap error:', error)
-      setAlertModal({
-        visible: true,
-        type: 'error',
-        title: 'Swap Failed',
-        message: error.message || 'An error occurred during the swap. Please try again.',
+      toast.show('Swap Failed', {
+        data: { message: error.message || 'An error occurred during the swap. Please try again.' },
+        type: 'error'
       })
     } finally {
       setIsSwapping(false)
@@ -352,13 +328,7 @@ export default function Swap() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      <AlertModal
-        visible={alertModal.visible}
-        type={alertModal.type}
-        title={alertModal.title}
-        message={alertModal.message}
-        onClose={() => setAlertModal({ ...alertModal, visible: false })}
-      />
+
     </View>
   )
 }

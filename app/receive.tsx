@@ -12,7 +12,7 @@ import { useNetwork } from '../context/NetworkContext'
 import { claimTransferWithCode } from '../services/movement_service/sendWithCode'
 import { removePendingClaim } from '../services/pendingClaims'
 import ClaimTransferForm from '../components/receive/ClaimTransferForm'
-import AlertModal from '../components/AlertModal'
+import { useToast } from '../context/ToastContext'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -29,8 +29,7 @@ export default function Receive() {
     const [showSuccess, setShowSuccess] = useState(false)
     const [successMessage, setSuccessMessage] = useState('Claim Successful!')
     const [lastClaimHash, setLastClaimHash] = useState<string | null>(null)
-    const [showAlert, setShowAlert] = useState(false)
-    const [alertMessage, setAlertMessage] = useState('')
+    const toast = useToast()
 
     // Public key handling
 
@@ -53,11 +52,9 @@ export default function Receive() {
     const handleCopy = async () => {
         if (walletAddress) {
             await Clipboard.setStringAsync(walletAddress)
-            setAlertMessage('Copied!')
-            setShowAlert(true)
+            toast.show('Copied!', { type: 'success' })
         } else {
-            setAlertMessage('No wallet address to copy')
-            setShowAlert(true)
+            toast.show('No wallet address to copy', { type: 'error' })
         }
     }
 
@@ -72,7 +69,7 @@ export default function Receive() {
                 console.error('Error sharing:', error)
             }
         } else {
-            Alert.alert('Error', 'No wallet address to share')
+            toast.show('No wallet address to share', { type: 'error' })
         }
     }
 
@@ -101,11 +98,11 @@ export default function Receive() {
         async (transferType: 'move' | 'fa') => {
             const trimmed = claimCode.trim()
             if (!walletAddress) {
-                Alert.alert('No Wallet', 'Connect your Movement wallet before claiming.')
+                toast.show('No Wallet', { data: { message: 'Connect your Movement wallet before claiming.' }, type: 'error' })
                 return
             }
             if (!trimmed) {
-                Alert.alert('Invalid code', 'Enter a valid claim code.')
+                toast.show('Invalid code', { data: { message: 'Enter a valid claim code.' }, type: 'error' })
                 return
             }
 
@@ -132,7 +129,7 @@ export default function Receive() {
                 setClaimCode('')
                 showSuccessMessage('Claim Successful!', result.transactionHash)
             } catch (error) {
-                Alert.alert('Claim Failed', error instanceof Error ? error.message : 'Unable to claim transfer.')
+                toast.show('Claim Failed', { data: { message: error instanceof Error ? error.message : 'Unable to claim transfer.' }, type: 'error' })
             } finally {
                 setIsClaiming(false)
             }
@@ -190,13 +187,7 @@ export default function Receive() {
                 </View>
             </Modal>
 
-            <AlertModal
-                visible={showAlert}
-                type="success"
-                title={alertMessage}
-                message=""
-                onClose={() => setShowAlert(false)}
-            />
+
 
             <ScrollView
                 style={styles.scrollView}

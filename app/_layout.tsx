@@ -10,6 +10,8 @@ import { WalletProvider, useWallet } from '../context/WalletContext'
 import { SidebarProvider, useSidebar } from '../context/SidebarContext'
 import { Sidebar } from '../components/Sidebar'
 import LockScreen from '../components/security/LockScreen'
+import { ToastProvider } from '../context/ToastContext'
+import { DeepLinkProvider } from '../context/DeepLinkContext'
 
 
 function AppContent() {
@@ -67,7 +69,11 @@ export default function RootLayout() {
               <BalanceVisibilityProvider>
                 <PreferencesProvider>
                   <SidebarProvider>
-                    <AppContent />
+                    <ToastProvider>
+                      <DeepLinkProvider>
+                        <AppContent />
+                      </DeepLinkProvider>
+                    </ToastProvider>
                   </SidebarProvider>
                 </PreferencesProvider>
               </BalanceVisibilityProvider>

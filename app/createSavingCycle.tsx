@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
 import { toBaseUnit, fromBaseUnit, createCycle, getFABalance } from '../services/movement_service/savingCycleService'
-import AlertModal from '../components/AlertModal'
+import { useToast } from '../context/ToastContext'
 import { DateRangePicker } from '../components/DateRangePicker'
 import { TOKEN_METADATA } from '../constants/tokenMetadata'
 
@@ -39,9 +39,7 @@ export default function CreateSavingCycle() {
     })
     const [creating, setCreating] = useState(false)
     const [penaltyPercentage, setPenaltyPercentage] = useState(5) // Default 5%
-    const [showAlert, setShowAlert] = useState(false)
-    const [alertType, setAlertType] = useState<'success' | 'error'>('success')
-    const [alertMessage, setAlertMessage] = useState('')
+    const toast = useToast()
     const [allowedAssets, setAllowedAssets] = useState<AllowedAsset[]>([])
     const [selectedAsset, setSelectedAsset] = useState<AllowedAsset | null>(null)
     const [loadingAssets, setLoadingAssets] = useState(true)
@@ -102,17 +100,17 @@ export default function CreateSavingCycle() {
     const handleCreate = async () => {
         // Validation
         if (!name.trim()) {
-            alert('Please enter a name for your saving goal')
+            toast.show('Error', { data: { message: 'Please enter a name for your saving goal' }, type: 'error' })
             return
         }
 
         if (!initialDeposit || parseFloat(initialDeposit) <= 0) {
-            alert('Please enter a valid initial deposit')
+            toast.show('Error', { data: { message: 'Please enter a valid initial deposit' }, type: 'error' })
             return
         }
 
         if (isGoalBased && (!goalAmount || parseFloat(goalAmount) <= parseFloat(initialDeposit))) {
-            alert('Goal amount must be greater than initial deposit')
+            toast.show('Error', { data: { message: 'Goal amount must be greater than initial deposit' }, type: 'error' })
             return
         }
 
@@ -120,24 +118,24 @@ export default function CreateSavingCycle() {
         const endTimestamp = Math.floor(endDateTime.getTime() / 1000)
 
         if (startTimestamp >= endTimestamp) {
-            alert('End date must be after start date')
+            toast.show('Error', { data: { message: 'End date must be after start date' }, type: 'error' })
             return
         }
 
         if (startTimestamp < Math.floor(Date.now() / 1000)) {
-            alert('Start date cannot be in the past')
+            toast.show('Error', { data: { message: 'Start date cannot be in the past' }, type: 'error' })
             return
         }
 
         if (network !== 'testnet') {
-            alert('Saving cycles are only available on testnet')
+            toast.show('Notice', { data: { message: 'Saving cycles are only available on testnet' }, type: 'info' })
             return
         }
 
         setCreating(true)
 
         if (!selectedAsset) {
-            alert('No asset selected')
+            toast.show('Error', { data: { message: 'No asset selected' }, type: 'error' })
             return
         }
 
@@ -157,24 +155,18 @@ export default function CreateSavingCycle() {
             )
 
             if (result.success) {
-                setAlertType('success')
-                setAlertMessage('Saving cycle created successfully!')
-                setShowAlert(true)
+                toast.show('Success', { data: { message: 'Saving cycle created successfully!' }, type: 'success' })
 
                 // Navigate back after a short delay
                 setTimeout(() => {
                     router.back()
                 }, 2000)
             } else {
-                setAlertType('error')
-                setAlertMessage(result.error || 'Failed to create saving cycle')
-                setShowAlert(true)
+                toast.show('Failed', { data: { message: result.error || 'Failed to create saving cycle' }, type: 'error' })
             }
         } catch (error: any) {
             console.error('Error creating cycle:', error)
-            setAlertType('error')
-            setAlertMessage(error.message || 'Failed to create saving cycle')
-            setShowAlert(true)
+            toast.show('Error', { data: { message: error.message || 'Failed to create saving cycle' }, type: 'error' })
         } finally {
             setCreating(false)
         }
@@ -184,14 +176,7 @@ export default function CreateSavingCycle() {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
 
-            {/* Alert Modal */}
-            <AlertModal
-                visible={showAlert}
-                type={alertType}
-                title={alertMessage}
-                message=""
-                onClose={() => setShowAlert(false)}
-            />
+
 
             {/* Header */}
             <View style={styles.header}>

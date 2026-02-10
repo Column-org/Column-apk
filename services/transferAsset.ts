@@ -132,9 +132,10 @@ export async function transferMove(
 
     try {
         const { senderAddress, recipientAddress, amount } = params
+        const decimals = 8
 
-        // MOVE has 8 decimals
-        const amountInOctas = Math.floor(parseFloat(amount) * Math.pow(10, 8))
+        // MOVE has 8 decimals (Aptos/Movement standard)
+        const amountInOctas = Math.floor(parseFloat(amount) * Math.pow(10, decimals))
 
         // Step 1: Generate transaction hash from backend
         const controller = new AbortController()

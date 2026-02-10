@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, StatusBar, Image, Dimensions, Modal, Pressable, Platform, Alert } from 'react-native'
+import { BlurView } from 'expo-blur'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { FungibleAsset, formatAssetBalance } from '../services/movementAssets'
@@ -142,7 +143,9 @@ export default function SendConfirm() {
                     statusBarTranslucent={true}
                 >
                     <View style={styles.modalOverlay}>
-                        <Pressable style={styles.modalBackdrop} onPress={() => setIsSaveModalVisible(false)} />
+                        <Pressable style={styles.modalBackdrop} onPress={() => setIsSaveModalVisible(false)}>
+                            <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+                        </Pressable>
                         <View style={styles.modalContent}>
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>Add to Contacts</Text>
@@ -256,11 +259,10 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'transparent',
     },
     modalBackdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
     },
     modalContent: {
         backgroundColor: '#121315',
