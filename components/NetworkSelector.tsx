@@ -4,14 +4,28 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useNetwork } from '../context/NetworkContext'
 
-export const NetworkSelector = () => {
+interface NetworkSelectorProps {
+    position?: 'top' | 'middle' | 'bottom' | 'single'
+}
+
+export const NetworkSelector = ({ position = 'single' }: NetworkSelectorProps) => {
     const router = useRouter()
     const { config } = useNetwork()
 
+    const getPositionStyle = () => {
+        switch (position) {
+            case 'top': return styles.cardTop
+            case 'middle': return styles.cardMiddle
+            case 'bottom': return styles.cardBottom
+            case 'single': return styles.cardSingle
+            default: return styles.cardSingle
+        }
+    }
+
     return (
         <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => router.push('/network')}
+            style={[styles.settingItem, getPositionStyle()]}
+            onPress={() => router.push('/settings/network')}
         >
             <View style={styles.settingLeft}>
                 <Ionicons name="server-outline" size={22} color="#ffda34" />
@@ -32,7 +46,29 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 12,
+        backgroundColor: '#222327',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        marginBottom: 2,
+    },
+    cardTop: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        borderBottomLeftRadius: 4,
+        borderBottomRightRadius: 4,
+    },
+    cardMiddle: {
+        borderRadius: 4,
+    },
+    cardBottom: {
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
+        marginBottom: 0,
+    },
+    cardSingle: {
+        borderRadius: 20,
     },
     settingLeft: {
         flexDirection: 'row',
@@ -40,7 +76,7 @@ const styles = StyleSheet.create({
     },
     settingText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '500',
         marginLeft: 15,
     },
@@ -51,6 +87,6 @@ const styles = StyleSheet.create({
     },
     settingValue: {
         color: '#8B98A5',
-        fontSize: 14,
+        fontSize: 13,
     },
 })

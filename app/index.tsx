@@ -13,10 +13,8 @@ export default function EntryScreen() {
 
         hasNavigated.current = true
         if (isWeb3Loaded) {
-            console.log('[Entry] Navigating to home')
             router.replace('/(tabs)/home')
         } else {
-            console.log('[Entry] Navigating to setup')
             router.replace('/wallet-setup')
         }
     }, [isLoading, isWeb3Loaded])

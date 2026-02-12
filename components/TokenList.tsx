@@ -11,6 +11,7 @@ import { EmptyWalletState } from './EmptyWalletState'
 import { ProjectItem } from './ProjectItem'
 import { useAssets } from '../hooks/useAssets'
 import { SYMBOL_TO_ID } from '../services/coinGecko'
+import { usePreferences } from '../context/PreferencesContext'
 
 const SwipeableToken = ({ name, amount, value, iconUri, tokenPrice, isOpen, onOpen, onClose, asset, isHidden }: any) => {
     const router = useRouter()
@@ -71,6 +72,8 @@ const SwipeableToken = ({ name, amount, value, iconUri, tokenPrice, isOpen, onOp
         }
     }
 
+
+
     return (
         <View style={styles.swipeableContainer}>
             <View style={styles.sendButtonContainer}>
@@ -123,6 +126,7 @@ interface TokenListProps {
 
 export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMode = 'tokens' }: TokenListProps) => {
     const { isHidden } = useBalanceVisibility()
+    const { isSpamFilterEnabled } = usePreferences()
     const { assets, prices, isLoading, refetch } = useAssets(refreshKey)
     const [openTokenIndex, setOpenTokenIndex] = useState<number | null>(null)
 
@@ -227,7 +231,10 @@ export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMod
                             name.includes('nexus') || symbol.includes('nexus') ||
                             type.includes('podium') || type.includes('pass') || type.includes('nexus');
 
-                        return !isProject
+                        if (isProject) return false;
+                        if (isSpamFilterEnabled && asset.metadata.isSpam) return false;
+
+                        return true
                     })
                     .map((asset, index) => {
                         const formattedBalance = formatAssetBalance(asset.amount, asset.metadata.decimals)

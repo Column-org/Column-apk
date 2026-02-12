@@ -11,7 +11,31 @@ export interface FungibleAsset {
     symbol: string
     decimals: number
     icon_uri?: string
+    isSpam?: boolean
   }
+}
+
+const SPAM_KEYWORDS = [
+  'CLAIM', 'FREE', 'AIRDROP', 'GIFT', 'REWARD', 'VISIT', 'WWW.', '.COM', '.ORG', '.NET', '.XYZ', 'VOUCHER',
+  'OFFER', 'PRIZE', 'WINNER', 'EARN', 'PROMO'
+]
+
+export const isSpamAsset = (name: string, symbol: string): boolean => {
+  const upperName = name.toUpperCase()
+  const upperSymbol = symbol.toUpperCase()
+
+  // 1. Check Keywords
+  if (SPAM_KEYWORDS.some(keyword => upperName.includes(keyword) || upperSymbol.includes(keyword))) {
+    return true
+  }
+
+  // 2. Check for URLs in name/symbol
+  const urlRegex = /(https?:\/\/|www\.)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/i
+  if (urlRegex.test(upperName) || urlRegex.test(upperSymbol)) {
+    return true
+  }
+
+  return false
 }
 
 const sanitizeIconUri = (symbol: string | undefined, uri?: string | null) => {
@@ -116,6 +140,7 @@ async function fetchIndexerAssets(
         symbol: balance.metadata?.symbol || '???',
         decimals: balance.metadata?.decimals || 8,
         icon_uri: sanitizeIconUri(balance.metadata?.symbol, balance.metadata?.icon_uri),
+        isSpam: isSpamAsset(balance.metadata?.name || '', balance.metadata?.symbol || ''),
       },
     }))
 
@@ -283,6 +308,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
             symbol: info.symbol,
             decimals: info.decimals,
             icon_uri: sanitizeIconUri(info.symbol, undefined),
+            isSpam: isSpamAsset(info.name, info.symbol),
           },
         } as FungibleAsset
       })
@@ -311,6 +337,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
             symbol: metadata.symbol,
             decimals: metadata.decimals,
             icon_uri: sanitizeIconUri(metadata.symbol, undefined),
+            isSpam: isSpamAsset(metadata.name, metadata.symbol),
           },
         } as FungibleAsset
       })
@@ -371,6 +398,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
                 symbol: metadata.symbol,
                 decimals: metadata.decimals,
                 icon_uri: sanitizeIconUri(metadata.symbol, undefined),
+                isSpam: isSpamAsset(metadata.name, metadata.symbol),
               },
             } as FungibleAsset)
           }

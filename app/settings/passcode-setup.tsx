@@ -1,6 +1,6 @@
 import React from 'react'
 import { useRouter } from 'expo-router'
-import PasscodeSetup from '../components/security/PasscodeSetup'
+import PasscodeSetup from '../../components/security/PasscodeSetup'
 
 export default function PasscodeSetupScreen() {
   const router = useRouter()
@@ -12,3 +12,5 @@ export default function PasscodeSetupScreen() {
     />
   )
 }
+
+

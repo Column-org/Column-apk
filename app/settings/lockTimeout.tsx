@@ -1,51 +1,56 @@
 import React from 'react'
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Dimensions, Platform } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Dimensions } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { useNetwork } from '../context/NetworkContext'
-import { MovementNetwork, NETWORK_CONFIGS } from '../constants/networkConfig'
+import { Ionicons } from '@expo/vector-icons'
+import { useSecurity } from '../../context/SecurityContext'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
-const NetworkPage = () => {
+export default function LockTimeout() {
     const router = useRouter()
-    const { network, setNetwork } = useNetwork()
+    const { lockTimeout, setLockTimeout } = useSecurity()
 
-    const networkOptions: MovementNetwork[] = ['mainnet', 'testnet']
+    const timeoutOptions = [
+        { label: '1 minute', value: 1, description: 'Lock after 1 minute of inactivity' },
+        { label: '5 minutes', value: 5, description: 'Lock after 5 minutes of inactivity' },
+        { label: '30 minutes', value: 30, description: 'Lock after 30 minutes of inactivity' },
+        { label: '1 hour', value: 60, description: 'Lock after 1 hour of inactivity' },
+        { label: '5 hours', value: 300, description: 'Lock after 5 hours of inactivity' },
+    ]
 
-    const handleNetworkChange = (value: MovementNetwork) => {
-        setNetwork(value)
+    const handleSelectTimeout = async (minutes: number) => {
+        await setLockTimeout(minutes)
         router.back()
     }
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={26} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Network</Text>
+                <Text style={styles.headerTitle}>Auto-Lock Timeout</Text>
             </View>
 
             <View style={styles.content}>
                 <Text style={styles.description}>
-                    Select which network to connect to
+                    Choose how long the app can be inactive before requiring authentication again
                 </Text>
 
-                <View style={styles.networkList}>
-                    {networkOptions.map((option) => {
-                        const optionConfig = NETWORK_CONFIGS[option]
-                        const isActive = network === option
+                <View style={styles.timeoutList}>
+                    {timeoutOptions.map((option) => {
+                        const isActive = lockTimeout === option.value
                         return (
                             <TouchableOpacity
-                                key={option}
-                                style={styles.networkItem}
-                                onPress={() => handleNetworkChange(option)}
+                                key={option.value}
+                                style={styles.timeoutItem}
+                                onPress={() => handleSelectTimeout(option.value)}
                             >
-                                <View style={styles.networkInfo}>
+                                <View style={styles.timeoutInfo}>
                                     <View style={[
                                         styles.radioOuter,
                                         isActive && styles.radioOuterActive,
@@ -53,13 +58,11 @@ const NetworkPage = () => {
                                         {isActive && <View style={styles.radioInner} />}
                                     </View>
                                     <View>
-                                        <Text style={styles.networkName}>
-                                            {optionConfig.displayName}
+                                        <Text style={styles.timeoutLabel}>
+                                            {option.label}
                                         </Text>
-                                        <Text style={styles.networkDescription}>
-                                            {option === 'mainnet'
-                                                ? 'Production network with real assets'
-                                                : 'Test network for development'}
+                                        <Text style={styles.timeoutDescription}>
+                                            {option.description}
                                         </Text>
                                     </View>
                                 </View>
@@ -68,7 +71,7 @@ const NetworkPage = () => {
                     })}
                 </View>
             </View>
-        </View>
+        </SafeAreaView>
     )
 }
 
@@ -81,8 +84,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 50 : 60,
-        paddingBottom: Platform.OS === 'ios' ? 12 : 24,
+        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
+        paddingBottom: IS_SMALL_SCREEN ? 12 : 24,
         gap: 12,
     },
     backButton: {
@@ -106,15 +109,15 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginBottom: 24,
     },
-    networkList: {
+    timeoutList: {
         gap: 16,
     },
-    networkItem: {
+    timeoutItem: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 12,
     },
-    networkInfo: {
+    timeoutInfo: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
@@ -137,16 +140,16 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         backgroundColor: '#ffda34',
     },
-    networkName: {
+    timeoutLabel: {
         color: 'white',
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 4,
     },
-    networkDescription: {
+    timeoutDescription: {
         color: '#8B98A5',
         fontSize: 13,
     },
 })
 
-export default NetworkPage
+

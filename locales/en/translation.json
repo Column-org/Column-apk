@@ -16,7 +16,8 @@
     "recoveryPhrase": "Recovery Phrase",
     "privateKey": "Private Key",
     "appTheme": "App Theme",
-    "showNFTCollection": "Show NFT Collection"
+    "showNFTCollection": "Show NFT Collection",
+    "devMode": "Dev Mode"
   },
   "home": {
     "send": "Send",

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../services/movement_service/nftService'
 import { useNetwork } from '../context/NetworkContext'
 import { SkeletonLoader } from './SkeletonLoader'
+import { usePreferences } from '../context/PreferencesContext'
 
 interface NFTListProps {
     walletAddress: string
@@ -13,6 +14,7 @@ interface NFTListProps {
 export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
     const router = useRouter()
     const { network } = useNetwork()
+    const { isSpamFilterEnabled } = usePreferences()
     const [nfts, setNfts] = useState<Array<UserNFT & { metadata?: NFTMetadata }>>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -56,6 +58,8 @@ export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
     const collections = useMemo(() => {
         const groups: { [key: string]: { name: string, items: typeof nfts, representative: typeof nfts[0] } } = {}
         nfts.forEach(nft => {
+            if (isSpamFilterEnabled && nft.metadata?.isSpam) return
+
             const collectionName = nft.current_token_data?.current_collection?.collection_name || 'Unknown Collection'
             if (!groups[collectionName]) {
                 groups[collectionName] = {
@@ -71,7 +75,7 @@ export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
 
     const handleCollectionPress = (collectionName: string) => {
         router.push({
-            pathname: "/collection/[name]",
+            pathname: "/nft/collection/[name]",
             params: { name: collectionName }
         })
     }

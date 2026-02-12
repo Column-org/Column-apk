@@ -1,4 +1,4 @@
-import { View, ScrollView, StyleSheet, StatusBar, ImageBackground, Animated, RefreshControl, Dimensions, Image } from 'react-native'
+import { View, ScrollView, StyleSheet, StatusBar, Animated, RefreshControl, Dimensions, Image } from 'react-native'
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Header } from '../../components/Header'
@@ -27,14 +27,14 @@ const Home = () => {
     const { getThemeImage } = useTheme()
     const { network } = useNetwork()
     const { address: walletAddress } = useWallet()
-    const { isNFTCollectionEnabled } = usePreferences()
+    const { isNFTCollectionEnabled, isSpamFilterEnabled } = usePreferences()
     const [refreshing, setRefreshing] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
     const [pendingClaimsCount, setPendingClaimsCount] = useState(0)
     const [activeTab, setActiveTab] = useState<'tokens' | 'projects'>('tokens')
     const [isTokenRefreshing, setIsTokenRefreshing] = useState(false)
     const tokenListRefreshRef = useRef<(() => void) | null>(null)
-    const { assets, prices, movePrice, isLoading: isAssetsLoading, refetch } = useAssets(refreshKey)
+    const { assets, prices, isLoading: isAssetsLoading, refetch } = useAssets(refreshKey)
 
     const { tokens, projects } = useMemo(() => {
         const t: FungibleAsset[] = []
@@ -50,6 +50,8 @@ const Home = () => {
                 name.includes('nexus') || symbol.includes('nexus') ||
                 type.includes('podium') || type.includes('pass') || type.includes('nexus') ||
                 name.includes('bonk') || name.includes('hawk') || name.includes('moonwalk') || name.includes('kamino')
+
+            if (isSpamFilterEnabled && asset.metadata.isSpam) return
 
             if (isProject) p.push(asset)
             else t.push(asset)

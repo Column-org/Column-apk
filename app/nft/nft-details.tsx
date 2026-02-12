@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, StatusBar, Dimensions, TextInput, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../services/movement_service/nftService'
-import { useNetwork } from '../context/NetworkContext'
-import { useWallet } from '../context/WalletContext'
+import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../../services/movement_service/nftService'
+import { useNetwork } from '../../context/NetworkContext'
+import { useWallet } from '../../context/WalletContext'
 
 const { width } = Dimensions.get('window')
 
@@ -14,7 +14,7 @@ export default function NFTDetails() {
     const { tokenId, collectionName } = useLocalSearchParams<{ tokenId: string, collectionName: string }>()
     const { network } = useNetwork()
     const { address: walletAddress, signAndSubmitTransaction } = useWallet()
-    const insets = useSafeAreaInsets()
+
 
     const [nft, setNft] = useState<(UserNFT & { metadata?: NFTMetadata }) | null>(null)
     const [loading, setLoading] = useState(true)
@@ -206,12 +206,13 @@ export default function NFTDetails() {
 
             <Modal
                 visible={sendModalVisible}
-                animationType="slide"
+                animationType="fade"
                 transparent={true}
+                statusBarTranslucent={true}
                 onRequestClose={() => setSendModalVisible(false)}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     style={styles.modalOverlay}
                 >
                     <View style={styles.modalContent}>
@@ -445,11 +446,11 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#1A1F28',
+        backgroundColor: '#121315',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 24,
@@ -512,3 +513,5 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
 })
+
+

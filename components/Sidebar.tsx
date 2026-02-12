@@ -147,7 +147,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                                     style={styles.switchHeaderButton}
                                     onPress={() => {
                                         onClose()
-                                        setTimeout(() => router.push('/account-center'), 250)
+                                        setTimeout(() => router.push('/settings/account-center'), 250)
                                     }}
                                 >
                                     <View style={styles.switchBadge}>
@@ -168,7 +168,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                                     onPress={() => {
                                         onClose()
                                         setTimeout(() => {
-                                            router.push('/manage-account' as any)
+                                            router.push('/settings/manage-account' as any)
                                         }, 250)
                                     }}
                                 >
@@ -184,7 +184,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                                     onPress={() => {
                                         onClose()
                                         setTimeout(() => {
-                                            router.push('/address-book' as any)
+                                            router.push('/settings/address-book' as any)
                                         }, 250)
                                     }}
                                 >

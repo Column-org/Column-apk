@@ -166,7 +166,7 @@ export const DeepLinkApprovalModal: React.FC<DeepLinkApprovalModalProps> = ({
                             <Text style={styles.detailsText}>
                                 {request?.details ||
                                     (request?.type === 'connect'
-                                        ? 'By connecting, the dApp will be able to see your wallet address and public key. It cannot move funds without your permission.'
+                                        ? 'By connecting, the dApp will be able to see your wallet address. It cannot move funds without your permission.'
                                         : 'Review the transaction details carefully before signing. This action cannot be undone.')}
                             </Text>
 

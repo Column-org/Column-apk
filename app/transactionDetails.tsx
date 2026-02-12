@@ -200,161 +200,159 @@ const TransactionDetails = () => {
                 </Text>
 
                 {/* Main Details Card */}
-                <View style={styles.detailsCard}>
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Date</Text>
-                        <Text style={styles.detailValue}>
-                            {formatFullDate(transaction.timestamp)}
-                        </Text>
-                    </View>
+                <View style={[styles.detailRow, styles.cardTop]}>
+                    <Text style={styles.detailLabel}>Date</Text>
+                    <Text style={styles.detailValue}>
+                        {formatFullDate(transaction.timestamp)}
+                    </Text>
+                </View>
 
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Status</Text>
-                        <Text style={[styles.detailValue, isSuccess ? styles.statusSuccess : styles.statusFailed]}>
-                            {isSuccess ? 'Succeeded' : 'Failed'}
-                        </Text>
-                    </View>
+                <View style={[styles.detailRow, styles.cardMiddle]}>
+                    <Text style={styles.detailLabel}>Status</Text>
+                    <Text style={[styles.detailValue, isSuccess ? styles.statusSuccess : styles.statusFailed]}>
+                        {isSuccess ? 'Succeeded' : 'Failed'}
+                    </Text>
+                </View>
 
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Network</Text>
-                        <Text style={styles.detailValue}>{getNetworkName()}</Text>
-                    </View>
+                <View style={[styles.detailRow, styles.cardBottom, { marginBottom: 16 }]}>
+                    <Text style={styles.detailLabel}>Network</Text>
+                    <Text style={styles.detailValue}>{getNetworkName()}</Text>
                 </View>
 
                 {/* Transaction Details */}
-                <View style={styles.detailsCard}>
+                <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Transaction Details</Text>
-
-                    {transaction.type === 'send' && transaction.amount && (
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>You Paid</Text>
-                            <Text style={styles.detailValueNegative}>
-                                -{transaction.amount} {transaction.token || 'MOVE'}
-                            </Text>
-                        </View>
-                    )}
-
-                    {transaction.type === 'receive' && transaction.amount && (
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>You Received</Text>
-                            <Text style={styles.detailValuePositive}>
-                                +{transaction.amount} {transaction.token || 'MOVE'}
-                            </Text>
-                        </View>
-                    )}
-
-                    {transaction.type === 'swap' && transaction.swapData && (
-                        <>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>You Paid</Text>
-                                <Text style={styles.detailValueNegative}>
-                                    -{transaction.swapData.fromAmount} {transaction.swapData.fromToken}
-                                </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>You Received</Text>
-                                <Text style={styles.detailValuePositive}>
-                                    +{transaction.swapData.toAmount} {transaction.swapData.toToken}
-                                </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Provider</Text>
-                                <Text style={styles.detailValue}>Mosaic</Text>
-                            </View>
-                        </>
-                    )}
-
-                    {transaction.type === 'contract' && transaction.functionName && (
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Function</Text>
-                            <Text style={styles.detailValue}>{transaction.functionName}</Text>
-                        </View>
-                    )}
-
-                    {transaction.gasUsed && (
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Gas Used</Text>
-                            <Text style={styles.detailValue}>{transaction.gasUsed}</Text>
-                        </View>
-                    )}
                 </View>
 
-                {/* Blockchain Details */}
-                <View style={styles.detailsCard}>
+                {transaction.type === 'send' && transaction.amount && (
+                    <View style={[styles.detailRow, styles.cardTop, !transaction.gasUsed && !transaction.functionName && styles.cardBottom]}>
+                        <Text style={styles.detailLabel}>You Paid</Text>
+                        <Text style={styles.detailValueNegative}>
+                            -{transaction.amount} {transaction.token || 'MOVE'}
+                        </Text>
+                    </View>
+                )}
+
+                {transaction.type === 'receive' && transaction.amount && (
+                    <View style={[styles.detailRow, styles.cardTop, !transaction.gasUsed && !transaction.functionName && styles.cardBottom]}>
+                        <Text style={styles.detailLabel}>You Received</Text>
+                        <Text style={styles.detailValuePositive}>
+                            +{transaction.amount} {transaction.token || 'MOVE'}
+                        </Text>
+                    </View>
+                )}
+
+                {transaction.type === 'swap' && transaction.swapData && (
+                    <>
+                        <View style={[styles.detailRow, styles.cardTop]}>
+                            <Text style={styles.detailLabel}>You Paid</Text>
+                            <Text style={styles.detailValueNegative}>
+                                -{transaction.swapData.fromAmount} {transaction.swapData.fromToken}
+                            </Text>
+                        </View>
+                        <View style={[styles.detailRow, styles.cardMiddle]}>
+                            <Text style={styles.detailLabel}>You Received</Text>
+                            <Text style={styles.detailValuePositive}>
+                                +{transaction.swapData.toAmount} {transaction.swapData.toToken}
+                            </Text>
+                        </View>
+                        <View style={[styles.detailRow, styles.cardMiddle]}>
+                            <Text style={styles.detailLabel}>Provider</Text>
+                            <Text style={styles.detailValue}>Mosaic</Text>
+                        </View>
+                    </>
+                )}
+
+                {transaction.type === 'contract' && transaction.functionName && (
+                    <View style={[styles.detailRow, styles.cardMiddle, transaction.type === 'contract' && !transaction.amount && styles.cardTop]}>
+                        <Text style={styles.detailLabel}>Function</Text>
+                        <Text style={styles.detailValue}>{transaction.functionName}</Text>
+                    </View>
+                )}
+
+                {transaction.gasUsed && (
+                    <View style={[styles.detailRow, styles.cardBottom, { marginBottom: 16 }]}>
+                        <Text style={styles.detailLabel}>Gas Used</Text>
+                        <Text style={styles.detailValue}>{transaction.gasUsed}</Text>
+                    </View>
+                )}
+
+                {/* Blockchain Details Section */}
+                <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Blockchain Details</Text>
+                </View>
 
-                    {transaction.to && (
-                        <View style={styles.detailRowWithCopy}>
-                            <View style={styles.detailRowContent}>
-                                <Text style={styles.detailLabel}>To</Text>
-                                <Text style={[styles.detailValue, styles.addressText]}>
-                                    {formatAddress(transaction.to, true)}
-                                </Text>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => copyToClipboard(transaction.to!, 'Address')}
-                                style={styles.copyButton}
-                            >
-                                <Ionicons name="copy-outline" size={18} color="#8B98A5" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {transaction.from && (
-                        <View style={styles.detailRowWithCopy}>
-                            <View style={styles.detailRowContent}>
-                                <Text style={styles.detailLabel}>From</Text>
-                                <Text style={[styles.detailValue, styles.addressText]}>
-                                    {formatAddress(transaction.from, true)}
-                                </Text>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => copyToClipboard(transaction.from!, 'Address')}
-                                style={styles.copyButton}
-                            >
-                                <Ionicons name="copy-outline" size={18} color="#8B98A5" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    <View style={styles.detailRowWithCopy}>
+                {transaction.to && (
+                    <View style={[styles.detailRowWithCopy, styles.cardTop]}>
                         <View style={styles.detailRowContent}>
-                            <Text style={styles.detailLabel}>Transaction Hash</Text>
+                            <Text style={styles.detailLabel}>To</Text>
                             <Text style={[styles.detailValue, styles.addressText]}>
-                                {formatAddress(transaction.hash, true)}
+                                {formatAddress(transaction.to, true)}
                             </Text>
                         </View>
                         <TouchableOpacity
-                            onPress={() => copyToClipboard(transaction.hash, 'Transaction Hash')}
+                            onPress={() => copyToClipboard(transaction.to!, 'Address')}
                             style={styles.copyButton}
                         >
                             <Ionicons name="copy-outline" size={18} color="#8B98A5" />
                         </TouchableOpacity>
                     </View>
+                )}
 
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Timestamp</Text>
-                        <Text style={styles.detailValue}>
-                            {new Date(transaction.timestamp * 1000).toISOString()}
+                {transaction.from && (
+                    <View style={[styles.detailRowWithCopy, styles.cardMiddle]}>
+                        <View style={styles.detailRowContent}>
+                            <Text style={styles.detailLabel}>From</Text>
+                            <Text style={[styles.detailValue, styles.addressText]}>
+                                {formatAddress(transaction.from, true)}
+                            </Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => copyToClipboard(transaction.from!, 'Address')}
+                            style={styles.copyButton}
+                        >
+                            <Ionicons name="copy-outline" size={18} color="#8B98A5" />
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                <View style={[styles.detailRowWithCopy, styles.cardMiddle]}>
+                    <View style={styles.detailRowContent}>
+                        <Text style={styles.detailLabel}>Transaction Hash</Text>
+                        <Text style={[styles.detailValue, styles.addressText]}>
+                            {formatAddress(transaction.hash, true)}
                         </Text>
                     </View>
-
-                    {transaction.version && (
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Block Number</Text>
-                            <Text style={styles.detailValue}>{transaction.version}</Text>
-                        </View>
-                    )}
-
                     <TouchableOpacity
-                        style={styles.explorerButton}
-                        onPress={() => openExplorer(transaction.hash)}
-                        activeOpacity={0.7}
+                        onPress={() => copyToClipboard(transaction.hash, 'Transaction Hash')}
+                        style={styles.copyButton}
                     >
-                        <Text style={styles.explorerButtonText}>View on Explorer</Text>
-                        <Ionicons name="open-outline" size={18} color="#6B7CFF" />
+                        <Ionicons name="copy-outline" size={18} color="#8B98A5" />
                     </TouchableOpacity>
                 </View>
+
+                <View style={[styles.detailRow, styles.cardMiddle]}>
+                    <Text style={styles.detailLabel}>Timestamp</Text>
+                    <Text style={styles.detailValue}>
+                        {new Date(transaction.timestamp * 1000).toISOString()}
+                    </Text>
+                </View>
+
+                {transaction.version && (
+                    <View style={[styles.detailRow, styles.cardMiddle]}>
+                        <Text style={styles.detailLabel}>Block Number</Text>
+                        <Text style={styles.detailValue}>{transaction.version}</Text>
+                    </View>
+                )}
+
+                <TouchableOpacity
+                    style={[styles.explorerButton, styles.cardBottom, { marginBottom: 16 }]}
+                    onPress={() => openExplorer(transaction.hash)}
+                    activeOpacity={0.7}
+                >
+                    <Text style={styles.explorerButtonText}>View on Explorer</Text>
+                    <Ionicons name="open-outline" size={18} color="#6B7CFF" />
+                </TouchableOpacity>
 
                 <View style={{ height: 40 }} />
             </ScrollView>
@@ -486,27 +484,51 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 16,
     },
+    sectionHeader: {
+        paddingHorizontal: 4,
+        marginBottom: 8,
+    },
     sectionTitle: {
         color: '#8B98A5',
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
-        marginBottom: 12,
+        textTransform: 'uppercase',
     },
     detailRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        backgroundColor: '#222327',
+        marginBottom: 2,
     },
     detailRowWithCopy: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        backgroundColor: '#222327',
+        marginBottom: 2,
+    },
+    cardTop: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        borderBottomLeftRadius: 4,
+        borderBottomRightRadius: 4,
+    },
+    cardMiddle: {
+        borderRadius: 4,
+    },
+    cardBottom: {
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
+    },
+    cardSingle: {
+        borderRadius: 20,
     },
     detailRowContent: {
         flexDirection: 'row',
@@ -520,12 +542,12 @@ const styles = StyleSheet.create({
     },
     detailLabel: {
         color: '#8B98A5',
-        fontSize: 15,
+        fontSize: 14,
         flex: 1,
     },
     detailValue: {
         color: 'white',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '500',
         flex: 2,
         textAlign: 'right',
@@ -535,12 +557,12 @@ const styles = StyleSheet.create({
     },
     detailValuePositive: {
         color: '#10B981',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
     },
     detailValueNegative: {
-        color: '#8B98A5',
-        fontSize: 15,
+        color: 'white',
+        fontSize: 14,
         fontWeight: '600',
     },
     statusSuccess: {
@@ -554,13 +576,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         gap: 8,
-        marginTop: 12,
-        paddingVertical: 8,
+        paddingVertical: 16,
+        backgroundColor: '#222327',
     },
     explorerButtonText: {
         color: '#6B7CFF',
-        fontSize: 15,
-        fontWeight: '500',
+        fontSize: 14,
+        fontWeight: '600',
     },
     errorText: {
         color: 'white',

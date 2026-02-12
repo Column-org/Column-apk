@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useWallet } from '../context/WalletContext'
-import { useTheme } from '../hooks/useTheme'
+import { useWallet } from '../../context/WalletContext'
+import { useTheme } from '../../hooks/useTheme'
 import * as Clipboard from 'expo-clipboard'
 
 export default function ManageAccountScreen() {
@@ -80,7 +80,7 @@ export default function ManageAccountScreen() {
 
                     {/* Options List */}
                     <View style={styles.optionsList}>
-                        <TouchableOpacity style={styles.optionItem} onPress={() => router.push('/account-center')}>
+                        <TouchableOpacity style={styles.optionItem} onPress={() => router.push('/settings/account-center')}>
                             <View style={styles.optionLeft}>
                                 <Text style={styles.optionText}>Customize Account</Text>
                             </View>
@@ -96,7 +96,7 @@ export default function ManageAccountScreen() {
 
                         <TouchableOpacity
                             style={styles.optionItem}
-                            onPress={() => router.push({ pathname: '/private-key', params: { showWarning: 'true' } } as any)}
+                            onPress={() => router.push({ pathname: '/settings/private-key', params: { showWarning: 'true' } } as any)}
                         >
                             <View style={styles.optionLeft}>
                                 <Text style={styles.optionText}>Show Private Key</Text>
@@ -106,7 +106,7 @@ export default function ManageAccountScreen() {
 
                         <TouchableOpacity
                             style={styles.optionItem}
-                            onPress={() => router.push({ pathname: '/recovery-phrase', params: { showWarning: 'true' } } as any)}
+                            onPress={() => router.push({ pathname: '/settings/recovery-phrase', params: { showWarning: 'true' } } as any)}
                         >
                             <View style={styles.optionLeft}>
                                 <Text style={styles.optionText}>Show Recovery Phrase</Text>
@@ -237,3 +237,5 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
 })
+
+

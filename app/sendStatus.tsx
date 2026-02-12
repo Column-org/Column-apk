@@ -7,6 +7,8 @@ import { useWallet } from '../context/WalletContext'
 import { transferFungibleAsset, transferMove, TransferAssetParams, TransferResult } from '../services/transferAsset'
 import { FungibleAsset } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
+import { usePreferences } from '../context/PreferencesContext'
+import AudioService from '../services/AudioService'
 
 type TransactionStatus = 'sending' | 'sent' | 'failed'
 
@@ -15,10 +17,15 @@ export default function SendStatus() {
     const params = useLocalSearchParams()
     const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
+    const { isSoundEnabled, isHapticEnabled } = usePreferences()
     const [status, setStatus] = useState<TransactionStatus>('sending')
     const [errorMessage, setErrorMessage] = useState<string>('')
     const [txHash, setTxHash] = useState<string>('')
 
+    useEffect(() => {
+        AudioService.setSoundEnabled(isSoundEnabled)
+        AudioService.setHapticEnabled(isHapticEnabled)
+    }, [isSoundEnabled, isHapticEnabled])
 
     const hasExecutedRef = useRef(false)
 
@@ -44,6 +51,7 @@ export default function SendStatus() {
                 if (isMounted) {
                     setStatus('failed')
                     setErrorMessage('Missing transaction parameters or wallet not found')
+                    AudioService.feedback('error')
                 }
                 return
             }
@@ -53,6 +61,7 @@ export default function SendStatus() {
                 if (isMounted) {
                     setStatus('failed')
                     setErrorMessage('Transaction timed out. Please try again.')
+                    AudioService.feedback('error')
                 }
             }, 60000) // 60 second timeout
 
@@ -64,6 +73,7 @@ export default function SendStatus() {
                 if (isMounted) {
                     setStatus('failed')
                     setErrorMessage('Unable to retrieve wallet public key. The wallet may need to be re-initialized.')
+                    AudioService.feedback('error')
                 }
                 if (timeoutId) clearTimeout(timeoutId)
                 return
@@ -120,9 +130,11 @@ export default function SendStatus() {
                     if (result.success && result.transactionHash) {
                         setStatus('sent')
                         setTxHash(result.transactionHash)
+                        AudioService.feedback('success')
                     } else {
                         setStatus('failed')
                         setErrorMessage(result.error || 'Transaction failed')
+                        AudioService.feedback('error')
                     }
                 }
             } catch (error) {
@@ -131,6 +143,7 @@ export default function SendStatus() {
                 if (isMounted) {
                     setStatus('failed')
                     setErrorMessage(error instanceof Error ? error.message : 'Unknown error')
+                    AudioService.feedback('error')
                 }
             }
         }
@@ -141,7 +154,7 @@ export default function SendStatus() {
             isMounted = false
             if (timeoutId) clearTimeout(timeoutId)
         }
-    }, [params.token, params.amount, params.recipient, walletAddress, walletPublicKey, web3SignRawHash, network]) // Only run when these change
+    }, [params.token, params.amount, params.recipient, walletAddress, walletPublicKey, web3SignRawHash, network, isSoundEnabled, isHapticEnabled]) // Only run when these change
 
     const getGradientColors = (): readonly [string, string, ...string[]] => {
         switch (status) {

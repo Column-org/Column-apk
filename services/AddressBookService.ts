@@ -7,6 +7,7 @@ export interface Contact {
     name: string;
     emoji: string;
     addedAt: number;
+    isTrusted?: boolean; // Safe Label
 }
 
 export class AddressBookService {

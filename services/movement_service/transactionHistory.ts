@@ -5,6 +5,9 @@ import { compareAddresses } from '../../utils/address'
 // Cache for token metadata
 const tokenMetadataCache: { [address: string]: { symbol: string; decimals: number; logoURI?: string } } = {}
 
+// Cache for transaction history to prevent unnecessary refetching
+const transactionHistoryCache: { [key: string]: Transaction[] } = {}
+
 export interface Transaction {
   hash: string
   type: 'send' | 'receive' | 'swap' | 'contract' | 'unknown'
@@ -238,6 +241,11 @@ async function extractTransactionDetails(tx: any, walletAddress: string): Promis
   }
 }
 
+export function getCachedTransactions(walletAddress: string, network: MovementNetwork): Transaction[] | null {
+  const cacheKey = `${walletAddress}:${network}`
+  return transactionHistoryCache[cacheKey] || null
+}
+
 export async function getTransactionHistory(
   walletAddress: string,
   network: MovementNetwork,
@@ -245,6 +253,15 @@ export async function getTransactionHistory(
 ): Promise<TransactionHistoryResult> {
   const { limit = 25, start } = options
   const rpcUrl = NETWORK_CONFIGS[network].rpcUrl
+  const cacheKey = `${walletAddress}:${network}`
+
+  // If we have cached transactions and no specific start point, return them immediately
+  if (transactionHistoryCache[cacheKey] && start === undefined && !options.limit) {
+    return {
+      success: true,
+      transactions: transactionHistoryCache[cacheKey],
+    }
+  }
 
   try {
     let url = `${rpcUrl}/accounts/${walletAddress}/transactions?limit=${limit}`
@@ -278,6 +295,11 @@ export async function getTransactionHistory(
 
     // Sort by timestamp descending (newest first)
     transactions.sort((a, b) => b.timestamp - a.timestamp)
+
+    // Cache the result for next time
+    if (start === undefined) {
+      transactionHistoryCache[cacheKey] = transactions
+    }
 
     return {
       success: true,

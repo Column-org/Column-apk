@@ -20,11 +20,9 @@ export default function Swap() {
   const { network } = useNetwork()
 
   const [tokens, setTokens] = useState<MosaicToken[]>([])
-  const [isLoadingTokens, setIsLoadingTokens] = useState(true)
   const [fromToken, setFromToken] = useState<MosaicToken | null>(null)
   const [toToken, setToToken] = useState<MosaicToken | null>(null)
   const [fromAmount, setFromAmount] = useState('')
-  const [displayAmount, setDisplayAmount] = useState('0')
   const [quote, setQuote] = useState<SwapQuote | null>(null)
   const [isLoadingQuote, setIsLoadingQuote] = useState(false)
   const [isSwapping, setIsSwapping] = useState(false)
@@ -39,7 +37,6 @@ export default function Swap() {
 
   const loadTokens = async () => {
     try {
-      setIsLoadingTokens(true)
       const fetchedTokens = await getTokens(network)
       setTokens(fetchedTokens)
 
@@ -57,8 +54,6 @@ export default function Swap() {
     } catch (error) {
       console.error('Error loading tokens:', error)
       toast.show('Error', { data: { message: 'Failed to load tokens. Please try again.' }, type: 'error' })
-    } finally {
-      setIsLoadingTokens(false)
     }
   }
 
@@ -171,7 +166,6 @@ export default function Swap() {
 
       // Reset form
       setFromAmount('')
-      setDisplayAmount('0')
       setQuote(null)
 
     } catch (error: any) {
@@ -205,9 +199,8 @@ export default function Swap() {
     setToToken(token)
   }
 
-  const handleAmountChange = (amount: string, display: string) => {
+  const handleAmountChange = (amount: string) => {
     setFromAmount(amount)
-    setDisplayAmount(display)
   }
 
   const toAmount = quote && toToken ? formatTokenAmount(quote.dstAmount, toToken.decimals) : 0
@@ -237,7 +230,7 @@ export default function Swap() {
               onChangeText={(text) => {
                 const regex = /^\d*\.?\d*$/
                 if (regex.test(text) || text === '') {
-                  handleAmountChange(text, text || '0')
+                  handleAmountChange(text)
                 }
               }}
               placeholder="0"
@@ -358,16 +351,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: '#8B98A5',
-    fontSize: 16,
-    marginTop: 16,
-  },
   swapCard: {
     backgroundColor: '#1a1b1f',
     borderRadius: 20,
@@ -393,13 +376,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     padding: 0,
   },
-  balanceRow: {
-    marginTop: 12,
-  },
-  balanceText: {
-    color: '#666666',
-    fontSize: 14,
-  },
   switchContainer: {
     alignItems: 'center',
     marginVertical: -16,
@@ -420,12 +396,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 48,
     fontWeight: '600',
-  },
-  loadingQuote: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
   },
   detailsCard: {
     backgroundColor: '#1a1b1f',

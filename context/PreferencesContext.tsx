@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import AudioService from '../services/AudioService'
 
 interface PreferencesContextType {
     isNFTTabEnabled: boolean
@@ -8,6 +9,14 @@ interface PreferencesContextType {
     setNFTCollectionEnabled: (enabled: boolean) => Promise<void>
     isNotificationsEnabled: boolean
     setNotificationsEnabled: (enabled: boolean) => Promise<void>
+    isSoundEnabled: boolean
+    setSoundEnabled: (enabled: boolean) => Promise<void>
+    isHapticEnabled: boolean
+    setHapticEnabled: (enabled: boolean) => Promise<void>
+    isDeveloperModeEnabled: boolean
+    setDeveloperModeEnabled: (enabled: boolean) => Promise<void>
+    isSpamFilterEnabled: boolean
+    setSpamFilterEnabled: (enabled: boolean) => Promise<void>
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -18,10 +27,19 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const [isNFTTabEnabled, setIsNFTTabEnabled] = useState(true)
     const [isNFTCollectionEnabled, setIsNFTCollectionEnabled] = useState(true)
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true)
+    const [isSoundEnabled, setIsSoundEnabled] = useState(true)
+    const [isHapticEnabled, setIsHapticEnabled] = useState(true)
+    const [isDeveloperModeEnabled, setIsDeveloperModeEnabled] = useState(false)
+    const [isSpamFilterEnabled, setIsSpamFilterEnabled] = useState(true)
 
     useEffect(() => {
         loadPreferences()
     }, [])
+
+    useEffect(() => {
+        AudioService.setSoundEnabled(isSoundEnabled)
+        AudioService.setHapticEnabled(isHapticEnabled)
+    }, [isSoundEnabled, isHapticEnabled])
 
     const loadPreferences = async () => {
         try {
@@ -31,46 +49,60 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 setIsNFTTabEnabled(preferences.isNFTTabEnabled ?? true)
                 setIsNFTCollectionEnabled(preferences.isNFTCollectionEnabled ?? true)
                 setIsNotificationsEnabled(preferences.isNotificationsEnabled ?? true)
+                setIsSoundEnabled(preferences.isSoundEnabled ?? true)
+                setIsHapticEnabled(preferences.isHapticEnabled ?? true)
+                setIsDeveloperModeEnabled(preferences.isDeveloperModeEnabled ?? false)
+                setIsSpamFilterEnabled(preferences.isSpamFilterEnabled ?? true)
             }
         } catch (error) {
             console.error('Failed to load preferences:', error)
         }
     }
 
-    const setNFTTabEnabled = async (enabled: boolean) => {
+    const savePreference = async (key: string, value: any) => {
         try {
-            setIsNFTTabEnabled(enabled)
             const stored = await AsyncStorage.getItem(PREFERENCES_STORAGE_KEY)
             const preferences = stored ? JSON.parse(stored) : {}
-            preferences.isNFTTabEnabled = enabled
+            preferences[key] = value
             await AsyncStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences))
         } catch (error) {
-            console.error('Failed to save NFT tab preference:', error)
+            console.error(`Failed to save preference for ${key}:`, error)
         }
+    }
+
+    const setNFTTabEnabled = async (enabled: boolean) => {
+        setIsNFTTabEnabled(enabled)
+        await savePreference('isNFTTabEnabled', enabled)
     }
 
     const setNFTCollectionEnabled = async (enabled: boolean) => {
-        try {
-            setIsNFTCollectionEnabled(enabled)
-            const stored = await AsyncStorage.getItem(PREFERENCES_STORAGE_KEY)
-            const preferences = stored ? JSON.parse(stored) : {}
-            preferences.isNFTCollectionEnabled = enabled
-            await AsyncStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences))
-        } catch (error) {
-            console.error('Failed to save NFT collection preference:', error)
-        }
+        setIsNFTCollectionEnabled(enabled)
+        await savePreference('isNFTCollectionEnabled', enabled)
     }
 
     const setNotificationsEnabled = async (enabled: boolean) => {
-        try {
-            setIsNotificationsEnabled(enabled)
-            const stored = await AsyncStorage.getItem(PREFERENCES_STORAGE_KEY)
-            const preferences = stored ? JSON.parse(stored) : {}
-            preferences.isNotificationsEnabled = enabled
-            await AsyncStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences))
-        } catch (error) {
-            console.error('Failed to save notification preference:', error)
-        }
+        setIsNotificationsEnabled(enabled)
+        await savePreference('isNotificationsEnabled', enabled)
+    }
+
+    const setSoundEnabled = async (enabled: boolean) => {
+        setIsSoundEnabled(enabled)
+        await savePreference('isSoundEnabled', enabled)
+    }
+
+    const setHapticEnabled = async (enabled: boolean) => {
+        setIsHapticEnabled(enabled)
+        await savePreference('isHapticEnabled', enabled)
+    }
+
+    const setDeveloperModeEnabled = async (enabled: boolean) => {
+        setIsDeveloperModeEnabled(enabled)
+        await savePreference('isDeveloperModeEnabled', enabled)
+    }
+
+    const setSpamFilterEnabled = async (enabled: boolean) => {
+        setIsSpamFilterEnabled(enabled)
+        await savePreference('isSpamFilterEnabled', enabled)
     }
 
     return (
@@ -80,7 +112,15 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
             isNFTCollectionEnabled,
             setNFTCollectionEnabled,
             isNotificationsEnabled,
-            setNotificationsEnabled
+            setNotificationsEnabled,
+            isSoundEnabled,
+            setSoundEnabled,
+            isHapticEnabled,
+            setHapticEnabled,
+            isDeveloperModeEnabled,
+            setDeveloperModeEnabled,
+            isSpamFilterEnabled,
+            setSpamFilterEnabled
         }}>
             {children}
         </PreferencesContext.Provider>

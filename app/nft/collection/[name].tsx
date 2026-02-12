@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, StatusBar, Dimensions, FlatList, Platform } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { View, Text, StyleSheet, Image, TouchableOpacity, StatusBar, Dimensions, FlatList, Platform } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../../services/movement_service/nftService'
-import { useNetwork } from '../../context/NetworkContext'
-import { useWallet } from '../../context/WalletContext'
-import { SkeletonLoader } from '../../components/SkeletonLoader'
+import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../../../services/movement_service/nftService'
+import { useNetwork } from '../../../context/NetworkContext'
+import { useWallet } from '../../../context/WalletContext'
+import { SkeletonLoader } from '../../../components/SkeletonLoader'
 
 const { width } = Dimensions.get('window')
 const COLUMN_WIDTH = (width - 48) / 2
@@ -16,7 +16,6 @@ export default function CollectionDetail() {
     const { name } = useLocalSearchParams<{ name: string }>()
     const { network } = useNetwork()
     const { address: walletAddress } = useWallet()
-    const insets = useSafeAreaInsets()
     const [nfts, setNfts] = useState<Array<UserNFT & { metadata?: NFTMetadata }>>([])
     const [loading, setLoading] = useState(true)
 
@@ -59,7 +58,7 @@ export default function CollectionDetail() {
 
     const handleNFTPress = (nft: UserNFT & { metadata?: NFTMetadata }) => {
         router.push({
-            pathname: "/nft-details",
+            pathname: "/nft/nft-details",
             params: {
                 tokenId: nft.token_data_id,
                 collectionName: name

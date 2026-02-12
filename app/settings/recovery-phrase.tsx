@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, Pressable, StatusBar, ScrollView, Alert } from 
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useWallet } from '../context/WalletContext'
-import { useSecurity } from '../context/SecurityContext'
+import { useWallet } from '../../context/WalletContext'
+import { useSecurity } from '../../context/SecurityContext'
 import * as Clipboard from 'expo-clipboard'
 import * as LocalAuthentication from 'expo-local-authentication'
 
-import { SecurityWarning } from '../components/SecurityWarning'
+import { SecurityWarning } from '../../components/SecurityWarning'
 
 export default function RecoveryPhraseScreen() {
     const router = useRouter()
@@ -225,3 +225,5 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
 })
+
+

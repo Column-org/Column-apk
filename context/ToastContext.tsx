@@ -1,8 +1,9 @@
 import React from 'react'
-import { ToastProvider as OriginalToastProvider } from 'react-native-toast-notifications'
+import { ToastProvider as OriginalToastProvider, useToast as useOriginalToast } from 'react-native-toast-notifications'
 import { View, Text, StyleSheet, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import AudioService from '../services/AudioService'
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const insets = useSafeAreaInsets()
@@ -66,8 +67,30 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     )
 }
 
-// Re-export the hook for easier use
-export { useToast } from 'react-native-toast-notifications'
+// Re-export the hook with audio feedback
+export const useToast = () => {
+    const toast = useOriginalToast()
+
+    const show = (message: string | React.ReactNode, options?: any) => {
+        const type = options?.type || 'normal'
+
+        // Trigger feedback based on type
+        if (type === 'success') {
+            AudioService.feedback('success')
+        } else if (type === 'error' || type === 'danger') {
+            AudioService.feedback('error')
+        } else if (type === 'warning') {
+            AudioService.feedback('error') // Use error sound for warning for now
+        }
+
+        return toast.show(message, options)
+    }
+
+    return {
+        ...toast,
+        show
+    }
+}
 
 const styles = StyleSheet.create({
     toastContainer: {

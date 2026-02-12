@@ -18,7 +18,7 @@ import {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
-export default function NFT() {
+export default function Checker() {
     const { t } = useTranslation()
     const { network } = useNetwork()
 

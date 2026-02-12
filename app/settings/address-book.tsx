@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { AddressBookService, Contact } from '../services/AddressBookService';
+import { AddressBookService, Contact } from '../../services/AddressBookService';
 
 const EMOJIS = ['👤', '💼', '🏠', '🏦', '🦊', '🐼', '🐱', '🐶', '🦄', '🌟'];
 
@@ -18,6 +18,7 @@ export default function AddressBook() {
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
     const [emoji, setEmoji] = useState('👤');
+    const [isTrusted, setIsTrusted] = useState(false);
 
     useEffect(() => {
         loadContacts();
@@ -34,12 +35,13 @@ export default function AddressBook() {
             return;
         }
 
-        await AddressBookService.addContact({ name, address, emoji });
+        await AddressBookService.addContact({ name, address, emoji, isTrusted });
         setIsAddModalVisible(false);
         setEditingContact(null);
         setName('');
         setAddress('');
         setEmoji('👤');
+        setIsTrusted(false);
         loadContacts();
     };
 
@@ -48,6 +50,7 @@ export default function AddressBook() {
         setName(contact.name);
         setAddress(contact.address);
         setEmoji(contact.emoji);
+        setIsTrusted(contact.isTrusted || false);
         setIsAddModalVisible(true);
     };
 
@@ -87,6 +90,7 @@ export default function AddressBook() {
                             setName('');
                             setAddress('');
                             setEmoji('👤');
+                            setIsTrusted(false);
                             setIsAddModalVisible(true);
                         }}
                         style={styles.addButton}
@@ -110,7 +114,15 @@ export default function AddressBook() {
                                         <Text style={styles.avatarText}>{contact.emoji}</Text>
                                     </View>
                                     <View style={styles.contactDetails}>
-                                        <Text style={styles.contactName}>{contact.name}</Text>
+                                        <View style={styles.nameRow}>
+                                            <Text style={styles.contactName}>{contact.name}</Text>
+                                            {contact.isTrusted && (
+                                                <View style={styles.safeBadge}>
+                                                    <Ionicons name="shield-checkmark" size={10} color="#00FFA3" />
+                                                    <Text style={styles.safeBadgeText}>SAFE</Text>
+                                                </View>
+                                            )}
+                                        </View>
                                         <Text style={styles.contactAddress}>{formatAddress(contact.address)}</Text>
                                     </View>
                                 </View>
@@ -180,6 +192,21 @@ export default function AddressBook() {
                                                 <Text style={styles.emojiLarge}>{e}</Text>
                                             </TouchableOpacity>
                                         ))}
+                                    </View>
+                                </View>
+
+                                <View style={styles.inputSection}>
+                                    <View style={styles.trustedRow}>
+                                        <View>
+                                            <Text style={styles.inputLabel}>Safe Label</Text>
+                                            <Text style={styles.inputSublabel}>Mark as trusted address</Text>
+                                        </View>
+                                        <TouchableOpacity
+                                            onPress={() => setIsTrusted(!isTrusted)}
+                                            style={[styles.toggle, isTrusted && styles.toggleActive]}
+                                        >
+                                            <View style={[styles.toggleDot, isTrusted && styles.toggleDotActive]} />
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
 
@@ -271,15 +298,68 @@ const styles = StyleSheet.create({
     },
     contactDetails: {
         gap: 2,
+        flex: 1,
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     contactName: {
         color: 'white',
         fontSize: 16,
         fontWeight: '600',
     },
+    safeBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 255, 163, 0.1)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        gap: 2,
+    },
+    safeBadgeText: {
+        color: '#00FFA3',
+        fontSize: 9,
+        fontWeight: '800',
+    },
     contactAddress: {
         color: '#8B98A5',
         fontSize: 13,
+    },
+    trustedRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        padding: 16,
+        borderRadius: 16,
+    },
+    inputSublabel: {
+        color: '#8B98A5',
+        fontSize: 12,
+        marginTop: 2,
+    },
+    toggle: {
+        width: 44,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#2A2F3A',
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: '#ffda34',
+    },
+    toggleDot: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: '#8B98A5',
+    },
+    toggleDotActive: {
+        transform: [{ translateX: 20 }],
+        backgroundColor: '#121315',
     },
     contactActions: {
         flexDirection: 'row',
@@ -370,3 +450,5 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
 });
+
+

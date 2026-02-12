@@ -14,6 +14,8 @@ import { ToastProvider } from '../context/ToastContext'
 import { DeepLinkProvider } from '../context/DeepLinkContext'
 
 
+import { AuraBackground } from '../components/AuraBackground'
+
 function AppContent() {
   const { isLocked, isSecurityEnabled, isPasscodeSet, isBiometricEnabled } = useSecurity()
   const { walletPublicKey } = useWallet()
@@ -21,7 +23,8 @@ function AppContent() {
   const showLock = isLocked && isSecurityEnabled && walletPublicKey && (isPasscodeSet || isBiometricEnabled)
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#121315' }}>
+      <AuraBackground />
       <AppUI />
       {showLock && (
         <View style={StyleSheet.absoluteFill}>
@@ -51,15 +54,22 @@ function AppUI() {
         <Stack.Screen name="send" />
         <Stack.Screen name="receive" />
         <Stack.Screen name="swap" />
-        <Stack.Screen name="account-center" options={{ animation: 'fade' }} />
-        <Stack.Screen name="passcode-setup" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="settings/account-center" options={{ animation: 'fade' }} />
+        <Stack.Screen name="settings/passcode-setup" options={{ presentation: 'fullScreenModal' }} />
       </Stack>
       <Sidebar isVisible={isSidebarVisible} onClose={closeSidebar} />
     </>
   )
 }
 
+import AudioService from '../services/AudioService'
+
 export default function RootLayout() {
+  useEffect(() => {
+    // Prime the audio engine immediately
+    AudioService.init()
+  }, [])
+
   return (
     <SafeAreaProvider>
       <View style={{ flex: 1, backgroundColor: '#121315' }}>

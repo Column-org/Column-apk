@@ -157,9 +157,8 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             finalRedirect += `${separator}${responseParams.toString()}`
 
             console.log('DeepLink: Redirecting to:', finalRedirect)
-            // Use WebBrowser.openAuthSessionAsync to try and reuse the existing browser session/tab
-            // This is much more effective at preventing new tabs than standard Linking.openURL
-            await WebBrowser.openAuthSessionAsync(finalRedirect);
+            // Use Linking.openURL to encourage standard browser navigation instead of a modal session
+            Linking.openURL(finalRedirect);
             toast.show('Success', { type: 'success' })
         } catch (error: any) {
             console.error('DeepLink: Approval failed:', error)

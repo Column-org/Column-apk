@@ -24,6 +24,7 @@ export interface UserNFT {
 export interface NFTMetadata {
   name: string
   description?: string
+  isSpam?: boolean
   image?: string
   animation_url?: string
   attributes?: Array<{
@@ -150,6 +151,9 @@ export async function fetchNFTMetadata(tokenUri: string): Promise<NFTMetadata | 
     try {
       const metadata = await response.json()
 
+      const { isSpamAsset } = require('../movementAssets')
+      metadata.isSpam = isSpamAsset(metadata.name || '', '')
+
       // Handle IPFS image URLs in metadata
       if (metadata.image && typeof metadata.image === 'string' && metadata.image.startsWith('ipfs://')) {
         metadata.image = metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
@@ -188,9 +192,12 @@ export async function getEnrichedUserNFTs(
             ? await fetchNFTMetadata(nft.current_token_data.token_uri)
             : null
 
+          const { isSpamAsset } = require('../movementAssets')
+          const isTokenSpam = isSpamAsset(nft.current_token_data?.token_name || '', '')
+
           return {
             ...nft,
-            metadata: metadata || undefined,
+            metadata: metadata ? { ...metadata, isSpam: metadata.isSpam || isTokenSpam } : { name: nft.current_token_data?.token_name, isSpam: isTokenSpam } as any,
           }
         } catch (error) {
           // Silently return NFT without metadata

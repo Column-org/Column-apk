@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useWallet } from '../context/WalletContext'
-import { useTheme } from '../hooks/useTheme'
+import { useWallet } from '../../context/WalletContext'
+import { useTheme } from '../../hooks/useTheme'
 import { Modal, TextInput, Pressable } from 'react-native'
 import { BlurView } from 'expo-blur'
 
@@ -467,3 +467,5 @@ const styles = StyleSheet.create({
 })
 
 export default AccountCenter
+
+

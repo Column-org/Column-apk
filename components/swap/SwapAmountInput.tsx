@@ -3,15 +3,13 @@ import { View, TextInput, StyleSheet, TouchableOpacity, Text } from 'react-nativ
 
 interface SwapAmountInputProps {
   amount: string
-  displayAmount: string
-  onAmountChange: (amount: string, display: string) => void
+  onAmountChange: (amount: string) => void
   tokenSymbol?: string
   balance?: string
 }
 
 export default function SwapAmountInput({
   amount,
-  displayAmount,
   onAmountChange,
   tokenSymbol,
   balance
@@ -20,13 +18,13 @@ export default function SwapAmountInput({
     // Only allow numbers and one decimal point
     const regex = /^\d*\.?\d*$/
     if (regex.test(text) || text === '') {
-      onAmountChange(text, text || '0')
+      onAmountChange(text)
     }
   }
 
   const handleMaxPress = () => {
     if (balance) {
-      onAmountChange(balance, balance)
+      onAmountChange(balance)
     }
   }
 

@@ -1,13 +1,16 @@
-import { View, Text, ScrollView, StyleSheet, StatusBar, ActivityIndicator, RefreshControl, TouchableOpacity, Animated, Image, Pressable, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, StatusBar, RefreshControl, TouchableOpacity, Animated, Dimensions } from 'react-native'
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'expo-router'
 import { useWallet } from '../../context/WalletContext'
 import { SwipeableTabWrapper } from '../../components/SwipeableTabWrapper'
 import { useNetwork } from '../../context/NetworkContext'
-import { getTransactionHistory, Transaction } from '../../services/movement_service/transactionHistory'
-import { SkeletonLoader } from '../../components/SkeletonLoader'
+import { getTransactionHistory, Transaction, getCachedTransactions } from '../../services/movement_service/transactionHistory'
+import { TransactionItem } from '../../components/activities/TransactionItem'
+import { ActivityFilter } from '../../components/activities/ActivityFilter'
+import { ActivityEmptyState } from '../../components/activities/ActivityEmptyState'
+import { ActivitySkeleton } from '../../components/activities/ActivitySkeleton'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -18,8 +21,13 @@ const Activities = () => {
     const { network } = useNetwork()
     const router = useRouter()
 
-    const [transactions, setTransactions] = useState<Transaction[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const [transactions, setTransactions] = useState<Transaction[]>(() => {
+        if (walletAddress && network) {
+            return getCachedTransactions(walletAddress, network) || []
+        }
+        return []
+    })
+    const [isLoading, setIsLoading] = useState(transactions.length === 0)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [filterType, setFilterType] = useState<'all' | 'send' | 'receive' | 'swap' | 'contract'>('all')
@@ -35,7 +43,8 @@ const Activities = () => {
 
         if (showRefresh) {
             setIsRefreshing(true)
-        } else {
+        } else if (transactions.length === 0) {
+            // Only show full loading skeleton if we don't have any data yet
             setIsLoading(true)
         }
         setError(null)
@@ -56,8 +65,11 @@ const Activities = () => {
     }, [walletAddress, network])
 
     useEffect(() => {
-        fetchTransactions()
-    }, [fetchTransactions])
+        // Only fetch if we don't have transactions yet
+        if (transactions.length === 0) {
+            fetchTransactions()
+        }
+    }, [fetchTransactions, transactions.length])
 
     const groupTransactionsByDate = useCallback((txs: Transaction[]) => {
         const groups: { [key: string]: Transaction[] } = {}
@@ -86,47 +98,6 @@ const Activities = () => {
         return groups
     }, [])
 
-    const getTransactionIcon = (type: Transaction['type']) => {
-        switch (type) {
-            case 'send':
-                return { name: 'arrow-up', color: '#8B98A5' }
-            case 'receive':
-                return { name: 'arrow-down', color: '#ffda34' }
-            case 'swap':
-                return { name: 'swap-horizontal', color: '#8B98A5' }
-            case 'contract':
-                return { name: 'apps', color: '#8B98A5' }
-            default:
-                return { name: 'help-circle', color: '#8B98A5' }
-        }
-    }
-
-
-    const getTransactionName = (tx: Transaction) => {
-        switch (tx.type) {
-            case 'send':
-                return `Sent ${tx.token || 'MOVE'}`
-            case 'receive':
-                return `Received ${tx.token || 'MOVE'}`
-            case 'swap':
-                return 'Swap'
-            case 'contract':
-                return tx.functionName || 'Contract Call'
-            default:
-                return 'Transaction'
-        }
-    }
-
-    const formatTime = (timestamp: number) => {
-        const date = new Date(timestamp * 1000)
-        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-    }
-
-    const formatAddress = (address: string) => {
-        if (!address) return ''
-        return `${address.slice(0, 6)}...${address.slice(-4)}`
-    }
-
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => {
             // Filter by success status
@@ -147,113 +118,11 @@ const Activities = () => {
         extrapolate: 'clamp',
     })
 
-    const renderTransactionItem = (tx: Transaction) => {
-        const icon = getTransactionIcon(tx.type)
-        const isSend = tx.type === 'send'
-        const isSuccess = tx.success !== false
-        const isAssetTransaction = tx.type === 'send' || tx.type === 'receive' || tx.type === 'swap'
-        const MOVE_ICON = 'https://gateway.pinata.cloud/ipfs/QmUv8RVdgo6cVQzh7kxerWLatDUt4rCEFoCTkCVLuMAa27'
-
-        return (
-            <Pressable
-                key={tx.hash}
-                style={({ pressed }) => [
-                    styles.transactionItem,
-                    pressed && styles.transactionItemPressed
-                ]}
-                onPress={() => router.push({
-                    pathname: '/transactionDetails',
-                    params: { transaction: JSON.stringify(tx) }
-                })}
-            >
-                <View style={styles.iconContainer}>
-                    {tx.type === 'swap' && tx.swapData ? (
-                        // For swap: Show overlapping token images
-                        <>
-                            <View style={styles.swapIconContainer}>
-                                <View style={styles.swapIconLeft}>
-                                    {tx.swapData.fromTokenLogo ? (
-                                        <Image
-                                            source={{ uri: tx.swapData.fromTokenLogo }}
-                                            style={styles.swapTokenImage}
-                                        />
-                                    ) : (
-                                        <View style={styles.swapTokenPlaceholder}>
-                                            <Text style={styles.swapTokenPlaceholderText}>
-                                                {tx.swapData.fromToken.substring(0, 2)}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                                <View style={styles.swapIconRight}>
-                                    {tx.swapData.toTokenLogo ? (
-                                        <Image
-                                            source={{ uri: tx.swapData.toTokenLogo }}
-                                            style={styles.swapTokenImage}
-                                        />
-                                    ) : (
-                                        <View style={styles.swapTokenPlaceholder}>
-                                            <Text style={styles.swapTokenPlaceholderText}>
-                                                {tx.swapData.toToken.substring(0, 2)}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                            <View style={[styles.statusBadge, isSuccess ? styles.successBadge : styles.failedBadge]}>
-                                <Ionicons
-                                    name={isSuccess ? 'checkmark' : 'close'}
-                                    size={10}
-                                    color="white"
-                                />
-                            </View>
-                        </>
-                    ) : isAssetTransaction ? (
-                        // For send/receive: Show asset icon with badge
-                        <>
-                            <View style={styles.transactionIcon}>
-                                <Image
-                                    source={{ uri: MOVE_ICON }}
-                                    style={styles.assetImage}
-                                />
-                            </View>
-                            <View style={[styles.statusBadge, isSuccess ? styles.successBadge : styles.failedBadge]}>
-                                <Ionicons
-                                    name={isSuccess ? 'checkmark' : 'close'}
-                                    size={10}
-                                    color="white"
-                                />
-                            </View>
-                        </>
-                    ) : (
-                        // For contract/interaction: Show full circle with checkmark or X
-                        <View style={[styles.transactionIcon, isSuccess ? styles.successCircle : styles.failedCircle]}>
-                            <Ionicons
-                                name={isSuccess ? 'checkmark' : 'close'}
-                                size={24}
-                                color="white"
-                            />
-                        </View>
-                    )}
-                </View>
-                <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionName}>{getTransactionName(tx)}</Text>
-                    <Text style={styles.transactionDate}>
-                        {tx.to && tx.type === 'send' && `To ${formatAddress(tx.to)}`}
-                        {tx.from && tx.type === 'receive' && `From ${formatAddress(tx.from)}`}
-                        {tx.type === 'contract' && (tx.functionName || 'Unknown')}
-                    </Text>
-                </View>
-                <View style={styles.transactionRight}>
-                    {tx.amount && (
-                        <Text style={isSend ? styles.transactionAmountNegative : styles.transactionAmount}>
-                            {isSend ? '-' : '+'}{tx.amount} {tx.token || 'MOVE'}
-                        </Text>
-                    )}
-                    <Text style={styles.transactionTime}>{formatTime(tx.timestamp)}</Text>
-                </View>
-            </Pressable>
-        )
+    const handleTransactionPress = (tx: Transaction) => {
+        router.push({
+            pathname: '/transactionDetails',
+            params: { transaction: JSON.stringify(tx) }
+        })
     }
 
     return (
@@ -276,61 +145,12 @@ const Activities = () => {
                 </Animated.View>
 
                 {showFilterMenu && (
-                    <View style={styles.filterMenu}>
-                        <View style={styles.filterSection}>
-                            <Text style={styles.filterLabel}>Transaction Type</Text>
-                            <View style={styles.filterOptions}>
-                                <TouchableOpacity
-                                    style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
-                                    onPress={() => setFilterType('all')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>All</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.filterChip, filterType === 'send' && styles.filterChipActive]}
-                                    onPress={() => setFilterType('send')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[styles.filterChipText, filterType === 'send' && styles.filterChipTextActive]}>Send</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.filterChip, filterType === 'receive' && styles.filterChipActive]}
-                                    onPress={() => setFilterType('receive')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[styles.filterChipText, filterType === 'receive' && styles.filterChipTextActive]}>Receive</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.filterChip, filterType === 'swap' && styles.filterChipActive]}
-                                    onPress={() => setFilterType('swap')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[styles.filterChipText, filterType === 'swap' && styles.filterChipTextActive]}>Swap</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.filterChip, filterType === 'contract' && styles.filterChipActive]}
-                                    onPress={() => setFilterType('contract')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[styles.filterChipText, filterType === 'contract' && styles.filterChipTextActive]}>Contract</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        <View style={styles.filterDivider} />
-
-                        <TouchableOpacity
-                            style={styles.filterToggle}
-                            onPress={() => setHideFailedTx(!hideFailedTx)}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={styles.filterToggleText}>Hide Failed Transactions</Text>
-                            <View style={[styles.toggle, hideFailedTx && styles.toggleActive]}>
-                                <View style={[styles.toggleDot, hideFailedTx && styles.toggleDotActive]} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                    <ActivityFilter
+                        filterType={filterType}
+                        setFilterType={setFilterType}
+                        hideFailedTx={hideFailedTx}
+                        setHideFailedTx={setHideFailedTx}
+                    />
                 )}
 
                 <Animated.ScrollView
@@ -351,21 +171,7 @@ const Activities = () => {
                 >
 
                     {isLoading && !isRefreshing && (
-                        <View style={styles.skeletonContainer}>
-                            {[...Array(6)].map((_, index) => (
-                                <View key={index} style={styles.skeletonItem}>
-                                    <SkeletonLoader width={48} height={48} borderRadius={24} />
-                                    <View style={styles.skeletonContent}>
-                                        <SkeletonLoader width="60%" height={16} style={{ marginBottom: 8 }} />
-                                        <SkeletonLoader width="40%" height={12} />
-                                    </View>
-                                    <View style={styles.skeletonRight}>
-                                        <SkeletonLoader width={60} height={14} style={{ marginBottom: 8 }} />
-                                        <SkeletonLoader width={50} height={12} />
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
+                        <ActivitySkeleton />
                     )}
 
                     {error && (
@@ -382,14 +188,10 @@ const Activities = () => {
                     )}
 
                     {!isLoading && !error && transactions.length === 0 && (
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="receipt-outline" size={48} color="#8B98A5" />
-                            <Text style={styles.emptyText}>No transactions yet</Text>
-                            <Text style={styles.emptySubtext}>Your transaction history will appear here</Text>
-                        </View>
+                        <ActivityEmptyState />
                     )}
 
-                    {!isLoading && !error && Object.entries(groupedTransactions).map(([dateKey, txs]) => (
+                    {!isLoading && !error && Object.entries(groupedTransactions).map(([dateKey, txs]: [string, any]) => (
                         <View key={dateKey}>
                             <View style={styles.dateSection}>
                                 <Text style={styles.dateLabel}>
@@ -400,7 +202,13 @@ const Activities = () => {
                                             : dateKey}
                                 </Text>
                             </View>
-                            {txs.map(renderTransactionItem)}
+                            {txs.map((tx: Transaction) => (
+                                <TransactionItem
+                                    key={tx.hash}
+                                    tx={tx}
+                                    onPress={() => handleTransactionPress(tx)}
+                                />
+                            ))}
                         </View>
                     ))}
 
@@ -448,165 +256,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textTransform: 'uppercase',
     },
-    transactionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#222327',
-        borderRadius: 12,
-        marginHorizontal: 20,
-        marginBottom: 8,
-    },
-    transactionItemPressed: {
-        backgroundColor: '#2A2F38',
-        opacity: 0.8,
-    },
-    iconContainer: {
-        position: 'relative',
-        marginRight: 12,
-    },
-    transactionIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: 'rgba(139, 152, 165, 0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-    },
-    assetImage: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-    },
-    swapIconContainer: {
-        width: 56,
-        height: 48,
-        position: 'relative',
-    },
-    swapIconLeft: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        position: 'absolute',
-        left: 0,
-        top: 6,
-        backgroundColor: '#222327',
-        borderWidth: 2,
-        borderColor: '#222327',
-        overflow: 'hidden',
-    },
-    swapIconRight: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        position: 'absolute',
-        right: 0,
-        top: 6,
-        backgroundColor: '#222327',
-        borderWidth: 2,
-        borderColor: '#222327',
-        overflow: 'hidden',
-    },
-    swapTokenImage: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-    },
-    swapTokenPlaceholder: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#ffda34',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    swapTokenPlaceholderText: {
-        color: '#121315',
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    statusBadge: {
-        position: 'absolute',
-        bottom: -2,
-        right: -2,
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#222327',
-    },
-    successBadge: {
-        backgroundColor: '#10B981',
-    },
-    failedBadge: {
-        backgroundColor: '#EF4444',
-    },
-    successCircle: {
-        backgroundColor: '#10B981',
-    },
-    failedCircle: {
-        backgroundColor: '#EF4444',
-    },
-    transactionDetails: {
-        flex: 1,
-    },
-    transactionName: {
-        color: 'white',
-        fontSize: 15,
-        fontWeight: '500',
-        marginBottom: 3,
-    },
-    transactionDate: {
-        color: '#8B98A5',
-        fontSize: 12,
-    },
-    transactionRight: {
-        alignItems: 'flex-end',
-    },
-    transactionAmount: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 3,
-    },
-    transactionAmountNegative: {
-        color: '#8B98A5',
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 3,
-    },
-    transactionValue: {
-        color: '#8B98A5',
-        fontSize: 12,
-    },
-    transactionTime: {
-        color: '#8B98A5',
-        fontSize: 12,
-        marginTop: 3,
-    },
-    skeletonContainer: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
-    skeletonItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#222327',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 8,
-    },
-    skeletonContent: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    skeletonRight: {
-        alignItems: 'flex-end',
-    },
     errorContainer: {
         alignItems: 'center',
         paddingVertical: 40,
@@ -628,100 +277,6 @@ const styles = StyleSheet.create({
         color: '#121315',
         fontSize: 14,
         fontWeight: '600',
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        paddingVertical: 60,
-    },
-    emptyText: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: '600',
-        marginTop: 16,
-    },
-    emptySubtext: {
-        color: '#8B98A5',
-        fontSize: 14,
-        marginTop: 8,
-    },
-    filterMenu: {
-        backgroundColor: '#222327',
-        marginHorizontal: 20,
-        marginTop: 8,
-        borderRadius: 12,
-        padding: 12,
-    },
-    filterSection: {
-        marginBottom: 8,
-    },
-    filterLabel: {
-        color: '#8B98A5',
-        fontSize: 10,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        marginBottom: 8,
-    },
-    filterOptions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 6,
-    },
-    filterChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        backgroundColor: '#121315',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    filterChipActive: {
-        backgroundColor: '#ffda34',
-        borderColor: '#ffda34',
-    },
-    filterChipText: {
-        color: '#8B98A5',
-        fontSize: 11,
-        fontWeight: '600',
-    },
-    filterChipTextActive: {
-        color: '#121315',
-    },
-    filterDivider: {
-        height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        marginVertical: 8,
-    },
-    filterToggle: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    filterToggleText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    toggle: {
-        width: 40,
-        height: 22,
-        borderRadius: 11,
-        backgroundColor: '#121315',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        paddingHorizontal: 2,
-    },
-    toggleActive: {
-        backgroundColor: '#ffda34',
-        alignItems: 'flex-end',
-    },
-    toggleDot: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: '#ffda34',
-    },
-    toggleDotActive: {
-        backgroundColor: '#121315',
     },
 })
 

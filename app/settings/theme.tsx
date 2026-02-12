@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, StatusBar, Dimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useTheme, saveTheme, ThemeType } from '../hooks/useTheme'
+import { useTheme, saveTheme, ThemeType } from '../../hooks/useTheme'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -45,7 +45,7 @@ export default function AppTheme() {
                             activeOpacity={0.8}
                         >
                             <Image
-                                source={require('../assets/parthenon2.webp')}
+                                source={require('../../assets/parthenon2.webp')}
                                 style={styles.themeImage}
                                 resizeMode="cover"
                             />
@@ -152,3 +152,5 @@ const styles = StyleSheet.create({
         padding: 2,
     },
 })
+
+
