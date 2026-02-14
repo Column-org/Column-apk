@@ -22,8 +22,8 @@ export default function QRScanner() {
     const handleBarCodeScanned = ({ data }: { data: string }) => {
         setScanned(true)
 
-        // 1. Detect Column SDK Deep Links
-        if (data.startsWith('column://')) {
+        // 1. Detect Column SDK Deep Links (or Expo fallback)
+        if (data.startsWith('column://') || data.startsWith('exp://')) {
             console.log('QR Scanner: Detected Column Deep Link:', data)
             Linking.openURL(data).catch(err => {
                 console.error('QR Scanner: Failed to open deep link:', err)

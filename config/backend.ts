@@ -10,9 +10,9 @@
  */
 
 // Set to true for local development, false for production
-export const USE_LOCAL_BACKEND = false
+export const USE_LOCAL_BACKEND = true
 
-const LOCAL_HOST = '10.148.185.245'
+const LOCAL_HOST = '10.130.96.245'
 const LOCAL_PORT = 3000
 
 // TODO: Update this with your Vercel URL after deployment

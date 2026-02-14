@@ -4,6 +4,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { DeepLinkManager, ParsedDeepLink } from '../services/DeepLinkManager'
 import { DeepLinkRequest, DeepLinkApprovalModal } from '../components/deeplink/DeepLinkApprovalModal'
 import { useWallet } from './WalletContext'
+import { DEFAULT_NETWORK, NETWORK_CONFIGS } from '../constants/networkConfig'
+import BACKEND_CONFIG from '../config/backend'
 import { useToast } from './ToastContext'
 import { useNetwork } from './NetworkContext'
 
@@ -153,10 +155,22 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             responseParams.set('log', logMsg)
 
             let finalRedirect = originalParsed.params.redirect_link
-            const separator = finalRedirect.includes('#') ? '&' : '#'
+            const separator = finalRedirect.includes('?') ? '&' : '?'
             finalRedirect += `${separator}${responseParams.toString()}`
 
             console.log('DeepLink: Redirecting to:', finalRedirect)
+
+            // RELAY: If there is a session ID, report the result to the Public Relay (Nostr)
+            const sessionId = originalParsed.params.session_id;
+            if (sessionId) {
+                try {
+                    console.log(`DeepLink: Reporting to Public Relay for session: ${sessionId}`);
+                    await sdk.publishToRelay(sessionId, Object.fromEntries(responseParams.entries()));
+                } catch (e) {
+                    console.error('DeepLink: Relay report failed', e);
+                }
+            }
+
             // Use Linking.openURL to encourage standard browser navigation instead of a modal session
             Linking.openURL(finalRedirect);
             toast.show('Success', { type: 'success' })
@@ -178,10 +192,26 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
     }
 
-    const handleDecline = () => {
+    const handleDecline = async () => {
         if (originalParsed?.params.redirect_link) {
             const redirect = originalParsed.params.redirect_link
             const errorRedirect = `${redirect}${redirect.includes('?') ? '&' : '?'}error=USER_DECLINED`
+
+            // RELAY: Report decline
+            const sessionId = originalParsed.params.session_id;
+            if (sessionId) {
+                try {
+                    await fetch(`${BACKEND_CONFIG.BASE_URL}/session/approve`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sessionId,
+                            data: { error: 'USER_DECLINED', status: 'error' }
+                        })
+                    });
+                } catch (e) { }
+            }
+
             Linking.openURL(errorRedirect)
         }
         setActiveRequest(null)
