@@ -45,5 +45,7 @@ expo-backend/.env
 
 # local development
 example/
+example2/
+example-native/
 SDK/
 

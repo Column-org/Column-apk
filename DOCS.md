@@ -113,23 +113,23 @@ const handleDisconnect = () => {
 
 ---
 
-## 💎 Best Practices
+## 🔄 Multi-dApp & Cross-App Compatibility
 
-1.  **Session Persistence**: Always check `localStorage` on page load to restore the user session.
-2.  **Encryption Key Recovery**: You **must** call `sdk.setWalletEncryptionPublicKey(savedKey)` when restoring a session, or the SDK won't be able to encrypt your transaction requests.
-3.  **URL Cleanup**: Always use `window.history.replaceState` after parsing a response to keep your app's URLs clean and prevent accidental double-processing.
+The Column SDK is designed to handle multiple dApps (or multiple instances of your own apps) simultaneously on the same device.
 
----
+### 1. Unique Session Identities
+Every time the SDK is initialized, it generates a unique cryptographic "Session Key". Even if you have 3 different apps on your phone using Column, they each have their own private "conversation" with the wallet. They never cross-talk.
 
-## 📡 Redirect Logic Breakdown
+### 2. Precise Redirects
+The Wallet uses the exact `redirect_link` (Web) or `scheme` (Native) provided in the request to return the user. 
+*   **Web dApp A** returns to `https://dapp-a.com`
+*   **Web dApp B** returns to `https://dapp-b.com`
+*   **Native App C** returns to `myapp-c://`
 
-| Parameter | Description |
-| :--- | :--- |
-| `address` | The user's wallet address (Aptos/Movement). |
-| `public_key` | The user's account public key. |
-| `column_encryption_public_key` | A unique key used to encrypt all future requests to the wallet. |
-| `transaction_hash` | Returned after a successful `signAndSubmit` request. |
-| `error` | Returned if the user declines or a failure occurs (e.g., `USER_DECLINED`). |
+### 3. Best Practices for Production
+*   **Unique App URLs**: Always provide a unique `appUrl` in your config. This is how the wallet identifies and groups your session in the user's history.
+*   **Unique Native Schemes**: Ensure every mobile app has a unique `scheme` in its `app.json`.
+*   **Session Storage**: To keep users logged in across refreshes, store the `sessionSecretKey` in Secure Storage and pass it to the constructor on next launch.
 
 ---
 
