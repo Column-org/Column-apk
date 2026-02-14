@@ -78,6 +78,12 @@ export const Header = () => {
                         <HeartbeatDot />
                     </View>
                     <TouchableOpacity
+                        onPress={() => router.push('/qrScanner')}
+                        style={styles.actionButton}
+                    >
+                        <Ionicons name="scan-outline" size={22} color="#8B98A5" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                         onPress={() => router.push('/browser')}
                         style={styles.actionButton}
                     >

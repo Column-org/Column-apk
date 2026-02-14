@@ -22,6 +22,18 @@ export default function QRScanner() {
     const handleBarCodeScanned = ({ data }: { data: string }) => {
         setScanned(true)
 
+        // 1. Detect Column SDK Deep Links
+        if (data.startsWith('column://')) {
+            console.log('QR Scanner: Detected Column Deep Link:', data)
+            Linking.openURL(data).catch(err => {
+                console.error('QR Scanner: Failed to open deep link:', err)
+                Alert.alert('Error', 'Failed to handle the scanned deep link.')
+            })
+            router.back()
+            return
+        }
+
+        // 2. Fallback: standard address scanning for transfers
         // Navigate back to sendConfirm with the scanned address and preserve other params
         router.push({
             pathname: '/sendConfirm',
