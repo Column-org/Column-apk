@@ -12,9 +12,13 @@ import { Sidebar } from '../components/Sidebar'
 import LockScreen from '../components/security/LockScreen'
 import { ToastProvider } from '../context/ToastContext'
 import { DeepLinkProvider } from '../context/DeepLinkContext'
-
+import { GlobalGlowProvider } from '../context/GlobalGlowContext'
 
 import { AuraBackground } from '../components/AuraBackground'
+import AudioService from '../services/audio/AudioService'
+
+// Ignore the noisy expo-notifications warning in Expo Go
+LogBox.ignoreLogs(['warnOfExpoGoPushUsage']);
 
 function AppContent() {
   const { isLocked, isSecurityEnabled, isPasscodeSet, isBiometricEnabled } = useSecurity()
@@ -50,6 +54,9 @@ function AppUI() {
         }}
       >
         <Stack.Screen name="index" />
+        <Stack.Screen name="wallet-setup" />
+        <Stack.Screen name="biometric-setup" />
+        <Stack.Screen name="setup-success" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="send" />
         <Stack.Screen name="receive" />
@@ -62,7 +69,6 @@ function AppUI() {
   )
 }
 
-import AudioService from '../services/AudioService'
 
 export default function RootLayout() {
   useEffect(() => {
@@ -80,9 +86,11 @@ export default function RootLayout() {
                 <PreferencesProvider>
                   <SidebarProvider>
                     <ToastProvider>
-                      <DeepLinkProvider>
-                        <AppContent />
-                      </DeepLinkProvider>
+                      <GlobalGlowProvider>
+                        <DeepLinkProvider>
+                          <AppContent />
+                        </DeepLinkProvider>
+                      </GlobalGlowProvider>
                     </ToastProvider>
                   </SidebarProvider>
                 </PreferencesProvider>

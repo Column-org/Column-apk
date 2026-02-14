@@ -8,7 +8,8 @@ import { transferFungibleAsset, transferMove, TransferAssetParams, TransferResul
 import { FungibleAsset } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
 import { usePreferences } from '../context/PreferencesContext'
-import AudioService from '../services/AudioService'
+import AudioService from '../services/audio/AudioService'
+import * as NotificationService from '../services/NotificationService'
 
 type TransactionStatus = 'sending' | 'sent' | 'failed'
 
@@ -131,6 +132,13 @@ export default function SendStatus() {
                         setStatus('sent')
                         setTxHash(result.transactionHash)
                         AudioService.feedback('success')
+
+                        // Trigger local notification
+                        NotificationService.triggerSendNotification(
+                            params.amount as string,
+                            token.metadata.symbol,
+                            (params.recipient as string).slice(0, 8) + '...' + (params.recipient as string).slice(-4)
+                        )
                     } else {
                         setStatus('failed')
                         setErrorMessage(result.error || 'Transaction failed')
@@ -225,8 +233,8 @@ export default function SendStatus() {
         <LinearGradient
             colors={getGradientColors()}
             style={styles.container}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
+            start={{ x: 0.0, y: 0.0 }}
+            end={{ x: 0.0, y: 1.0 }}
         >
             <View style={styles.content}>
                 <View style={styles.iconContainer}>

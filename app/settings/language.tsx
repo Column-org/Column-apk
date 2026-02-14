@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import ISO6391 from 'iso-639-1'
 import { getLanguageFlag } from '../../utils/languageFlags'
-import AudioService from '../../services/AudioService'
+import AudioService from '../../services/audio/AudioService'
 import { usePreferences } from '../../context/PreferencesContext'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')

@@ -22,6 +22,7 @@ export const SYMBOL_TO_ID: Record<string, string> = {
   'WBTC': 'bitcoin',
   'SOL': 'solana',
   'APT': 'aptos',
+  'WEUSD': 'weusd',
 }
 
 export async function getMoveTokenPrice(): Promise<TokenPrice | null> {

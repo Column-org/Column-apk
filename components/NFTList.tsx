@@ -1,46 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native'
+import React, { useMemo } from 'react'
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../services/movement_service/nftService'
-import { useNetwork } from '../context/NetworkContext'
+import { UserNFT, NFTMetadata } from '../services/movement_service/nftService'
 import { SkeletonLoader } from './SkeletonLoader'
 import { usePreferences } from '../context/PreferencesContext'
 
+import { useNFTs } from '../hooks/useNFTs'
+
 interface NFTListProps {
     walletAddress: string
+    refreshKey?: number
 }
 
-export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
+export const NFTList: React.FC<NFTListProps> = ({ walletAddress, refreshKey = 0 }) => {
     const router = useRouter()
-    const { network } = useNetwork()
     const { isSpamFilterEnabled } = usePreferences()
-    const [nfts, setNfts] = useState<Array<UserNFT & { metadata?: NFTMetadata }>>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const { nfts, isLoading: loading, error, refetch } = useNFTs(refreshKey)
 
-    useEffect(() => {
-        loadNFTs()
-    }, [walletAddress, network])
-
-    const loadNFTs = async () => {
-        if (!walletAddress) {
-            setLoading(false)
-            return
-        }
-
-        setLoading(true)
-        setError(null)
-        try {
-            const userNFTs = await getEnrichedUserNFTs(walletAddress, network)
-            setNfts(userNFTs)
-        } catch (err: any) {
-            setNfts([])
-            setError(null)
-        } finally {
-            setLoading(false)
-        }
-    }
 
     const getImageUrl = (nft: UserNFT & { metadata?: NFTMetadata }) => {
         if (nft.metadata?.image) return nft.metadata.image
@@ -103,7 +79,7 @@ export const NFTList: React.FC<NFTListProps> = ({ walletAddress }) => {
             ) : error ? (
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error}</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={loadNFTs}>
+                    <TouchableOpacity style={styles.retryButton} onPress={refetch}>
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>

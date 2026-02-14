@@ -1,27 +1,17 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 const PREFERENCES_STORAGE_KEY = '@app_preferences';
 
-const areNotificationsEnabled = async () => {
-    try {
-        const stored = await AsyncStorage.getItem(PREFERENCES_STORAGE_KEY);
-        if (stored) {
-            const preferences = JSON.parse(stored);
-            return preferences.isNotificationsEnabled ?? true;
-        }
-    } catch (error) {
-        console.error('Error checking notification preference:', error);
-    }
-    return true; // Default to true if not set
-};
-
-// Lazy loader for notifications to avoid initialization errors in some environments
+// Lazy load notifications to avoid bundling issues
 const getNotifications = () => {
     try {
-        return require('expo-notifications');
+        // In Expo Go, require can trigger a noisy warning, but we need it for local notifications
+        const Notifications = require('expo-notifications');
+        return Notifications;
     } catch (e) {
-        // Silently fail in Expo Go - this is expected
+        console.warn('NotificationService: expo-notifications not found');
         return null;
     }
 };
@@ -31,7 +21,7 @@ const ensureHandler = () => {
     if (isHandlerSet) return;
     try {
         const Notifications = getNotifications();
-        if (!Notifications) return; // Skip if notifications not available
+        if (!Notifications) return;
 
         Notifications.setNotificationHandler({
             handleNotification: async () => ({
@@ -43,15 +33,28 @@ const ensureHandler = () => {
         });
         isHandlerSet = true;
     } catch (e) {
-        // Silently ignore - expected in Expo Go
+        console.warn('NotificationService: Failed to set handler', e);
     }
+};
+
+const areNotificationsEnabled = async () => {
+    try {
+        const stored = await AsyncStorage.getItem(PREFERENCES_STORAGE_KEY);
+        if (stored) {
+            const preferences = JSON.parse(stored);
+            return preferences.isNotificationsEnabled ?? true;
+        }
+    } catch (error) {
+        console.error('NotificationService: Error checking preference:', error);
+    }
+    return true; // Default to true if not set
 };
 
 export const requestNotificationPermissions = async () => {
     if (Platform.OS === 'web') return false;
     try {
         const Notifications = getNotifications();
-        if (!Notifications) return false; // Not available in Expo Go
+        if (!Notifications) return false;
 
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
@@ -63,6 +66,7 @@ export const requestNotificationPermissions = async () => {
 
         return finalStatus === 'granted';
     } catch (e) {
+        console.warn('NotificationService: Failed to request permissions:', e);
         return false;
     }
 };
@@ -73,7 +77,7 @@ export const triggerReceiveNotification = async (amount: string, symbol: string)
 
     try {
         const Notifications = getNotifications();
-        if (!Notifications) return; // Not available in Expo Go
+        if (!Notifications) return;
 
         await Notifications.scheduleNotificationAsync({
             content: {
@@ -84,7 +88,7 @@ export const triggerReceiveNotification = async (amount: string, symbol: string)
             trigger: null, // trigger immediately
         });
     } catch (e) {
-        // Silently ignore
+        console.warn('NotificationService: Failed to schedule receive notification:', e);
     }
 };
 
@@ -94,7 +98,7 @@ export const triggerSendNotification = async (amount: string, symbol: string, to
 
     try {
         const Notifications = getNotifications();
-        if (!Notifications) return; // Not available in Expo Go
+        if (!Notifications) return;
 
         await Notifications.scheduleNotificationAsync({
             content: {
@@ -105,6 +109,6 @@ export const triggerSendNotification = async (amount: string, symbol: string, to
             trigger: null, // trigger immediately
         });
     } catch (e) {
-        // Silently ignore
+        console.warn('NotificationService: Failed to schedule send notification:', e);
     }
 };

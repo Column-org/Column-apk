@@ -58,7 +58,7 @@ export default function Web3SetupScreen() {
                     </Pressable>
 
                     <View style={styles.divider}>
-                        <Text style={styles.dividerText}>OR IMPORT EXISTING</Text>
+                        <Text style={styles.dividerText}>Or import existing</Text>
                     </View>
 
                     <Pressable style={styles.optionCard} onPress={handleImportPrivateKey}>
@@ -145,8 +145,6 @@ const styles = StyleSheet.create({
         padding: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
     },
     iconContainer: {
         width: 52,

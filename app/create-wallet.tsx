@@ -40,7 +40,7 @@ export default function CreateWalletScreen() {
             Alert.alert('Wait!', 'Please confirm that you have saved your recovery phrase.')
             return
         }
-        router.replace('/(tabs)/home')
+        router.replace('/biometric-setup')
     }
 
     const handleShare = async () => {

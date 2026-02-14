@@ -24,7 +24,8 @@ import { useSecurity } from '../context/SecurityContext'
 import { usePreferences } from '../context/PreferencesContext'
 import { BlurView } from 'expo-blur'
 import * as Clipboard from 'expo-clipboard'
-import * as NotificationService from '../services/NotificationService'
+import { requestNotificationPermissions } from '../services/NotificationService'
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 const SIDEBAR_WIDTH = SCREEN_WIDTH // Cover completely
@@ -38,7 +39,6 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
     const { address: walletAddress, allWallets, switchWallet, logout: unifiedLogout } = useWallet()
     const { clearAllSecurity } = useSecurity()
     const { isNotificationsEnabled, setNotificationsEnabled } = usePreferences()
-    const { getThemeImage } = useTheme()
     const router = useRouter()
     const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current
     const opacityAnim = useRef(new Animated.Value(0)).current
@@ -99,6 +99,21 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
     const formatAddressShort = (address: string | null) => {
         if (!address) return '0x...'
         return `${address.slice(0, 6)}...${address.slice(-4)}`
+    }
+
+    const handleToggleNotifications = async () => {
+        if (!isNotificationsEnabled) {
+            const granted = await requestNotificationPermissions()
+            if (!granted) {
+                Alert.alert(
+                    'Permissions Required',
+                    'Please enable notifications in your device settings to receive alerts.',
+                    [{ text: 'OK' }]
+                )
+                return
+            }
+        }
+        await setNotificationsEnabled(!isNotificationsEnabled)
     }
 
 
@@ -178,7 +193,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                                     </View>
                                 </TouchableOpacity>
 
-                                {/* Address Book Option */}
+                                { /* Address Book Option */}
                                 <TouchableOpacity
                                     style={styles.sidebarOption}
                                     onPress={() => {
@@ -188,16 +203,22 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                                         }, 250)
                                     }}
                                 >
-                                    <Text style={styles.sidebarOptionText}>Address Book</Text>
+                                    <View style={styles.optionLeft}>
+                                        <Ionicons name="book-outline" size={22} color="#8B98A5" />
+                                        <Text style={styles.sidebarOptionText}>Address Book</Text>
+                                    </View>
                                 </TouchableOpacity>
 
-                                {/* Notification Toggle */}
+                                {/* Notification Option */}
                                 <View style={styles.sidebarOption}>
-                                    <Text style={styles.sidebarOptionText}>Column Notifications</Text>
+                                    <View style={styles.optionLeft}>
+                                        <Ionicons name="notifications-outline" size={22} color="#8B98A5" />
+                                        <Text style={styles.sidebarOptionText}>Notifications</Text>
+                                    </View>
                                     <Switch
                                         value={isNotificationsEnabled}
-                                        onValueChange={setNotificationsEnabled}
-                                        trackColor={{ false: '#3A3F4A', true: 'rgba(255, 255, 255, 0.3)' }}
+                                        onValueChange={handleToggleNotifications}
+                                        trackColor={{ false: '#3A3F4A', true: '#FFDA34' }}
                                         thumbColor={isNotificationsEnabled ? '#FFFFFF' : '#8B98A5'}
                                         ios_backgroundColor="#3A3F4A"
                                         style={styles.notificationSwitch}

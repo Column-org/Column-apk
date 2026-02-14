@@ -87,12 +87,6 @@ export default function ManageAccountScreen() {
                             <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.optionItem}>
-                            <View style={styles.optionLeft}>
-                                <Text style={styles.optionText}>Notifications</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                        </TouchableOpacity>
 
                         <TouchableOpacity
                             style={styles.optionItem}

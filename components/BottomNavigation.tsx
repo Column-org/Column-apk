@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useRouter, usePathname } from 'expo-router'
-import AudioService from '../services/AudioService'
+import AudioService from '../services/audio/AudioService'
 import { usePreferences } from '../context/PreferencesContext'
 
 const { width } = Dimensions.get('window')

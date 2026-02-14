@@ -76,14 +76,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 const loadedAccount = await walletManager.loadWallet()
                 if (loadedAccount) {
                     setWeb3Account(loadedAccount)
-                    // Initial balance fetch
-                    const bal = await transactionService.getBalance(loadedAccount.accountAddress.toString())
-                    setLastBalance(bal)
+                    setIsWeb3Loading(false) // Set loading to false as soon as we have an account
+
+                    // Initial balance fetch happens in background
+                    transactionService.getBalance(loadedAccount.accountAddress.toString())
+                        .then(bal => setLastBalance(bal))
+                        .catch(err => console.warn('Initial balance fetch failed:', err))
+                } else {
+                    setIsWeb3Loading(false)
                 }
                 await refreshWallets()
             } catch (error) {
                 console.error('WalletContext: Failed to initialize WalletProvider:', error)
-            } finally {
                 setIsWeb3Loading(false)
             }
         }

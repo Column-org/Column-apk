@@ -14,12 +14,14 @@ export default function WalletSetupScreen() {
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
             <View style={styles.content}>
-                <View style={styles.header}>
+                <View style={styles.heroContainer}>
                     <Image
-                        source={require('../assets/Collumn-Login.png')}
-                        style={styles.logo}
+                        source={require('../assets/first-page.png')}
+                        style={styles.heroImage}
                         resizeMode="contain"
                     />
+                    <Text style={styles.welcomeTitle}>Welcome to Column</Text>
+                    <Text style={styles.welcomeSubtitle}>Your gateway to the Movement ecosystem.</Text>
                 </View>
 
                 <View style={styles.buttonsContainer}>
@@ -45,16 +47,30 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 20, // Slightly reduced for larger image feel
+        paddingBottom: 24,
+    },
+    heroContainer: {
+        flex: 1,
         justifyContent: 'center',
-    },
-    header: {
         alignItems: 'center',
-        marginBottom: 64,
     },
-    logo: {
-        width: 140,
-        height: 140,
+    heroImage: {
+        width: '100%',
+        height: 460, // Slightly reduced to fit text beautifully
+    },
+    welcomeTitle: {
+        color: '#ffffff',
+        fontSize: 32,
+        fontWeight: '800',
+        marginTop: 24,
+        textAlign: 'center',
+    },
+    welcomeSubtitle: {
+        color: '#8B98A5',
+        fontSize: 16,
+        marginTop: 8,
+        textAlign: 'center',
     },
     buttonsContainer: {
         gap: 16,

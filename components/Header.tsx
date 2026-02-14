@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, Platform } from 'react-native'
+import React from 'react'
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useWallet } from '../context/WalletContext'
@@ -74,10 +74,6 @@ export const Header = () => {
 
             {walletAddress && (
                 <View style={styles.headerActions}>
-                    <View style={styles.heartbeatContainer}>
-                        <HeartbeatDot />
-                    </View>
-
                     <TouchableOpacity
                         onPress={() => router.push('/browser')}
                         style={styles.actionButton}
@@ -86,49 +82,6 @@ export const Header = () => {
                     </TouchableOpacity>
                 </View>
             )}
-        </View>
-    )
-}
-
-const HeartbeatDot = () => {
-    const pulseAnim = useRef(new Animated.Value(1)).current
-
-    useEffect(() => {
-        const animate = () => {
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 2,
-                    duration: 400,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
-                })
-            ]).start()
-        }
-
-        const interval = setInterval(animate, 3000)
-        animate()
-        return () => clearInterval(interval)
-    }, [])
-
-    return (
-        <View style={styles.heartbeatOuter}>
-            <Animated.View
-                style={[
-                    styles.heartbeatInner,
-                    {
-                        transform: [{ scale: pulseAnim }],
-                        opacity: pulseAnim.interpolate({
-                            inputRange: [1, 2],
-                            outputRange: [0.6, 0]
-                        })
-                    }
-                ]}
-            />
-            <View style={styles.heartbeatCore} />
         </View>
     )
 }
@@ -182,31 +135,5 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         padding: 8,
-    },
-    heartbeatContainer: {
-        paddingHorizontal: 8,
-    },
-    heartbeatOuter: {
-        width: 12,
-        height: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    heartbeatCore: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#00FFA3',
-        shadowColor: '#00FFA3',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 4,
-    },
-    heartbeatInner: {
-        position: 'absolute',
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: '#00FFA3',
     },
 })

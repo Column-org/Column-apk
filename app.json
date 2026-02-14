@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Column.png",
+      "image": "./assets/Collumn-Login.png",
       "resizeMode": "contain",
       "backgroundColor": "#121315"
     },

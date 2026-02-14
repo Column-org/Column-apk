@@ -30,6 +30,14 @@ const AccountCenter = () => {
     const [editingWallet, setEditingWallet] = useState<any>(null)
     const [editName, setEditName] = useState('')
     const [editEmoji, setEditEmoji] = useState('💰')
+    const [collapsedGroups, setCollapsedGroups] = useState<Record<number, boolean>>({})
+
+    const toggleGroup = (index: number) => {
+        setCollapsedGroups(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }))
+    }
 
     // In a real app, we'd group by actual source. 
     // Here we'll simulate the grouping as seen in the image for demonstration,
@@ -138,18 +146,31 @@ const AccountCenter = () => {
                 </View>
 
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                    {groupedWallets.map((group, index) => (
-                        <View key={index} style={styles.groupContainer}>
-                            <TouchableOpacity style={styles.groupHeader}>
-                                <Text style={styles.groupTitle}>{group.title}</Text>
-                                <Ionicons name="chevron-up" size={18} color="#FFFFFF" />
-                            </TouchableOpacity>
+                    {groupedWallets.map((group, index) => {
+                        const isCollapsed = collapsedGroups[index];
+                        return (
+                            <View key={index} style={styles.groupContainer}>
+                                <TouchableOpacity
+                                    style={styles.groupHeader}
+                                    onPress={() => toggleGroup(index)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.groupTitle}>{group.title}</Text>
+                                    <Ionicons
+                                        name={isCollapsed ? "chevron-down" : "chevron-up"}
+                                        size={18}
+                                        color="#FFFFFF"
+                                    />
+                                </TouchableOpacity>
 
-                            <View style={styles.walletList}>
-                                {group.data.map(renderWalletItem)}
+                                {!isCollapsed && (
+                                    <View style={styles.walletList}>
+                                        {group.data.map(renderWalletItem)}
+                                    </View>
+                                )}
                             </View>
-                        </View>
-                    ))}
+                        );
+                    })}
                     <View style={{ height: 100 }} />
                 </ScrollView>
 

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import AudioService from '../services/AudioService'
+import AudioService from '../services/audio/AudioService'
 
 interface PreferencesContextType {
     isNFTTabEnabled: boolean
@@ -17,6 +17,20 @@ interface PreferencesContextType {
     setDeveloperModeEnabled: (enabled: boolean) => Promise<void>
     isSpamFilterEnabled: boolean
     setSpamFilterEnabled: (enabled: boolean) => Promise<void>
+    isPnlGlowEnabled: boolean
+    setPnlGlowEnabled: (enabled: boolean) => Promise<void>
+    pnlGlowPulseCount: number
+    setPnlGlowPulseCount: (count: number) => Promise<void>
+    pnlGlowFrequency: 'always' | 'daily'
+    setPnlGlowFrequency: (freq: 'always' | 'daily') => Promise<void>
+    lastPnlGlowShown: number
+    setLastPnlGlowShown: (timestamp: number) => Promise<void>
+    pnlGlowBlurSize: number
+    setPnlGlowBlurSize: (size: number) => Promise<void>
+    pnlGlowColorPositive: string
+    setPnlGlowColorPositive: (color: string) => Promise<void>
+    pnlGlowColorNegative: string
+    setPnlGlowColorNegative: (color: string) => Promise<void>
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -31,6 +45,13 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const [isHapticEnabled, setIsHapticEnabled] = useState(true)
     const [isDeveloperModeEnabled, setIsDeveloperModeEnabled] = useState(false)
     const [isSpamFilterEnabled, setIsSpamFilterEnabled] = useState(true)
+    const [isPnlGlowEnabled, setIsPnlGlowEnabled] = useState(true)
+    const [pnlGlowPulseCount, setPnlGlowPulseCountState] = useState(2)
+    const [pnlGlowFrequency, setPnlGlowFrequencyState] = useState<'always' | 'daily'>('always')
+    const [lastPnlGlowShown, setLastPnlGlowShownState] = useState(0)
+    const [pnlGlowBlurSize, setPnlGlowBlurSizeState] = useState(40)
+    const [pnlGlowColorPositive, setPnlGlowColorPositiveState] = useState('#ffda34')
+    const [pnlGlowColorNegative, setPnlGlowColorNegativeState] = useState('#ef4444')
 
     useEffect(() => {
         loadPreferences()
@@ -53,6 +74,13 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 setIsHapticEnabled(preferences.isHapticEnabled ?? true)
                 setIsDeveloperModeEnabled(preferences.isDeveloperModeEnabled ?? false)
                 setIsSpamFilterEnabled(preferences.isSpamFilterEnabled ?? true)
+                setIsPnlGlowEnabled(preferences.isPnlGlowEnabled ?? true)
+                setPnlGlowPulseCountState(preferences.pnlGlowPulseCount ?? 2)
+                setPnlGlowFrequencyState(preferences.pnlGlowFrequency ?? 'always')
+                setLastPnlGlowShownState(preferences.lastPnlGlowShown ?? 0)
+                setPnlGlowBlurSizeState(preferences.pnlGlowBlurSize ?? 40)
+                setPnlGlowColorPositiveState(preferences.pnlGlowColorPositive ?? '#ffda34')
+                setPnlGlowColorNegativeState(preferences.pnlGlowColorNegative ?? '#ef4444')
             }
         } catch (error) {
             console.error('Failed to load preferences:', error)
@@ -70,58 +98,124 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
     }
 
-    const setNFTTabEnabled = async (enabled: boolean) => {
+    const setNFTTabEnabled = useCallback(async (enabled: boolean) => {
         setIsNFTTabEnabled(enabled)
         await savePreference('isNFTTabEnabled', enabled)
-    }
+    }, [])
 
-    const setNFTCollectionEnabled = async (enabled: boolean) => {
+    const setNFTCollectionEnabled = useCallback(async (enabled: boolean) => {
         setIsNFTCollectionEnabled(enabled)
         await savePreference('isNFTCollectionEnabled', enabled)
-    }
+    }, [])
 
-    const setNotificationsEnabled = async (enabled: boolean) => {
+    const setNotificationsEnabled = useCallback(async (enabled: boolean) => {
         setIsNotificationsEnabled(enabled)
         await savePreference('isNotificationsEnabled', enabled)
-    }
+    }, [])
 
-    const setSoundEnabled = async (enabled: boolean) => {
+    const setSoundEnabled = useCallback(async (enabled: boolean) => {
         setIsSoundEnabled(enabled)
         await savePreference('isSoundEnabled', enabled)
-    }
+    }, [])
 
-    const setHapticEnabled = async (enabled: boolean) => {
+    const setHapticEnabled = useCallback(async (enabled: boolean) => {
         setIsHapticEnabled(enabled)
         await savePreference('isHapticEnabled', enabled)
-    }
+    }, [])
 
-    const setDeveloperModeEnabled = async (enabled: boolean) => {
+    const setDeveloperModeEnabled = useCallback(async (enabled: boolean) => {
         setIsDeveloperModeEnabled(enabled)
         await savePreference('isDeveloperModeEnabled', enabled)
-    }
+    }, [])
 
-    const setSpamFilterEnabled = async (enabled: boolean) => {
+    const setSpamFilterEnabled = useCallback(async (enabled: boolean) => {
         setIsSpamFilterEnabled(enabled)
         await savePreference('isSpamFilterEnabled', enabled)
-    }
+    }, [])
+
+    const setPnlGlowEnabled = useCallback(async (enabled: boolean) => {
+        setIsPnlGlowEnabled(enabled)
+        await savePreference('isPnlGlowEnabled', enabled)
+    }, [])
+
+    const setPnlGlowPulseCount = useCallback(async (count: number) => {
+        setPnlGlowPulseCountState(count)
+        await savePreference('pnlGlowPulseCount', count)
+    }, [])
+
+    const setPnlGlowFrequency = useCallback(async (freq: 'always' | 'daily') => {
+        setPnlGlowFrequencyState(freq)
+        await savePreference('pnlGlowFrequency', freq)
+    }, [])
+
+    const setLastPnlGlowShown = useCallback(async (timestamp: number) => {
+        setLastPnlGlowShownState(timestamp)
+        await savePreference('lastPnlGlowShown', timestamp)
+    }, [])
+
+    const setPnlGlowBlurSize = useCallback(async (size: number) => {
+        setPnlGlowBlurSizeState(size)
+        await savePreference('pnlGlowBlurSize', size)
+    }, [])
+
+    const setPnlGlowColorPositive = useCallback(async (color: string) => {
+        setPnlGlowColorPositiveState(color)
+        await savePreference('pnlGlowColorPositive', color)
+    }, [])
+
+    const setPnlGlowColorNegative = useCallback(async (color: string) => {
+        setPnlGlowColorNegativeState(color)
+        await savePreference('pnlGlowColorNegative', color)
+    }, [])
+
+    const contextValue = useMemo(() => ({
+        isNFTTabEnabled,
+        setNFTTabEnabled,
+        isNFTCollectionEnabled,
+        setNFTCollectionEnabled,
+        isNotificationsEnabled,
+        setNotificationsEnabled,
+        isSoundEnabled,
+        setSoundEnabled,
+        isHapticEnabled,
+        setHapticEnabled,
+        isDeveloperModeEnabled,
+        setDeveloperModeEnabled,
+        isSpamFilterEnabled,
+        setSpamFilterEnabled,
+        isPnlGlowEnabled,
+        setPnlGlowEnabled,
+        pnlGlowPulseCount,
+        setPnlGlowPulseCount,
+        pnlGlowFrequency,
+        setPnlGlowFrequency,
+        lastPnlGlowShown,
+        setLastPnlGlowShown,
+        pnlGlowBlurSize,
+        setPnlGlowBlurSize,
+        pnlGlowColorPositive,
+        setPnlGlowColorPositive,
+        pnlGlowColorNegative,
+        setPnlGlowColorNegative
+    }), [
+        isNFTTabEnabled, setNFTTabEnabled,
+        isNFTCollectionEnabled, setNFTCollectionEnabled,
+        isNotificationsEnabled, setNotificationsEnabled,
+        isSoundEnabled, setSoundEnabled,
+        isHapticEnabled, setHapticEnabled,
+        isDeveloperModeEnabled, setDeveloperModeEnabled,
+        isSpamFilterEnabled, setSpamFilterEnabled,
+        isPnlGlowEnabled, setPnlGlowEnabled,
+        pnlGlowPulseCount, setPnlGlowPulseCount,
+        pnlGlowFrequency, setPnlGlowFrequency,
+        lastPnlGlowShown, setLastPnlGlowShown,
+        pnlGlowBlurSize, setPnlGlowBlurSize,
+        pnlGlowColorPositive, setPnlGlowColorPositive,
+        pnlGlowColorNegative, setPnlGlowColorNegative
+    ])
 
     return (
-        <PreferencesContext.Provider value={{
-            isNFTTabEnabled,
-            setNFTTabEnabled,
-            isNFTCollectionEnabled,
-            setNFTCollectionEnabled,
-            isNotificationsEnabled,
-            setNotificationsEnabled,
-            isSoundEnabled,
-            setSoundEnabled,
-            isHapticEnabled,
-            setHapticEnabled,
-            isDeveloperModeEnabled,
-            setDeveloperModeEnabled,
-            isSpamFilterEnabled,
-            setSpamFilterEnabled
-        }}>
+        <PreferencesContext.Provider value={contextValue}>
             {children}
         </PreferencesContext.Provider>
     )

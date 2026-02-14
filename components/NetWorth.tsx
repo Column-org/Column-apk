@@ -97,9 +97,6 @@ export const NetWorth = ({ refreshKey }: NetWorthProps) => {
             <Text style={styles.netWorthAmount} selectable={false}>
                 {isHidden ? '••••••' : `$${displayValue.toFixed(2)}`}
             </Text>
-            <Text style={[styles.netWorthChange, !isPositive && styles.netWorthChangeNegative]} selectable={false}>
-                {isHidden ? '••••' : `$${Math.abs(change24h.amount).toFixed(2)} ${isPositive ? '+' : '-'}${Math.abs(change24h.percentage).toFixed(2)}%`}
-            </Text>
         </Pressable>
     )
 }
@@ -107,7 +104,8 @@ export const NetWorth = ({ refreshKey }: NetWorthProps) => {
 const styles = StyleSheet.create({
     netWorthSection: {
         alignItems: 'flex-start',
-        paddingVertical: 30,
+        paddingTop: 30,
+        paddingBottom: 15,
         paddingHorizontal: 20,
     },
     netWorthAmount: {

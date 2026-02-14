@@ -106,8 +106,8 @@ export const AuraBackground = () => {
             <Animated.View style={[styles.auraContainer, animatedStyle]}>
                 <LinearGradient
                     colors={auraColors}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                    start={{ x: 0.0, y: 0.0 }}
+                    end={{ x: 1.0, y: 1.0 }}
                     style={styles.gradient}
                 />
             </Animated.View>

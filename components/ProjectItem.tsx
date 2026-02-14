@@ -112,8 +112,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#1E2024',
         borderRadius: 16,
         marginBottom: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
         overflow: 'hidden',
     },
     header: {

@@ -1,18 +1,18 @@
-import { Audio } from 'expo-av';
+import { AudioPlayer, createAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 
 export type SoundType = 'success' | 'error' | 'click';
 
-const PREMIUM_SOUNDS: Record<SoundType, any> = {
-    success: require('../assets/sounds/success.mp3'),
-    error: require('../assets/sounds/error.mp3'),
-    click: require('../assets/sounds/click.mp3'),
+const PREMIUM_SOUNDS: Record<SoundType, number | string> = {
+    success: require('../../assets/sounds/success.mp3'),
+    error: require('../../assets/sounds/error.mp3'),
+    click: require('../../assets/sounds/click.mp3'),
 };
 
 class AudioService {
     private isSoundEnabled: boolean = true;
     private isHapticEnabled: boolean = true;
-    private sounds: Partial<Record<SoundType, Audio.Sound>> = {};
+    private players: Partial<Record<SoundType, AudioPlayer>> = {};
     private isFetching: Partial<Record<SoundType, boolean>> = {};
     private isReady: boolean = false;
 
@@ -23,13 +23,7 @@ class AudioService {
     async init() {
         if (this.isReady) return;
         try {
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                playsInSilentModeIOS: true,
-                shouldDuckAndroid: true,
-                staysActiveInBackground: false,
-                playThroughEarpieceAndroid: false,
-            });
+            // expo-audio doesn't require audio mode setup for basic playback
             this.isReady = true;
             this.preloadSounds();
         } catch (e) {
@@ -44,15 +38,12 @@ class AudioService {
     }
 
     private async loadSound(type: SoundType) {
-        if (this.sounds[type] || this.isFetching[type]) return;
+        if (this.players[type] || this.isFetching[type]) return;
 
         this.isFetching[type] = true;
         try {
-            const { sound } = await Audio.Sound.createAsync(
-                PREMIUM_SOUNDS[type],
-                { shouldPlay: false, volume: 1.0 }
-            );
-            this.sounds[type] = sound;
+            const player = createAudioPlayer(PREMIUM_SOUNDS[type]);
+            this.players[type] = player;
         } catch (e) {
             // console.warn(`AudioService: Load Fail ${type}`, e);
         } finally {
@@ -75,23 +66,17 @@ class AudioService {
             // Ensure ready
             if (!this.isReady) await this.init();
 
-            let sound = this.sounds[type];
+            let player = this.players[type];
 
-            if (sound) {
-                const status = await sound.getStatusAsync();
-                if (status.isLoaded) {
-                    await sound.replayAsync();
-                    return;
-                }
-                delete this.sounds[type];
+            if (!player) {
+                // Create player on demand
+                player = createAudioPlayer(PREMIUM_SOUNDS[type]);
+                this.players[type] = player;
             }
 
-            // Direct play as fallback
-            const result = await Audio.Sound.createAsync(
-                PREMIUM_SOUNDS[type],
-                { shouldPlay: true, volume: 1.0 }
-            );
-            this.sounds[type] = result.sound;
+            // Reset to beginning and play
+            player.seekTo(0);
+            player.play();
         } catch (error) {
             console.warn(`AudioService: Play Error ${type}`, error);
         }

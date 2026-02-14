@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: 8,
         paddingHorizontal: 20,
-        paddingTop: 35,
+        paddingTop: 10,
         paddingBottom: 0,
         zIndex: 10,
         position: 'relative',

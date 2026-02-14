@@ -29,7 +29,7 @@ export default function ImportWalletScreen() {
             } else {
                 await importFromSeedphrase(value.trim())
             }
-            router.replace('/(tabs)/home')
+            router.replace('/biometric-setup')
         } catch (error: any) {
             Alert.alert('Import Failed', error.message || 'Please check your inputs and try again.')
         } finally {

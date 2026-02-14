@@ -38,7 +38,7 @@ export const isSpamAsset = (name: string, symbol: string): boolean => {
   return false
 }
 
-const sanitizeIconUri = (symbol: string | undefined, uri?: string | null) => {
+const sanitizeIconUri = (symbol: string | undefined, name: string | undefined, uri?: string | null) => {
   // Hardcoded fixes for known broken/missing images
   const brokenUrls = [
     'bridge.movementnetwork.xyz/usdc.png',
@@ -50,6 +50,13 @@ const sanitizeIconUri = (symbol: string | undefined, uri?: string | null) => {
   if (!uri || isBroken) {
     if (symbol?.toUpperCase().includes('USDC')) {
       return 'https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png'
+    }
+    if (symbol?.toUpperCase() === 'WEUSD') {
+      return 'https://assets.coingecko.com/coins/images/36248/large/WEUSD.png'
+    }
+    if (symbol?.toLowerCase().includes('moon moverz') || name?.toLowerCase().includes('moon moverz') ||
+      symbol?.toLowerCase().includes('moonmoverz') || name?.toLowerCase().includes('moonmoverz')) {
+      return 'https://i.ibb.co/3pQjQ6P/moonmoverz.png'
     }
     // Check if symbol OR original URI has "podium"
     if (symbol?.toLowerCase().includes('podium') || (uri && uri.toLowerCase().includes('podium'))) {
@@ -139,7 +146,7 @@ async function fetchIndexerAssets(
         name: balance.metadata?.name || 'Unknown Asset',
         symbol: balance.metadata?.symbol || '???',
         decimals: balance.metadata?.decimals || 8,
-        icon_uri: sanitizeIconUri(balance.metadata?.symbol, balance.metadata?.icon_uri),
+        icon_uri: sanitizeIconUri(balance.metadata?.symbol, balance.metadata?.name, balance.metadata?.icon_uri),
         isSpam: isSpamAsset(balance.metadata?.name || '', balance.metadata?.symbol || ''),
       },
     }))
@@ -198,28 +205,100 @@ type CoinInfo = {
 
 const coinInfoCache = new Map<string, CoinInfo>()
 
-async function fetchCoinInfo(coinType: string, networkConfig: MovementNetworkConfig): Promise<CoinInfo> {
-  if (coinInfoCache.has(coinType)) {
-    return coinInfoCache.get(coinType)!
+// Helper to fetch from RPC with fallback support
+async function fetchRpc(path: string, network: MovementNetwork): Promise<Response> {
+  const config = NETWORK_CONFIGS[network]
+  const urls = [config.rpcUrl]
+  if (config.fallbackRpcUrl) {
+    urls.push(config.fallbackRpcUrl)
+  }
+
+  let lastError: any = null
+
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i]
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+    try {
+      const response = await fetch(`${url}${path}`, {
+        signal: controller.signal
+      })
+
+      if (response.ok) {
+        // Try to clone and text() to check if it's actually JSON before returning
+        // but that might be expensive. Let's just return it and handle parse error later.
+        clearTimeout(timeoutId)
+        return response
+      }
+
+      throw new Error(`RPC status ${response.status} at ${url}`)
+    } catch (error: any) {
+      lastError = error
+      const isJsonError = error instanceof SyntaxError || error.message?.includes('JSON')
+      if (i < urls.length - 1) {
+        console.warn(`[movementAssets] RPC ${url} failed (${isJsonError ? 'JSON Error' : error.message}), trying fallback...`)
+      }
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  }
+
+  throw lastError || new Error('All RPC endpoints failed')
+}
+
+export async function getFungibleAssets(
+  walletAddress: string,
+  network: MovementNetwork = DEFAULT_NETWORK
+): Promise<FungibleAsset[]> {
+  if (!walletAddress) {
+    return []
+  }
+
+  const networkConfig = NETWORK_CONFIGS[network]
+
+  // Helper for actual fetching (since we might need to retry logic)
+  const doFetch = async () => {
+    if (networkConfig.skipIndexer) {
+      const rpcAssets = await fetchAssetsFromRpc(walletAddress, network)
+      return rpcAssets.length > 0 ? rpcAssets : null
+    }
+
+    try {
+      const indexedAssets = await fetchIndexerAssets(walletAddress, networkConfig)
+      return indexedAssets.length > 0 ? indexedAssets : null
+    } catch (error) {
+      return null
+    }
+  }
+
+  try {
+    const assets = await doFetch()
+    if (assets) return assets
+
+    // Fallback to native move balance via backend
+    const nativeMove = await fetchNativeMoveBalance(walletAddress, network)
+    return nativeMove ? [nativeMove] : []
+  } catch (error) {
+    const nativeMove = await fetchNativeMoveBalance(walletAddress, network)
+    return nativeMove ? [nativeMove] : []
+  }
+}
+
+async function fetchCoinInfo(coinType: string, network: MovementNetwork): Promise<CoinInfo> {
+  const cacheKey = `${network}:${coinType}`
+  if (coinInfoCache.has(cacheKey)) {
+    return coinInfoCache.get(cacheKey)!
   }
 
   const providerAccount = coinType.split('::')[0]
   const resourceType = `0x1::coin::CoinInfo<${coinType}>`
   const encodedResourceType = encodeURIComponent(resourceType)
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 15000)
-
   try {
-    const response = await fetch(`${networkConfig.rpcUrl}/accounts/${providerAccount}/resource/${encodedResourceType}`, {
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      throw new Error(`Coin info response ${response.status}`)
-    }
-
-    const { data } = await response.json()
+    const response = await fetchRpc(`/accounts/${providerAccount}/resource/${encodedResourceType}`, network)
+    const result = await response.json()
+    const data = result.data
 
     const info: CoinInfo = {
       name: data.name || coinType.split('::').pop() || 'Unknown',
@@ -227,37 +306,29 @@ async function fetchCoinInfo(coinType: string, networkConfig: MovementNetworkCon
       decimals: typeof data.decimals === 'number' ? data.decimals : parseInt(data.decimals ?? '8', 10),
     }
 
-    coinInfoCache.set(coinType, info)
+    coinInfoCache.set(cacheKey, info)
     return info
-  } catch (error) {
-    console.error('Failed to fetch coin info', coinType, error)
+  } catch (error: any) {
+    const isJsonError = error instanceof SyntaxError || error.message?.includes('JSON')
+    if (isJsonError) {
+      console.warn('[movementAssets] fetchCoinInfo parse error (Nodes down or rate-limited)')
+    } else {
+      console.warn('[movementAssets] fetchCoinInfo failed:', error.message)
+    }
+
     const fallback: CoinInfo = {
       name: coinType.split('::').pop() || 'Unknown',
       symbol: coinType.split('::').pop() || '???',
       decimals: 8,
     }
-    coinInfoCache.set(coinType, fallback)
+    coinInfoCache.set(cacheKey, fallback)
     return fallback
-  } finally {
-    clearTimeout(timeoutId)
   }
 }
 
-async function fetchFAMetadata(assetType: string, networkConfig: MovementNetworkConfig): Promise<{ name: string; symbol: string; decimals: number } | null> {
+async function fetchFAMetadata(assetType: string, network: MovementNetwork): Promise<{ name: string; symbol: string; decimals: number } | null> {
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000)
-
-    const response = await fetch(`${networkConfig.rpcUrl}/accounts/${assetType}/resource/0x1::fungible_asset::Metadata`, {
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      return null
-    }
-
+    const response = await fetchRpc(`/accounts/${assetType}/resource/0x1::fungible_asset::Metadata`, network)
     const result = await response.json()
     const data = result?.data
 
@@ -266,25 +337,18 @@ async function fetchFAMetadata(assetType: string, networkConfig: MovementNetwork
       symbol: data?.symbol || '???',
       decimals: data?.decimals || 8,
     }
-  } catch (error) {
-    console.error('Failed to fetch FA metadata for', assetType, error)
+  } catch (error: any) {
+    const isJsonError = error instanceof SyntaxError || error.message?.includes('JSON')
+    if (!isJsonError) {
+      console.warn('[movementAssets] fetchFAMetadata failed:', error.message)
+    }
     return null
   }
 }
 
-async function fetchAssetsFromRpc(walletAddress: string, networkConfig: MovementNetworkConfig): Promise<FungibleAsset[]> {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 20000)
-
+async function fetchAssetsFromRpc(walletAddress: string, network: MovementNetwork): Promise<FungibleAsset[]> {
   try {
-    const response = await fetch(`${networkConfig.rpcUrl}/accounts/${walletAddress}/resources?limit=200`, {
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      throw new Error(`Resources response ${response.status}`)
-    }
-
+    const response = await fetchRpc(`/accounts/${walletAddress}/resources?limit=200`, network)
     const resources = await response.json()
     const assets: FungibleAsset[] = []
 
@@ -299,7 +363,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
         const amount = resource?.data?.coin?.value ?? '0'
         if (!amount || amount === '0') return null
 
-        const info = await fetchCoinInfo(coinType, networkConfig)
+        const info = await fetchCoinInfo(coinType, network)
         return {
           asset_type: coinType,
           amount: amount.toString(),
@@ -307,7 +371,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
             name: info.name,
             symbol: info.symbol,
             decimals: info.decimals,
-            icon_uri: sanitizeIconUri(info.symbol, undefined),
+            icon_uri: sanitizeIconUri(info.symbol, info.name, undefined),
             isSpam: isSpamAsset(info.name, info.symbol),
           },
         } as FungibleAsset
@@ -326,7 +390,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
         if (!assetType || !amount || amount === '0') return null
         if (assets.some(a => a.asset_type === assetType)) return null
 
-        const metadata = await fetchFAMetadata(assetType, networkConfig)
+        const metadata = await fetchFAMetadata(assetType, network)
         if (!metadata) return null
 
         return {
@@ -336,7 +400,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
             name: metadata.name,
             symbol: metadata.symbol,
             decimals: metadata.decimals,
-            icon_uri: sanitizeIconUri(metadata.symbol, undefined),
+            icon_uri: sanitizeIconUri(metadata.symbol, metadata.name, undefined),
             isSpam: isSpamAsset(metadata.name, metadata.symbol),
           },
         } as FungibleAsset
@@ -346,14 +410,11 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
     assets.push(...faAssets)
 
     // Fetch Fungible Assets stored in owned objects
-    // Movement Network stores FA in separate object addresses
     const ownedObjectAddresses: string[] = []
-
     for (const resource of resources) {
       if (resource?.type === '0x1::object::ObjectCore') {
         const owner = resource?.data?.owner
         if (owner === walletAddress) {
-          // Extract the object address - it's stored in the resource address or state_key
           const objectAddr = resource.address
           if (objectAddr && objectAddr !== walletAddress) {
             ownedObjectAddresses.push(objectAddr)
@@ -362,20 +423,9 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
       }
     }
 
-    // Fetch FA resources from owned objects in parallel
     const objectTasks = ownedObjectAddresses.map(async (objectAddr) => {
       try {
-        const objController = new AbortController()
-        const objTimeoutId = setTimeout(() => objController.abort(), 10000)
-
-        const objResponse = await fetch(`${networkConfig.rpcUrl}/accounts/${objectAddr}/resources`, {
-          signal: objController.signal,
-        })
-
-        clearTimeout(objTimeoutId)
-
-        if (!objResponse.ok) return []
-
+        const objResponse = await fetchRpc(`/accounts/${objectAddr}/resources`, network)
         const objResources = await objResponse.json()
         const objectAssets: FungibleAsset[] = []
 
@@ -388,7 +438,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
           if (!assetType || !amount || amount === '0') continue
           if (assets.some(a => a.asset_type === assetType)) continue
 
-          const metadata = await fetchFAMetadata(assetType, networkConfig)
+          const metadata = await fetchFAMetadata(assetType, network)
           if (metadata) {
             objectAssets.push({
               asset_type: assetType,
@@ -397,7 +447,7 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
                 name: metadata.name,
                 symbol: metadata.symbol,
                 decimals: metadata.decimals,
-                icon_uri: sanitizeIconUri(metadata.symbol, undefined),
+                icon_uri: sanitizeIconUri(metadata.symbol, metadata.name, undefined),
                 isSpam: isSpamAsset(metadata.name, metadata.symbol),
               },
             } as FungibleAsset)
@@ -405,7 +455,6 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
         }
         return objectAssets
       } catch (error) {
-        console.error(`Failed to fetch FA from object ${objectAddr}:`, error)
         return []
       }
     })
@@ -416,48 +465,9 @@ async function fetchAssetsFromRpc(walletAddress: string, networkConfig: Movement
     })
 
     return sortAssets(assets)
-  } finally {
-    clearTimeout(timeoutId)
-  }
-}
-
-export async function getFungibleAssets(
-  walletAddress: string,
-  network: MovementNetwork = DEFAULT_NETWORK
-): Promise<FungibleAsset[]> {
-  if (!walletAddress) {
-    return []
-  }
-
-  const networkConfig = NETWORK_CONFIGS[network]
-
-  if (networkConfig.skipIndexer) {
-    try {
-      const rpcAssets = await fetchAssetsFromRpc(walletAddress, networkConfig)
-
-      if (rpcAssets.length > 0) {
-        return rpcAssets
-      }
-    } catch (error) {
-      console.error('Failed to fetch assets from RPC', error)
-    }
-
-    const balance = await fetchNativeMoveBalance(walletAddress, network)
-    return balance ? [balance] : []
-  }
-
-  try {
-    const indexedAssets = await fetchIndexerAssets(walletAddress, networkConfig)
-
-    if (indexedAssets.length > 0) {
-      return indexedAssets
-    }
-
-    const nativeMove = await fetchNativeMoveBalance(walletAddress, network)
-    return nativeMove ? [nativeMove] : []
   } catch (error) {
-    const nativeMove = await fetchNativeMoveBalance(walletAddress, network)
-    return nativeMove ? [nativeMove] : []
+    console.warn('[movementAssets] fetchAssetsFromRpc failed:', error instanceof Error ? error.message : 'Unknown error')
+    return []
   }
 }
 

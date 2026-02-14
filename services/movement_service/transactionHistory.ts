@@ -40,13 +40,49 @@ export interface TransactionHistoryResult {
 /**
  * Fetch token metadata from Mosaic API
  */
+let mosaicTokensCache: any[] | null = null
+let isFetchingMosaic = false
+const mosaicWaiters: ((tokens: any[]) => void)[] = []
+
+async function fetchMosaicTokens(): Promise<any[]> {
+  if (mosaicTokensCache) return mosaicTokensCache
+  if (isFetchingMosaic) {
+    return new Promise(resolve => mosaicWaiters.push(resolve))
+  }
+
+  isFetchingMosaic = true
+  try {
+    const response = await fetch('https://api.mosaic.ag/v1/tokens', {
+      headers: {
+        'X-API-Key': '-RlbDSaN2rLCwY5b6dYtyCQr6VrnJKYU',
+        'Accept': 'application/json',
+      },
+    })
+
+    if (!response.ok) throw new Error('Failed to fetch Mosaic tokens')
+
+    const result = await response.json()
+    const tokenById = result.data?.tokenById || {}
+    mosaicTokensCache = Object.values(tokenById)
+
+    mosaicWaiters.forEach(resolve => resolve(mosaicTokensCache!))
+    mosaicWaiters.length = 0
+    return mosaicTokensCache!
+  } catch (error) {
+    console.error('Mosaic fetch error:', error)
+    return []
+  } finally {
+    isFetchingMosaic = false
+  }
+}
+
 export async function getTokenMetadata(tokenAddress: string): Promise<{ symbol: string; decimals: number; logoURI?: string } | null> {
   // Check cache first
   if (tokenMetadataCache[tokenAddress]) {
     return tokenMetadataCache[tokenAddress]
   }
 
-  // Hardcoded common tokens that might not be in Mosaic API
+  // Hardcoded common tokens
   const commonTokens: { [key: string]: { symbol: string; decimals: number; logoURI?: string } } = {
     '0x1::aptos_coin::AptosCoin': {
       symbol: 'MOVE',
@@ -60,7 +96,6 @@ export async function getTokenMetadata(tokenAddress: string): Promise<{ symbol: 
     },
   }
 
-  // Check hardcoded tokens first
   const normalized = tokenAddress.toLowerCase()
   for (const [addr, metadata] of Object.entries(commonTokens)) {
     if (addr.toLowerCase() === normalized) {
@@ -69,45 +104,28 @@ export async function getTokenMetadata(tokenAddress: string): Promise<{ symbol: 
     }
   }
 
-  try {
-    const response = await fetch('https://api.mosaic.ag/v1/tokens', {
-      headers: {
-        'X-API-Key': '-RlbDSaN2rLCwY5b6dYtyCQr6VrnJKYU',
-        'Content-Type': 'application/json',
-      },
-    })
+  // Fetch from global mosaic list
+  const tokens = await fetchMosaicTokens()
+  const token = tokens.find((t: any) => {
+    const addresses = [t.id, t.address, t.faAddress, t.coinAddress]
+      .filter(Boolean)
+      .map((a: string) => a.toLowerCase())
+    return addresses.includes(normalized)
+  })
 
-    if (!response.ok) return null
-
-    const result = await response.json()
-    const tokenById = result.data?.tokenById || {}
-
-    // Find token by matching addresses
-    for (const token of Object.values(tokenById) as any[]) {
-      const addresses = [
-        token.id,
-        token.address,
-        token.faAddress,
-        token.coinAddress,
-      ].filter(Boolean).map((addr: string) => addr.toLowerCase())
-
-      if (addresses.includes(tokenAddress.toLowerCase())) {
-        const metadata = {
-          symbol: token.symbol || 'Unknown',
-          decimals: token.decimals || 8,
-          logoURI: token.iconUri,
-        }
-        tokenMetadataCache[tokenAddress] = metadata
-        return metadata
-      }
+  if (token) {
+    const metadata = {
+      symbol: token.symbol || 'Unknown',
+      decimals: token.decimals || 8,
+      logoURI: token.iconUri,
     }
-
-    return null
-  } catch (error) {
-    console.error('Error fetching token metadata:', error)
-    return null
+    tokenMetadataCache[tokenAddress] = metadata
+    return metadata
   }
+
+  return null
 }
+
 
 function parseTransactionType(tx: any, walletAddress: string): Transaction['type'] {
   if (!tx.payload) return 'unknown'
@@ -256,7 +274,7 @@ export async function getTransactionHistory(
   const cacheKey = `${walletAddress}:${network}`
 
   // If we have cached transactions and no specific start point, return them immediately
-  if (transactionHistoryCache[cacheKey] && start === undefined && !options.limit) {
+  if (transactionHistoryCache[cacheKey] && start === undefined) {
     return {
       success: true,
       transactions: transactionHistoryCache[cacheKey],

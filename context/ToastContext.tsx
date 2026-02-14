@@ -3,7 +3,7 @@ import { ToastProvider as OriginalToastProvider, useToast as useOriginalToast } 
 import { View, Text, StyleSheet, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import AudioService from '../services/AudioService'
+import AudioService from '../services/audio/AudioService'
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const insets = useSafeAreaInsets()
@@ -71,7 +71,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 export const useToast = () => {
     const toast = useOriginalToast()
 
-    const show = (message: string | React.ReactNode, options?: any) => {
+    const show = React.useCallback((message: string | React.ReactNode, options?: any) => {
         const type = options?.type || 'normal'
 
         // Trigger feedback based on type
@@ -84,12 +84,12 @@ export const useToast = () => {
         }
 
         return toast.show(message, options)
-    }
+    }, [toast])
 
-    return {
+    return React.useMemo(() => ({
         ...toast,
         show
-    }
+    }), [toast, show])
 }
 
 const styles = StyleSheet.create({

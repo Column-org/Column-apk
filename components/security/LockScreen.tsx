@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Vibration, StatusBar } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Vibration, StatusBar, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSecurity } from '../../context/SecurityContext'
 
@@ -129,21 +129,23 @@ export default function LockScreen() {
         <StatusBar barStyle="light-content" />
 
         <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="finger-print" size={64} color="#ffda34" />
+          <View style={styles.biometricContent}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="finger-print" size={64} color="#ffda34" />
+            </View>
+
+            <Text style={styles.title}>Unlock Wallet</Text>
+            <Text style={styles.subtitle}>Use biometric authentication to unlock</Text>
+
+            <TouchableOpacity
+              style={styles.biometricButton}
+              onPress={handleBiometric}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="finger-print" size={32} color="#121315" />
+              <Text style={styles.biometricButtonText}>Authenticate</Text>
+            </TouchableOpacity>
           </View>
-
-          <Text style={styles.title}>Unlock Wallet</Text>
-          <Text style={styles.subtitle}>Use biometric authentication to unlock</Text>
-
-          <TouchableOpacity
-            style={styles.biometricButton}
-            onPress={handleBiometric}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="finger-print" size={32} color="#121315" />
-            <Text style={styles.biometricButtonText}>Authenticate</Text>
-          </TouchableOpacity>
         </View>
       </View>
     )
@@ -275,4 +277,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+  biometricContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 100,
+  }
 })

@@ -161,6 +161,7 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             console.log('DeepLink: Redirecting to:', finalRedirect)
 
             // RELAY: If there is a session ID, report the result to the Public Relay (Nostr)
+            /*
             const sessionId = originalParsed.params.session_id;
             if (sessionId) {
                 try {
@@ -170,6 +171,7 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     console.error('DeepLink: Relay report failed', e);
                 }
             }
+            */
 
             // Use Linking.openURL to encourage standard browser navigation instead of a modal session
             Linking.openURL(finalRedirect);

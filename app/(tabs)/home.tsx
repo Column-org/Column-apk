@@ -7,6 +7,7 @@ import { ActionButtons } from '../../components/ActionButtons'
 import { PortfolioTabs } from '../../components/PortfolioTabs'
 import { TokenList } from '../../components/TokenList'
 import { NFTList } from '../../components/NFTList'
+import { PNLSummary } from '../../components/PNLSummary'
 import PendingClaimsIndicator from '../../components/PendingClaimsIndicator'
 import { useTheme } from '../../hooks/useTheme'
 import { useNetwork } from '../../context/NetworkContext'
@@ -122,19 +123,7 @@ const Home = () => {
         loadPendingClaims()
     }, [loadPendingClaims, refreshKey])
 
-    useFocusEffect(
-        useCallback(() => {
-            let isActive = true
-            const run = async () => {
-                if (!isActive) return
-                await loadPendingClaims()
-            }
-            run()
-            return () => {
-                isActive = false
-            }
-        }, [loadPendingClaims])
-    )
+
 
     const headerOpacity = scrollY.interpolate({
         inputRange: [0, 100],
@@ -179,9 +168,9 @@ const Home = () => {
                             resizeMode="cover"
                         />
                         <LinearGradient
-                            colors={['transparent', 'rgba(15, 20, 25, 0.5)', '#121315']}
+                            colors={['rgba(18, 19, 21, 0)', 'rgba(15, 20, 25, 0.5)', '#121315']}
                             style={styles.fixedGradientOverlay}
-                            locations={[0, 0.6, 1]}
+                            locations={[0.0, 0.6, 1.0]}
                         />
                     </View>
                 )}
@@ -209,6 +198,7 @@ const Home = () => {
                 >
                     <View style={styles.headerSpacer} />
                     <NetWorth refreshKey={refreshKey} />
+                    <PNLSummary />
 
                     <ActionButtons />
                     <PortfolioTabs

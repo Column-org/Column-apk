@@ -44,5 +44,9 @@ expo-backend/.env
 /android
 
 # local development
+example/
+example2/
+example-native/
+SDK/
 
 

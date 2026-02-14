@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Modal, Pressable, Alert, Dimensions, Animated } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Modal, Pressable, Alert, Dimensions, Animated, Linking } from 'react-native'
 import React, { useRef } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
@@ -9,7 +9,8 @@ import { useSecurity } from '../../context/SecurityContext'
 import { usePreferences } from '../../context/PreferencesContext'
 import { NetworkSelector } from '../../components/NetworkSelector'
 import { useWallet } from '../../context/WalletContext'
-import AudioService from '../../services/AudioService'
+import AudioService from '../../services/audio/AudioService'
+import { requestNotificationPermissions } from '../../services/NotificationService'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -41,6 +42,10 @@ const Settings = () => {
         setSoundEnabled,
         isHapticEnabled,
         setHapticEnabled,
+        isPnlGlowEnabled,
+        setPnlGlowEnabled,
+        isNotificationsEnabled,
+        setNotificationsEnabled,
     } = usePreferences()
 
     const formatLockTimeout = (minutes: number) => {
@@ -99,6 +104,22 @@ const Settings = () => {
         }
     }
 
+    const handleToggleNotifications = async () => {
+        AudioService.feedback('click')
+        if (!isNotificationsEnabled) {
+            const granted = await requestNotificationPermissions()
+            if (!granted) {
+                Alert.alert(
+                    'Permissions Required',
+                    'Please enable notifications in your device settings to receive alerts.',
+                    [{ text: 'OK' }]
+                )
+                return
+            }
+        }
+        await setNotificationsEnabled(!isNotificationsEnabled)
+    }
+
     const handleLogout = async () => {
         try {
             await clearAllSecurity()
@@ -148,6 +169,8 @@ const Settings = () => {
                     <LinearGradient
                         colors={['#121315', 'rgba(18, 19, 21, 0.95)']}
                         style={StyleSheet.absoluteFill}
+                        start={{ x: 0.0, y: 0.0 }}
+                        end={{ x: 0.0, y: 1.0 }}
                     />
                     <Animated.Text style={[
                         styles.stickyHeaderTitle,
@@ -330,6 +353,22 @@ const Settings = () => {
 
                         <TouchableOpacity
                             style={[styles.settingItem, styles.cardMiddle]}
+                            onPress={handleToggleNotifications}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.settingMainRow}>
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="notifications-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>App Notifications</Text>
+                                </View>
+                                <View style={[styles.toggle, isNotificationsEnabled && styles.toggleActive]}>
+                                    <View style={[styles.toggleDot, isNotificationsEnabled && styles.toggleDotActive]} />
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.settingItem, styles.cardMiddle]}
                             onPress={() => router.push('/settings/theme')}
                             activeOpacity={0.7}
                         >
@@ -382,7 +421,11 @@ const Settings = () => {
                     {/* Support Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
-                        <TouchableOpacity style={[styles.settingItem, styles.cardTop]} activeOpacity={0.7}>
+                        <TouchableOpacity
+                            style={[styles.settingItem, styles.cardTop]}
+                            activeOpacity={0.7}
+                            onPress={() => Linking.openURL('https://x.com/AkpanSunday193')}
+                        >
                             <View style={styles.settingMainRow}>
                                 <View style={styles.settingLeft}>
                                     <Ionicons name="help-circle-outline" size={22} color="#ffda34" />

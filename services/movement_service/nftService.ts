@@ -184,27 +184,33 @@ export async function getEnrichedUserNFTs(
       return []
     }
 
-    // Fetch metadata for each NFT (in parallel, limit concurrency)
-    const enrichedNFTs = await Promise.all(
-      nfts.map(async (nft) => {
-        try {
-          const metadata = nft.current_token_data?.token_uri
-            ? await fetchNFTMetadata(nft.current_token_data.token_uri)
-            : null
+    // Fetch metadata for each NFT (in chunks to avoid overwhelming the network)
+    const enrichedNFTs: Array<UserNFT & { metadata?: NFTMetadata }> = []
+    const CHUNK_SIZE = 5
 
-          const { isSpamAsset } = require('../movementAssets')
-          const isTokenSpam = isSpamAsset(nft.current_token_data?.token_name || '', '')
+    for (let i = 0; i < nfts.length; i += CHUNK_SIZE) {
+      const chunk = nfts.slice(i, i + CHUNK_SIZE)
+      const enrichedChunk = await Promise.all(
+        chunk.map(async (nft) => {
+          try {
+            const metadata = nft.current_token_data?.token_uri
+              ? await fetchNFTMetadata(nft.current_token_data.token_uri)
+              : null
 
-          return {
-            ...nft,
-            metadata: metadata ? { ...metadata, isSpam: metadata.isSpam || isTokenSpam } : { name: nft.current_token_data?.token_name, isSpam: isTokenSpam } as any,
+            const { isSpamAsset } = require('../movementAssets')
+            const isTokenSpam = isSpamAsset(nft.current_token_data?.token_name || '', '')
+
+            return {
+              ...nft,
+              metadata: metadata ? { ...metadata, isSpam: metadata.isSpam || isTokenSpam } : { name: nft.current_token_data?.token_name, isSpam: isTokenSpam } as any,
+            }
+          } catch (error) {
+            return nft
           }
-        } catch (error) {
-          // Silently return NFT without metadata
-          return nft
-        }
-      })
-    )
+        })
+      )
+      enrichedNFTs.push(...enrichedChunk)
+    }
 
     return enrichedNFTs
   } catch (error) {

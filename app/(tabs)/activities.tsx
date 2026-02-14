@@ -15,19 +15,15 @@ import { ActivitySkeleton } from '../../components/activities/ActivitySkeleton'
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
+import { useTransactions } from '../../hooks/useTransactions'
+
 const Activities = () => {
     const { t } = useTranslation()
     const { address: walletAddress } = useWallet()
     const { network } = useNetwork()
     const router = useRouter()
 
-    const [transactions, setTransactions] = useState<Transaction[]>(() => {
-        if (walletAddress && network) {
-            return getCachedTransactions(walletAddress, network) || []
-        }
-        return []
-    })
-    const [isLoading, setIsLoading] = useState(transactions.length === 0)
+    const { transactions, isLoading, error: fetchError, refetch } = useTransactions()
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [filterType, setFilterType] = useState<'all' | 'send' | 'receive' | 'swap' | 'contract'>('all')
@@ -35,34 +31,21 @@ const Activities = () => {
     const [showFilterMenu, setShowFilterMenu] = useState(false)
     const scrollY = useRef(new Animated.Value(0)).current
 
-    const fetchTransactions = useCallback(async (showRefresh = false) => {
-        if (!walletAddress) {
-            setIsLoading(false)
-            return
-        }
+    useEffect(() => {
 
+        if (fetchError) setError(fetchError)
+    }, [fetchError])
+
+    const fetchTransactions = useCallback(async (showRefresh = false) => {
         if (showRefresh) {
             setIsRefreshing(true)
-        } else if (transactions.length === 0) {
-            // Only show full loading skeleton if we don't have any data yet
-            setIsLoading(true)
-        }
-        setError(null)
-
-        try {
-            const result = await getTransactionHistory(walletAddress, network, { limit: 50 })
-            if (result.success) {
-                setTransactions(result.transactions)
-            } else {
-                setError(result.error || 'Failed to load transactions')
-            }
-        } catch (err) {
-            setError('Failed to load transactions')
-        } finally {
-            setIsLoading(false)
+            await refetch()
             setIsRefreshing(false)
+        } else {
+            await refetch()
         }
-    }, [walletAddress, network])
+    }, [refetch])
+
 
     useEffect(() => {
         // Only fetch if we don't have transactions yet
