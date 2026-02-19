@@ -16,7 +16,14 @@
     "recoveryPhrase": "Frase de Recuperación",
     "privateKey": "Clave Privada",
     "appTheme": "Tema de la App",
-    "showNFTCollection": "Mostrar Colección NFT"
+    "showNFTCollection": "Mostrar Colección NFT",
+    "manageTokens": "Gestionar Tokens",
+    "yourAssets": "Tus Activos",
+    "manageTokensSubtitle": "Oculta tokens para eliminarlos de tu panel principal"
+  },
+  "search": {
+    "placeholder": "Buscar tokens",
+    "noResults": "No se encontraron tokens"
   },
   "home": {
     "send": "Enviar",

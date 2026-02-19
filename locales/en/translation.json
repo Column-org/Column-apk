@@ -17,7 +17,14 @@
     "privateKey": "Private Key",
     "appTheme": "App Theme",
     "showNFTCollection": "Show NFT Collection",
-    "devMode": "Dev Mode"
+    "devMode": "Dev Mode",
+    "manageTokens": "Manage Tokens",
+    "yourAssets": "Your Assets",
+    "manageTokensSubtitle": "Hide tokens to remove them from your main dashboard"
+  },
+  "search": {
+    "placeholder": "Search tokens",
+    "noResults": "No tokens found"
   },
   "home": {
     "send": "Send",

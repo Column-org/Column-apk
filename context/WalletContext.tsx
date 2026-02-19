@@ -32,6 +32,7 @@ interface WalletContextType {
     signRawHash: (hash: string) => Promise<{ signature: string }>
     signAndSubmitTransaction: (payload: any) => Promise<string>
     signMessage: (message: string) => Promise<string>
+    simulateTransaction: (payload: any) => Promise<any>
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined)
@@ -232,6 +233,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No wallet active')
     }, [web3Account, transactionService])
 
+    const simulateTransaction = useCallback(async (payload: any) => {
+        if (web3Account) {
+            return await transactionService.simulateTransaction(web3Account, payload)
+        }
+        throw new Error('No wallet active')
+    }, [web3Account, transactionService])
+
     const signMessage = useCallback(async (message: string) => {
         if (web3Account) {
             const signature = web3Account.sign(Buffer.from(message))
@@ -272,6 +280,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 signRawHash,
                 signAndSubmitTransaction,
                 signMessage,
+                simulateTransaction,
                 network,
                 switchNetwork,
                 updateWallet,

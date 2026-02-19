@@ -1,0 +1,38 @@
+[
+    {
+        "id": "move-dao",
+        "name": "Move DAO",
+        "url": "https://move-dao-app.vercel.app/",
+        "logo": "https://move-dao-app.vercel.app/assets/Logonew-a36hing0.png",
+        "description": "The decentralized autonomous organization for the Movement ecosystem.",
+        "category": "DAO",
+        "featured": true
+    },
+    {
+        "id": "movement-stake",
+        "name": "Stake",
+        "url": "https://staking.movementnetwork.xyz/my-stakes",
+        "logo": "stake.png",
+        "description": "Staking platform for the Movement network.",
+        "category": "Staking",
+        "featured": true
+    },
+    {
+        "id": "movement-explorer",
+        "name": "Explorer",
+        "url": "https://explorer.movementnetwork.xyz/#/?network=local",
+        "logo": "https://images.ctfassets.net/vt5g7b08joig/4f3y9hctgccTWNAe9PI1PU/81d7efa43425103625fe46846bbedc55/explorer.jpg",
+        "description": "Block explorer for the Movement network.",
+        "category": "Explorer",
+        "featured": true
+    },
+    {
+        "id": "parthenon",
+        "name": "Parthenon",
+        "url": "https://parthenon.movementlabs.xyz/",
+        "logo": "https://parthenon.movementlabs.xyz/og.png",
+        "description": "Embark in the Movement Community Program.",
+        "category": "Community",
+        "featured": true
+    }
+]

@@ -125,8 +125,9 @@ interface TokenListProps {
 }
 
 export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMode = 'tokens' }: TokenListProps) => {
+    const router = useRouter()
     const { isHidden } = useBalanceVisibility()
-    const { isSpamFilterEnabled } = usePreferences()
+    const { isSpamFilterEnabled, hiddenTokens } = usePreferences()
     const { assets, prices, isLoading, refetch } = useAssets(refreshKey)
     const [openTokenIndex, setOpenTokenIndex] = useState<number | null>(null)
 
@@ -233,6 +234,7 @@ export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMod
 
                         if (isProject) return false;
                         if (isSpamFilterEnabled && asset.metadata.isSpam) return false;
+                        if (hiddenTokens.includes(asset.asset_type)) return false;
 
                         return true
                     })
@@ -264,6 +266,17 @@ export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMod
                             />
                         )
                     })
+            )}
+
+            {!isLoading && assets.length > 0 && filterMode === 'tokens' && (
+                <View style={styles.manageFooter}>
+                    <TouchableOpacity
+                        onPress={() => router.push('/manage-tokens')}
+                        style={styles.manageTokenButton}
+                    >
+                        <Text style={styles.manageTokenText}>Manage token</Text>
+                    </TouchableOpacity>
+                </View>
             )}
         </View>
     )
@@ -457,5 +470,19 @@ const styles = StyleSheet.create({
     },
     skeletonRight: {
         alignItems: 'flex-end',
+    },
+    manageFooter: {
+        alignItems: 'center',
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    manageTokenButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+    },
+    manageTokenText: {
+        color: 'rgba(255, 255, 255, 0.4)',
+        fontSize: 13,
+        fontWeight: '500',
     },
 })

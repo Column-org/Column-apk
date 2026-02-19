@@ -31,6 +31,8 @@ interface PreferencesContextType {
     setPnlGlowColorPositive: (color: string) => Promise<void>
     pnlGlowColorNegative: string
     setPnlGlowColorNegative: (color: string) => Promise<void>
+    hiddenTokens: string[]
+    toggleTokenVisibility: (tokenType: string) => Promise<void>
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -52,6 +54,7 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const [pnlGlowBlurSize, setPnlGlowBlurSizeState] = useState(40)
     const [pnlGlowColorPositive, setPnlGlowColorPositiveState] = useState('#ffda34')
     const [pnlGlowColorNegative, setPnlGlowColorNegativeState] = useState('#ef4444')
+    const [hiddenTokens, setHiddenTokens] = useState<string[]>([])
 
     useEffect(() => {
         loadPreferences()
@@ -81,6 +84,7 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 setPnlGlowBlurSizeState(preferences.pnlGlowBlurSize ?? 40)
                 setPnlGlowColorPositiveState(preferences.pnlGlowColorPositive ?? '#ffda34')
                 setPnlGlowColorNegativeState(preferences.pnlGlowColorNegative ?? '#ef4444')
+                setHiddenTokens(preferences.hiddenTokens ?? [])
             }
         } catch (error) {
             console.error('Failed to load preferences:', error)
@@ -168,6 +172,16 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
         await savePreference('pnlGlowColorNegative', color)
     }, [])
 
+    const toggleTokenVisibility = useCallback(async (tokenType: string) => {
+        setHiddenTokens(prev => {
+            const next = prev.includes(tokenType)
+                ? prev.filter(t => t !== tokenType)
+                : [...prev, tokenType]
+            savePreference('hiddenTokens', next)
+            return next
+        })
+    }, [])
+
     const contextValue = useMemo(() => ({
         isNFTTabEnabled,
         setNFTTabEnabled,
@@ -196,7 +210,9 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
         pnlGlowColorPositive,
         setPnlGlowColorPositive,
         pnlGlowColorNegative,
-        setPnlGlowColorNegative
+        setPnlGlowColorNegative,
+        hiddenTokens,
+        toggleTokenVisibility
     }), [
         isNFTTabEnabled, setNFTTabEnabled,
         isNFTCollectionEnabled, setNFTCollectionEnabled,
@@ -211,7 +227,8 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
         lastPnlGlowShown, setLastPnlGlowShown,
         pnlGlowBlurSize, setPnlGlowBlurSize,
         pnlGlowColorPositive, setPnlGlowColorPositive,
-        pnlGlowColorNegative, setPnlGlowColorNegative
+        pnlGlowColorNegative, setPnlGlowColorNegative,
+        hiddenTokens, toggleTokenVisibility
     ])
 
     return (

@@ -13,6 +13,7 @@ import LockScreen from '../components/security/LockScreen'
 import { ToastProvider } from '../context/ToastContext'
 import { DeepLinkProvider } from '../context/DeepLinkContext'
 import { GlobalGlowProvider } from '../context/GlobalGlowContext'
+import { BrowserProvider } from '../context/BrowserContext'
 
 import { AuraBackground } from '../components/AuraBackground'
 import AudioService from '../services/audio/AudioService'
@@ -88,7 +89,9 @@ export default function RootLayout() {
                     <ToastProvider>
                       <GlobalGlowProvider>
                         <DeepLinkProvider>
-                          <AppContent />
+                          <BrowserProvider>
+                            <AppContent />
+                          </BrowserProvider>
                         </DeepLinkProvider>
                       </GlobalGlowProvider>
                     </ToastProvider>

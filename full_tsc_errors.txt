@@ -1,0 +1,37 @@
+﻿example-native/example-app/app/(tabs)/_layout.tsx(4,27): error TS2307: Cannot find module '@/components/haptic-tab' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/_layout.tsx(5,28): error TS2307: Cannot find module '@/components/ui/icon-symbol' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/_layout.tsx(6,24): error TS2307: Cannot find module '@/constants/theme' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/_layout.tsx(7,32): error TS2307: Cannot find module '@/hooks/use-color-scheme' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/explore.tsx(4,29): error TS2307: Cannot find module '@/components/ui/collapsible' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/explore.tsx(5,30): error TS2307: Cannot find module '@/components/external-link' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/explore.tsx(6,32): error TS2307: Cannot find module '@/components/parallax-scroll-view' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/explore.tsx(7,28): error TS2307: Cannot find module '@/components/themed-text' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/explore.tsx(8,28): error TS2307: Cannot find module '@/components/themed-view' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/explore.tsx(9,28): error TS2307: Cannot find module '@/components/ui/icon-symbol' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/explore.tsx(10,23): error TS2307: Cannot find module '@/constants/theme' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/index.tsx(6,32): error TS2307: Cannot find module '@/components/parallax-scroll-view' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/index.tsx(7,28): error TS2307: Cannot find module '@/components/themed-text' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/index.tsx(8,28): error TS2307: Cannot find module '@/components/themed-view' or its corresponding type declarations.
+example-native/example-app/app/(tabs)/index.tsx(9,24): error TS2307: Cannot find module '@/constants/column' or its corresponding type declarations.
+example-native/example-app/app/_layout.tsx(6,32): error TS2307: Cannot find module '@/hooks/use-color-scheme' or its corresponding type declarations.
+example-native/example-app/app/modal.tsx(4,28): error TS2307: Cannot find module '@/components/themed-text' or its corresponding type declarations.
+example-native/example-app/app/modal.tsx(5,28): error TS2307: Cannot find module '@/components/themed-view' or its corresponding type declarations.
+example-native/example-app/components/parallax-scroll-view.tsx(10,28): error TS2307: Cannot find module '@/components/themed-view' or its corresponding type declarations.
+example-native/example-app/components/parallax-scroll-view.tsx(11,32): error TS2307: Cannot find module '@/hooks/use-color-scheme' or its corresponding type declarations.
+example-native/example-app/components/parallax-scroll-view.tsx(12,31): error TS2307: Cannot find module '@/hooks/use-theme-color' or its corresponding type declarations.
+example-native/example-app/components/parallax-scroll-view.tsx(55,30): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ dark: string; light: string; }'.
+example-native/example-app/components/themed-text.tsx(3,31): error TS2307: Cannot find module '@/hooks/use-theme-color' or its corresponding type declarations.
+example-native/example-app/components/themed-view.tsx(3,31): error TS2307: Cannot find module '@/hooks/use-theme-color' or its corresponding type declarations.
+example-native/example-app/components/ui/collapsible.tsx(4,28): error TS2307: Cannot find module '@/components/themed-text' or its corresponding type declarations.
+example-native/example-app/components/ui/collapsible.tsx(5,28): error TS2307: Cannot find module '@/components/themed-view' or its corresponding type declarations.
+example-native/example-app/components/ui/collapsible.tsx(6,28): error TS2307: Cannot find module '@/components/ui/icon-symbol' or its corresponding type declarations.
+example-native/example-app/components/ui/collapsible.tsx(7,24): error TS2307: Cannot find module '@/constants/theme' or its corresponding type declarations.
+example-native/example-app/components/ui/collapsible.tsx(8,32): error TS2307: Cannot find module '@/hooks/use-color-scheme' or its corresponding type declarations.
+example-native/example-app/hooks/use-theme-color.ts(6,24): error TS2307: Cannot find module '@/constants/theme' or its corresponding type declarations.
+example-native/example-app/hooks/use-theme-color.ts(7,32): error TS2307: Cannot find module '@/hooks/use-color-scheme' or its corresponding type declarations.
+example-native/example-app/hooks/use-theme-color.ts(14,26): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ light?: string | undefined; dark?: string | undefined; }'.
+example/src/App.tsx(65,9): error TS2322: Type '{ isOpen: boolean; onClose: () => void; onConnect: () => void; sdk: any; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'isOpen' does not exist on type 'IntrinsicAttributes & Props'.
+example/src/hooks/useColumnWallet.ts(2,10): error TS2724: '"@column-org/wallet-sdk"' has no exported member named 'ColumnWalletWeb'. Did you mean 'ColumnWalletSDK'?
+example/src/main.tsx(4,17): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
+example2/example-two/src/main.tsx(4,17): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.

@@ -199,7 +199,7 @@ const Settings = () => {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
                         <TouchableOpacity
-                            style={[styles.settingItem, styles.cardSingle, profileExpanded && styles.settingItemExpanded]}
+                            style={[styles.settingItem, styles.cardTop, profileExpanded && styles.settingItemExpanded]}
                             onPress={() => setProfileExpanded(!profileExpanded)}
                             activeOpacity={0.7}
                         >
@@ -229,6 +229,20 @@ const Settings = () => {
                                     </View>
                                 </View>
                             )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.settingItem, styles.cardBottom]}
+                            onPress={() => router.push('/settings/connected-apps')}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.settingMainRow}>
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="link-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>Connected Apps</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            </View>
                         </TouchableOpacity>
                     </View>
 

@@ -16,7 +16,14 @@
     "recoveryPhrase": "助记词",
     "privateKey": "私钥",
     "appTheme": "应用主题",
-    "showNFTCollection": "显示 NFT 收藏"
+    "showNFTCollection": "显示 NFT 收藏",
+    "manageTokens": "管理代币",
+    "yourAssets": "您的资产",
+    "manageTokensSubtitle": "隐藏代币以从主面板中移除它们"
+  },
+  "search": {
+    "placeholder": "搜索代币",
+    "noResults": "未找到代币"
   },
   "home": {
     "send": "发送",

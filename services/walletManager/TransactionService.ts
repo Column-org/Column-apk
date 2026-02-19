@@ -82,11 +82,12 @@ export class TransactionService {
     // Generic contract interaction
     async executeTransaction(
         account: Account,
-        payload: InputGenerateTransactionPayloadData
+        payload: any
     ): Promise<string> {
+        const normalizedPayload = this._normalizePayload(payload)
         const transaction = await this.aptosClient.transaction.build.simple({
             sender: account.accountAddress,
-            data: payload,
+            data: normalizedPayload,
         })
 
         const signedTransaction = await this.aptosClient.transaction.sign({
@@ -118,8 +119,13 @@ export class TransactionService {
                 accountAddress: address,
             })
 
+            const normalizedCoinType = coinType.startsWith('0x') ? coinType : `0x${coinType}`
             const coinResource = resources.find(
-                (r: any) => r.type === `0x1::coin::CoinStore<${coinType}>`
+                (r: any) => {
+                    const type = r.type as string
+                    return type === `0x1::coin::CoinStore<${coinType}>` ||
+                        type.includes(`CoinStore<${normalizedCoinType}>`)
+                }
             )
 
             return coinResource ? BigInt((coinResource.data as any).coin.value) : BigInt(0)
@@ -142,6 +148,42 @@ export class TransactionService {
                 console.warn('[TransactionService] Balance fetch failed:', error.message)
             }
             return BigInt(0)
+        }
+    }
+
+    // Simulation
+    async simulateTransaction(
+        account: Account,
+        payload: any
+    ) {
+        const normalizedPayload = this._normalizePayload(payload)
+        const transaction = await this.aptosClient.transaction.build.simple({
+            sender: account.accountAddress,
+            data: normalizedPayload,
+        })
+
+        const [simulation] = await this.aptosClient.transaction.simulate.simple({
+            signerPublicKey: account.publicKey,
+            transaction,
+            options: {
+                estimateGasUnitPrice: true,
+                estimateMaxGasAmount: true,
+                estimatePrioritizedGasUnitPrice: false
+            }
+        })
+
+        return simulation
+    }
+
+    // Helper to handle both legacy and new SDK payload formats, and wrapped payloads
+    private _normalizePayload(payload: any): InputGenerateTransactionPayloadData {
+        // Handle wrapped payload { payload: { ... }, asFeePayer: ... }
+        const raw = payload.payload || payload
+
+        return {
+            function: raw.function,
+            typeArguments: raw.typeArguments || raw.type_arguments || [],
+            functionArguments: raw.functionArguments || raw.arguments || [],
         }
     }
 }

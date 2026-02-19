@@ -451,8 +451,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     declineText: {
         color: '#8B98A5',

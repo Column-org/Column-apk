@@ -3,6 +3,15 @@
   "compilerOptions": {
     "strict": true,
     "module": "ESNext",
-    "moduleResolution": "Bundler"
-  }
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "jsx": "react-native",
+    "allowImportingTsExtensions": true
+  },
+  "exclude": [
+    "node_modules",
+    "example",
+    "example2",
+    "example-native"
+  ]
 }

@@ -30,7 +30,7 @@ export default function Web3SetupScreen() {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
             <View style={styles.header}>
-                <Pressable onPress={() => router.replace('/wallet-setup')} style={styles.backButton}>
+                <Pressable onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#ffffff" />
                 </Pressable>
                 <Text style={styles.headerTitle}>Wallet Setup</Text>
