@@ -16,7 +16,7 @@
     "ios": {
       "usesAppleSignIn": true,
       "supportsTablet": true,
-      "bundleIdentifier": "com.column.app",
+      "bundleIdentifier": "com.getcolumn.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow Column to access your camera to scan QR codes for sending assets.",
         "NSFaceIDUsageDescription": "Allow Column to use FaceID to securely unlock your wallet.",
@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/AppIcon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.column.app",
+      "package": "com.getcolumn.app",
       "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
