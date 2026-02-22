@@ -154,48 +154,155 @@ export default function BrowserScreen() {
                 try {
                     const result = await walletSimulate(pendingRequest.params);
 
-                    // Basic balance change extraction
-                    const balanceChanges: { asset: string, amount: string, isPositive: boolean }[] = [];
+                    // Helper to normalize addresses for comparison
+                    const normalizeAddr = (addr: any) => {
+                        if (!addr || typeof addr !== 'string') return '';
+                        let clean = addr.toLowerCase();
+                        if (clean.startsWith('0x')) clean = clean.slice(2);
+                        return clean.padStart(64, '0');
+                    };
+
+                    const normalizedUserAddr = normalizeAddr(address || '');
+                    console.log('[Simulation] Normalized User Addr:', normalizedUserAddr);
+
+                    // Aggregated changes
+                    const changeMap = new Map<string, { asset: string, amount: number, isPositive: boolean }>();
+
                     if (result.success && result.events) {
-                        result.events.forEach((event: any) => {
-                            const type = event.type as string;
-                            const isWithdraw = type.includes('coin::WithdrawEvent') || type.includes('fungible_asset::WithdrawEvent');
-                            const isDeposit = type.includes('coin::DepositEvent') || type.includes('fungible_asset::DepositEvent');
+                        console.log(`[Simulation] Processing ${result.events.length} events...`);
+                        result.events.forEach((event: any, idx: number) => {
+                            const type = (event.type as string).toLowerCase();
+                            console.log(`[Simulation] Event ${idx} type: ${type}`);
 
-                            // Try to match the owner address
-                            // For legacy events, it's in event.guid.account_address
-                            // For FA events, it's usually in event.data.store or similar, but simulation often fills guid
-                            const eventAddr = event.guid?.account_address || event.data?.owner;
+                            const possibleAddrs = [
+                                event.guid?.account_address,
+                                event.data?.owner,
+                                event.data?.account,
+                                event.data?.addr,
+                                event.data?.from,
+                                event.data?.to,
+                                event.data?.sender,
+                                event.data?.receiver,
+                                event.data?.store,
+                                event.data?.buyer,
+                                event.data?.payer,
+                                event.data?.user,
+                                event.data?.payor,
+                                event.data?.recipient
+                            ];
 
-                            if ((isWithdraw || isDeposit) && eventAddr === address) {
-                                let assetName = 'MOVE';
-                                let decimals = 8;
+                            const matchedAddr = possibleAddrs.find(a => normalizeAddr(a) === normalizedUserAddr);
+                            const isMatch = !!matchedAddr;
 
-                                // Try to extract asset name from type if possible
-                                if (type.includes('<')) {
-                                    const match = type.match(/<(.*)>/);
-                                    if (match && match[1]) {
-                                        assetName = match[1].split('::').pop() || 'Asset';
+                            if (isMatch) {
+                                console.log(`[Simulation] Event ${idx} MATCHED user: ${type}`);
+                                const isWithdraw = type.includes('::withdraw');
+                                const isDeposit = type.includes('::deposit');
+                                const isTransfer = type.includes('::transfer');
+
+                                // 1. Handle Coin/Fungible Asset Events
+                                // Catch Withdraw, Deposit, or Transfer events associated with the user
+                                if (isWithdraw || isDeposit || isTransfer) {
+                                    const amountRaw = event.data?.amount || event.data?.value || event.data?.balance || event.data?.price || event.data?.cost;
+
+                                    if (amountRaw !== undefined) {
+                                        let assetName = 'MOVE';
+                                        let decimals = 8;
+
+                                        if (type.includes('<')) {
+                                            const match = type.match(/<(.*)>/);
+                                            if (match && match[1]) {
+                                                const fullType = match[1];
+                                                if (fullType.includes('aptos_coin::AptosCoin')) {
+                                                    assetName = 'MOVE';
+                                                } else {
+                                                    assetName = fullType.split('::').pop()?.toUpperCase() || 'Asset';
+                                                }
+                                            }
+                                        } else if (type.includes('fungible_asset')) {
+                                            assetName = 'Asset';
+                                        }
+
+                                        const amountVal = Number(amountRaw) / Math.pow(10, decimals);
+
+                                        if (amountVal > 0) {
+                                            // Determine direction for Transfers or explicit events
+                                            let finalIsPositive = isDeposit;
+
+                                            if (isTransfer) {
+                                                const addrTo = normalizeAddr(event.data?.to || event.data?.receiver || event.data?.recipient);
+                                                const addrFrom = normalizeAddr(event.data?.from || event.data?.sender || event.data?.payor);
+
+                                                const isToUser = addrTo === normalizedUserAddr;
+                                                const isFromUser = addrFrom === normalizedUserAddr;
+
+                                                if (isToUser && !isFromUser) finalIsPositive = true;
+                                                else if (isFromUser && !isToUser) finalIsPositive = false;
+                                                else return;
+                                            } else {
+                                                // For Withdraw/Deposit, direction is fixed but we double check the address
+                                                finalIsPositive = isDeposit;
+                                            }
+
+                                            console.log(`[Simulation] Coin change: ${finalIsPositive ? '+' : '-'}${amountVal} ${assetName}`);
+                                            const key = `${assetName}_${finalIsPositive}`;
+                                            const existing = changeMap.get(key);
+                                            if (existing) {
+                                                existing.amount += amountVal;
+                                            } else {
+                                                changeMap.set(key, { asset: assetName, amount: amountVal, isPositive: finalIsPositive });
+                                            }
+                                            return; // If it's a coin event, don't also treat it as NFT
+                                        }
                                     }
-                                } else if (type.includes('fungible_asset')) {
-                                    assetName = 'Asset'; // FA standard doesn't always put name in event type
                                 }
 
-                                const amount = (Number(event.data.amount) / Math.pow(10, decimals)).toString();
-                                balanceChanges.push({
-                                    asset: assetName,
-                                    amount,
-                                    isPositive: isDeposit
-                                });
+                                // 2. Handle NFT Events (Fallback or explicit token objects)
+                                const isNFTEvent = type.includes('token') || type.includes('object') || type.includes('nft') || type.includes('listing');
+                                if (isNFTEvent && (isWithdraw || isDeposit || isTransfer || type.includes('filled'))) {
+                                    const nftName = event.data?.token_name || event.data?.name || event.data?.metadata?.name || event.data?.asset?.name || 'NFT';
+                                    let isNFTDeposit = isDeposit;
+
+                                    if (isTransfer || type.includes('filled') || type.includes('buy')) {
+                                        const addrTo = normalizeAddr(event.data?.to || event.data?.receiver || event.data?.buyer || event.data?.recipient);
+                                        isNFTDeposit = addrTo === normalizedUserAddr;
+                                    }
+
+                                    console.log(`[Simulation] NFT change: ${isNFTDeposit ? '+' : '-'}1 ${nftName}`);
+
+                                    const key = `NFT_${nftName}_${isNFTDeposit}`;
+                                    const existing = changeMap.get(key);
+                                    if (existing) {
+                                        existing.amount += 1;
+                                    } else {
+                                        changeMap.set(key, { asset: nftName, amount: 1, isPositive: isNFTDeposit });
+                                    }
+                                }
                             }
                         });
                     }
+
+                    const balanceChanges = Array.from(changeMap.values())
+                        .filter(c => c.amount > 0)
+                        .map(c => ({
+                            asset: c.asset,
+                            amount: c.amount.toString(),
+                            isPositive: c.isPositive
+                        }));
+
+
+                    // Extract Gas
+                    const gasPrice = Number(result.gas_unit_price || 0);
+                    const gasUsed = Number(result.gas_used || 0);
+                    const gasFeeValue = (gasPrice * gasUsed) / 100000000;
+                    const gasFeeStr = gasFeeValue.toFixed(6) + ' MOVE';
 
                     setSimulationResult({
                         loading: false,
                         success: result.success,
                         error: result.success ? undefined : (result as any).vm_status,
-                        balanceChanges
+                        balanceChanges,
+                        gasFee: gasFeeStr
                     });
                 } catch (e: any) {
                     setSimulationResult({

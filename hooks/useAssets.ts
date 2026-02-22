@@ -9,6 +9,7 @@ let assetCache: FungibleAsset[] | null = null
 let priceMapCache: Record<string, TokenPrice> = {}
 let lastFetchTime = 0
 let isFetchingGlobal = false
+let currentCacheAddress = '' // Add this to track which account the cache belongs to
 const CACHE_TTL = 600000 // 10 minutes
 
 // Listener system to sync all hook instances
@@ -52,14 +53,22 @@ export function useAssets(refreshKey: number = 0) {
 
         const now = Date.now()
 
+        // If address changed, clear cache to force fresh load for the new account
+        let effectiveForce = force
+        if (walletAddress !== currentCacheAddress) {
+            assetCache = null
+            currentCacheAddress = walletAddress
+            effectiveForce = true
+        }
+
         // If already fetching, just wait for listeners to be notified
-        if (isFetchingGlobal && !force) {
+        if (isFetchingGlobal && !effectiveForce) {
             setIsLoading(true)
             return
         }
 
         // If not forced and we have a valid cache within TTL, use it
-        if (!force && assetCache && (now - lastFetchTime < CACHE_TTL)) {
+        if (!effectiveForce && assetCache && (now - lastFetchTime < CACHE_TTL)) {
             setAssets(assetCache)
             setPrices(priceMapCache)
             setIsLoading(false)

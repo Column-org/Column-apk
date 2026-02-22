@@ -7,6 +7,7 @@ import { getEnrichedUserNFTs, UserNFT, NFTMetadata } from '../services/movement_
 let nftCache: Array<UserNFT & { metadata?: NFTMetadata }> | null = null
 let lastFetchTime = 0
 let isFetchingGlobal = false
+let currentCacheAddress = '' // Track which account the cache belongs to
 const CACHE_TTL = 600000 // 10 minutes
 
 // Listener system to sync all hook instances
@@ -47,14 +48,22 @@ export function useNFTs(refreshKey: number = 0) {
 
         const now = Date.now()
 
+        // If address changed, clear cache to force fresh load for the new account
+        let effectiveForce = force
+        if (walletAddress !== currentCacheAddress) {
+            nftCache = null
+            currentCacheAddress = walletAddress
+            effectiveForce = true
+        }
+
         // If already fetching, just wait for listeners
-        if (isFetchingGlobal && !force) {
+        if (isFetchingGlobal && !effectiveForce) {
             setIsLoading(true)
             return
         }
 
         // If valid cache, use it
-        if (!force && nftCache && (now - lastFetchTime < CACHE_TTL)) {
+        if (!effectiveForce && nftCache && (now - lastFetchTime < CACHE_TTL)) {
             setNfts(nftCache)
             setIsLoading(false)
             return

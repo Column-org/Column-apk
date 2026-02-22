@@ -200,7 +200,8 @@ export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMod
                             <View style={styles.emptyContainer}>
                                 <Ionicons name="briefcase-outline" size={48} color="rgba(255, 218, 52, 0.2)" />
                                 <Text style={styles.emptyText}>No Projects Found</Text>
-                                <Text style={styles.emptySubtext}>Tokens found: {assets.map(a => a.metadata.symbol).join(', ') || 'none'}</Text>
+                                {/* Hide discovery text as requested */}
+                                {/* <Text style={styles.emptySubtext}>Tokens found: {assets.map(a => a.metadata.symbol).join(', ') || 'none'}</Text> */}
                             </View>
                         );
                     }

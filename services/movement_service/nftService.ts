@@ -169,6 +169,9 @@ export async function fetchNFTMetadata(tokenUri: string): Promise<NFTMetadata | 
   }
 }
 
+// Simple memory cache for NFT metadata
+const metadataCache = new Map<string, NFTMetadata | null>()
+
 /**
  * Get enriched NFT data with metadata
  */
@@ -186,16 +189,30 @@ export async function getEnrichedUserNFTs(
 
     // Fetch metadata for each NFT (in chunks to avoid overwhelming the network)
     const enrichedNFTs: Array<UserNFT & { metadata?: NFTMetadata }> = []
-    const CHUNK_SIZE = 5
+    const CHUNK_SIZE = 15 // Increased from 5 to 15 for better speed
 
     for (let i = 0; i < nfts.length; i += CHUNK_SIZE) {
       const chunk = nfts.slice(i, i + CHUNK_SIZE)
       const enrichedChunk = await Promise.all(
         chunk.map(async (nft) => {
           try {
-            const metadata = nft.current_token_data?.token_uri
-              ? await fetchNFTMetadata(nft.current_token_data.token_uri)
-              : null
+            const tokenUri = nft.current_token_data?.token_uri
+            if (!tokenUri) {
+              return {
+                ...nft,
+                metadata: { name: nft.current_token_data?.token_name, isSpam: false } as any
+              }
+            }
+
+            // Check cache first
+            if (metadataCache.has(tokenUri)) {
+              return { ...nft, metadata: metadataCache.get(tokenUri) as any }
+            }
+
+            const metadata = await fetchNFTMetadata(tokenUri)
+
+            // Update cache
+            metadataCache.set(tokenUri, metadata)
 
             const { isSpamAsset } = require('../movementAssets')
             const isTokenSpam = isSpamAsset(nft.current_token_data?.token_name || '', '')

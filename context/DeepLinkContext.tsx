@@ -22,7 +22,8 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [manager] = useState(() => new DeepLinkManager())
     const [activeRequest, setActiveRequest] = useState<DeepLinkRequest | null>(null)
     const [originalParsed, setOriginalParsed] = useState<ParsedDeepLink | null>(null)
-    const { address, publicKey, signAndSubmitTransaction, signMessage, signRawHash, switchNetwork: walletSwitchNetwork } = useWallet()
+    const [simulationResult, setSimulationResult] = useState<any>(null)
+    const { address, publicKey, signAndSubmitTransaction, signMessage, signRawHash, switchNetwork: walletSwitchNetwork, simulateTransaction } = useWallet()
     const { network: currentNetwork } = useNetwork()
     const toast = useToast()
 
@@ -60,6 +61,154 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setActiveRequest(request);
         }
     }, [manager])
+
+    useEffect(() => {
+        const runSimulation = async () => {
+            if (!activeRequest || (activeRequest.type !== 'signAndSubmitTransaction' && activeRequest.type !== 'signTransaction')) {
+                setSimulationResult(null)
+                return
+            }
+
+            setSimulationResult({ loading: true })
+            try {
+                const payload = activeRequest.payload.transaction
+                const result = await simulateTransaction(payload)
+
+                // Helper to normalize addresses for comparison
+                const normalizeAddr = (addr: string) => {
+                    if (!addr) return '';
+                    let clean = addr.toLowerCase();
+                    if (clean.startsWith('0x')) clean = clean.slice(2);
+                    return clean.padStart(64, '0');
+                };
+
+                const normalizedUserAddr = normalizeAddr(address || '');
+                console.log('[DeepLink Sim] Normalized User Addr:', normalizedUserAddr);
+
+                // Aggregate balance changes by asset and direction
+                const changeMap = new Map<string, { asset: string, amount: number, isPositive: boolean }>();
+
+                if (result.success && result.events) {
+                    console.log(`[DeepLink Sim] Processing ${result.events.length} events...`);
+                    result.events.forEach((event: any, idx: number) => {
+                        const type = (event.type as string).toLowerCase();
+
+                        const isWithdraw = type.includes('::withdraw');
+                        const isDeposit = type.includes('::deposit');
+                        const isTransfer = type.includes('::transfer');
+
+                        const possibleAddrs = [
+                            event.guid?.account_address,
+                            event.data?.owner,
+                            event.data?.account,
+                            event.data?.addr,
+                            event.data?.from,
+                            event.data?.to,
+                            event.data?.sender,
+                            event.data?.receiver,
+                            event.data?.store,
+                            event.data?.buyer,
+                            event.data?.payer,
+                            event.data?.user,
+                            event.data?.payor,
+                            event.data?.recipient
+                        ];
+
+                        const matchedAddr = possibleAddrs.find(a => normalizeAddr(a) === normalizedUserAddr);
+                        const isMatch = !!matchedAddr;
+
+                        if (isMatch) {
+                            console.log(`[DeepLink Sim] Event MATCHED: ${type}`);
+
+                            if (isWithdraw || isDeposit || isTransfer) {
+                                const amountRaw = event.data?.amount || event.data?.value || event.data?.balance || event.data?.price || event.data?.cost;
+                                if (amountRaw !== undefined) {
+                                    let assetName = 'MOVE';
+                                    let decimals = 8;
+
+                                    if (type.includes('<')) {
+                                        const match = type.match(/<(.*)>/);
+                                        if (match && match[1]) {
+                                            assetName = match[1].split('::').pop()?.toUpperCase() || 'Asset';
+                                        }
+                                    }
+
+                                    const amountVal = Number(amountRaw) / Math.pow(10, decimals);
+
+                                    if (amountVal > 0) {
+                                        let finalIsPositive = isDeposit;
+                                        if (isTransfer) {
+                                            const addrTo = normalizeAddr(event.data?.to || event.data?.receiver || event.data?.recipient);
+                                            const addrFrom = normalizeAddr(event.data?.from || event.data?.sender || event.data?.payor);
+
+                                            const isToUser = addrTo === normalizedUserAddr;
+                                            const isFromUser = addrFrom === normalizedUserAddr;
+
+                                            if (isToUser && !isFromUser) finalIsPositive = true;
+                                            else if (isFromUser && !isToUser) finalIsPositive = false;
+                                            else return;
+                                        }
+
+                                        const key = `${assetName}_${finalIsPositive}`;
+                                        const existing = changeMap.get(key);
+                                        if (existing) {
+                                            existing.amount += amountVal;
+                                        } else {
+                                            changeMap.set(key, { asset: assetName, amount: amountVal, isPositive: finalIsPositive });
+                                        }
+                                        return;
+                                    }
+                                }
+                            }
+
+                            const isNFTEvent = type.includes('token') || type.includes('object');
+                            if (isNFTEvent && (isWithdraw || isDeposit || isTransfer)) {
+                                const nftName = event.data?.token_name || event.data?.name || event.data?.metadata?.name || 'NFT';
+                                const isNFTDeposit = isDeposit || (isTransfer && normalizeAddr(event.data?.to || event.data?.receiver) === normalizedUserAddr);
+
+                                const key = `NFT_${nftName}_${isNFTDeposit}`;
+                                const existing = changeMap.get(key);
+                                if (existing) {
+                                    existing.amount += 1;
+                                } else {
+                                    changeMap.set(key, { asset: nftName, amount: 1, isPositive: isNFTDeposit });
+                                }
+                            }
+                        }
+                    })
+                }
+
+                const balanceChanges = Array.from(changeMap.values())
+                    .filter(c => c.amount > 0)
+                    .map(c => ({
+                        asset: c.asset,
+                        amount: c.amount.toString(),
+                        isPositive: c.isPositive
+                    }));
+
+                // Extract Gas
+                const gasPrice = Number(result.gas_unit_price || 0)
+                const gasUsed = Number(result.gas_used || 0)
+                const gasFeeValue = (gasPrice * gasUsed) / 100000000
+                const gasFeeStr = gasFeeValue.toFixed(6) + ' MOVE'
+
+                setSimulationResult({
+                    loading: false,
+                    success: result.success,
+                    error: result.success ? undefined : (result as any).vm_status,
+                    balanceChanges,
+                    gasFee: gasFeeStr
+                })
+            } catch (e: any) {
+                setSimulationResult({
+                    loading: false,
+                    error: e.message || 'Simulation failed'
+                })
+            }
+        }
+
+        runSimulation()
+    }, [activeRequest, simulateTransaction, address])
 
     useEffect(() => {
         // Handle URL that opened the app
@@ -191,6 +340,7 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } finally {
             setActiveRequest(null)
             setOriginalParsed(null)
+            setSimulationResult(null)
         }
     }
 
@@ -229,6 +379,7 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 request={activeRequest}
                 onApprove={handleApprove}
                 onDecline={handleDecline}
+                simulation={simulationResult}
             />
         </DeepLinkContext.Provider>
     )

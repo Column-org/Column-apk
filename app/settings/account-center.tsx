@@ -89,6 +89,8 @@ const AccountCenter = () => {
     const handleSwitchWallet = async (address: string) => {
         if (address === activeAddress) return
         await switchWallet(address)
+        // Automatically go back to home to show the new account's state
+        router.replace('/(tabs)/home' as any)
     }
 
     const renderWalletItem = (wallet: any) => {

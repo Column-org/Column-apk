@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity, Dimensions, Image, Platform } from 'react-native'
+import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity, Dimensions, Image, Platform, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -28,6 +28,17 @@ interface DeepLinkApprovalModalProps {
     request: DeepLinkRequest | null
     onApprove: () => void
     onDecline: () => void
+    simulation?: {
+        loading: boolean
+        success?: boolean
+        error?: string
+        gasFee?: string
+        balanceChanges?: {
+            asset: string
+            amount: string
+            isPositive: boolean
+        }[]
+    } | null
 }
 
 export const DeepLinkApprovalModal: React.FC<DeepLinkApprovalModalProps> = ({
@@ -35,10 +46,12 @@ export const DeepLinkApprovalModal: React.FC<DeepLinkApprovalModalProps> = ({
     request,
     onApprove,
     onDecline,
+    simulation,
 }) => {
     const { network: currentNetwork, setNetwork } = useNetwork()
     const slideAnim = useRef(new Animated.Value(height)).current
     const opacityAnim = useRef(new Animated.Value(0)).current
+    const [isDataExpanded, setIsDataExpanded] = React.useState(false)
 
     useEffect(() => {
         if (visible) {
@@ -172,41 +185,94 @@ export const DeepLinkApprovalModal: React.FC<DeepLinkApprovalModalProps> = ({
 
                             {request?.type === 'signAndSubmitTransaction' && request.payload?.transaction && (
                                 <View style={styles.payloadSummary}>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Action</Text>
-                                        <View style={styles.summaryValueContainer}>
-                                            {request.assetMetadata?.logoURI && (
-                                                <Image
-                                                    source={{ uri: request.assetMetadata.logoURI }}
-                                                    style={styles.summaryIcon}
-                                                />
-                                            )}
-                                            <Text style={styles.summaryValue} numberOfLines={1}>
-                                                {request.payload.transaction.function?.includes('transfer')
-                                                    ? `${request.assetMetadata?.symbol || 'Asset'} Transfer`
-                                                    : 'Contract Interaction'}
+                                    <TouchableOpacity
+                                        style={styles.expandHeader}
+                                        onPress={() => setIsDataExpanded(!isDataExpanded)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={styles.detailsTitle}>Transaction Data</Text>
+                                        <Ionicons
+                                            name={isDataExpanded ? "chevron-up" : "chevron-down"}
+                                            size={18}
+                                            color="#8B98A5"
+                                        />
+                                    </TouchableOpacity>
+
+                                    {isDataExpanded && (
+                                        <View style={styles.codeBlock}>
+                                            <Text style={styles.codeText}>
+                                                {JSON.stringify(request.payload.transaction, null, 2)}
                                             </Text>
                                         </View>
-                                    </View>
-                                    {request.payload.transaction.function?.includes('transfer') && (
-                                        <>
-                                            <View style={styles.summaryRow}>
-                                                <Text style={styles.summaryLabel}>Amount</Text>
-                                                <Text style={[styles.summaryValue, { color: '#EF4444', fontWeight: '800' }]} numberOfLines={1}>
-                                                    -{parseFloat(request.payload.transaction.functionArguments?.[1] || '0') / Math.pow(10, request.assetMetadata?.decimals || 8)} {request.assetMetadata?.symbol || 'MOVE'}
-                                                </Text>
-                                            </View>
-                                            <View style={styles.summaryRow}>
-                                                <Text style={styles.summaryLabel}>To</Text>
-                                                <Text style={styles.summaryValue} numberOfLines={1} ellipsizeMode="middle">
-                                                    {request.payload.transaction.functionArguments?.[0]}
-                                                </Text>
-                                            </View>
-                                        </>
                                     )}
                                 </View>
                             )}
                         </View>
+
+                        {/* Transaction Simulation Section */}
+                        {(request?.type === 'signAndSubmitTransaction' || request?.type === 'signTransaction') && simulation && (
+                            <View style={styles.simulationContainer}>
+                                <Text style={styles.detailsTitle}>Transaction Simulation</Text>
+
+                                {simulation.loading ? (
+                                    <View style={styles.simulationPlaceholder}>
+                                        <ActivityIndicator size="small" color="#ffda34" />
+                                        <Text style={styles.simulationText}>Simulating execution...</Text>
+                                    </View>
+                                ) : simulation.error ? (
+                                    <View style={[styles.warningBox, { marginTop: 8 }]}>
+                                        <Ionicons name="alert-circle-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+                                        <Text style={styles.warningText}>Simulation failed: {simulation.error}</Text>
+                                    </View>
+                                ) : (
+                                    <View style={styles.balanceChangesList}>
+                                        {/* Show incoming and outgoing assets based on simulation */}
+                                        {simulation.balanceChanges && simulation.balanceChanges.length > 0 ? (
+                                            simulation.balanceChanges.map((change, idx) => (
+                                                <View key={idx} style={styles.balanceChangeItem}>
+                                                    <View style={[styles.changeIndicator, { backgroundColor: change.isPositive ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
+                                                        <Ionicons
+                                                            name={change.isPositive ? "add-outline" : "remove-outline"}
+                                                            size={14}
+                                                            color={change.isPositive ? "#4ADE80" : "#EF4444"}
+                                                        />
+                                                    </View>
+                                                    <Text style={styles.changeLabel}>{change.asset}</Text>
+                                                    <Text style={[styles.changeValue, { color: change.isPositive ? "#4ADE80" : "#EF4444" }]}>
+                                                        {change.isPositive ? '+' : '-'}{change.amount}
+                                                    </Text>
+                                                </View>
+                                            ))
+                                        ) : (
+                                            <View style={styles.balanceChangeItem}>
+                                                <Ionicons name="information-circle-outline" size={18} color="#8B98A5" style={{ marginRight: 8 }} />
+                                                <Text style={styles.simulationText}>No significant balance changes detected.</Text>
+                                            </View>
+                                        )}
+
+                                        {/* Network Fee (Gas) */}
+                                        {simulation.gasFee && (
+                                            <View style={styles.balanceChangeItem}>
+                                                <View style={[styles.changeIndicator, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+                                                    <Ionicons name="speedometer-outline" size={14} color="#8B98A5" />
+                                                </View>
+                                                <Text style={styles.changeLabel}>Network Fee</Text>
+                                                <Text style={[styles.changeValue, { color: '#8B98A5' }]}>
+                                                    -{simulation.gasFee}
+                                                </Text>
+                                            </View>
+                                        )}
+
+                                        {!simulation.success && (
+                                            <View style={[styles.warningBox, { marginTop: 12 }]}>
+                                                <Ionicons name="warning-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+                                                <Text style={styles.warningText}>This transaction will likely fail during execution.</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
+                            </View>
+                        )}
 
                         {request?.type === 'signAndSubmitTransaction' && (
                             <View style={styles.warningBox}>
@@ -370,6 +436,24 @@ const styles = StyleSheet.create({
         borderTopColor: 'rgba(255, 255, 255, 0.05)',
         gap: 12,
     },
+    expandHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingBottom: 4,
+    },
+    codeBlock: {
+        backgroundColor: '#121315',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    codeText: {
+        color: '#8B98A5',
+        fontSize: 12,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
     summaryRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -413,6 +497,47 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 1,
+    },
+    simulationContainer: {
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 16,
+    },
+    simulationPlaceholder: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 8,
+    },
+    simulationText: {
+        color: '#8B98A5',
+        fontSize: 13,
+    },
+    balanceChangesList: {
+        marginTop: 8,
+        gap: 10,
+    },
+    balanceChangeItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    changeIndicator: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    changeLabel: {
+        color: 'white',
+        fontSize: 13,
+        flex: 1,
+    },
+    changeValue: {
+        fontSize: 13,
+        fontWeight: '700',
     },
     detailsTitle: {
         color: '#8B98A5',

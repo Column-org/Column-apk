@@ -16,7 +16,7 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 export default function Swap() {
   const router = useRouter()
   const { t } = useTranslation()
-  const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
+  const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey, signAndSubmitTransaction } = useWallet()
   const { network } = useNetwork()
 
   const [tokens, setTokens] = useState<MosaicToken[]>([])
@@ -104,57 +104,13 @@ export default function Swap() {
     try {
       setIsSwapping(true)
 
-      // Step 1: Generate hash using backend with Mosaic transaction data
-      const API_BASE_URL = BACKEND_CONFIG.BASE_URL
+      console.log('Swap: Initiating transaction with payload:', JSON.stringify(quote.tx));
 
-      const hashResponse = await fetch(`${API_BASE_URL}/generate-hash`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sender: walletAddress,
-          function: quote.tx.function,
-          typeArguments: quote.tx.typeArguments,
-          functionArguments: quote.tx.functionArguments,
-          network,
-        }),
-      })
+      // Use the direct signAndSubmitTransaction from WalletContext
+      // This bypasses the need for the backend generate-hash/submit-transaction endpoints
+      const txHash = await signAndSubmitTransaction(quote.tx);
 
-      if (!hashResponse.ok) {
-        const errorText = await hashResponse.text()
-        console.error('Hash generation failed:', errorText)
-        throw new Error(`Failed to generate transaction hash: ${errorText}`)
-      }
-
-      const { hash, rawTxnHex } = await hashResponse.json()
-
-      // Step 2: Sign hash
-      const { signature } = await web3SignRawHash(hash as any)
-
-      // Step 3: Submit signed transaction
-      const publicKey = walletPublicKey
-
-      const submitResponse = await fetch(`${API_BASE_URL}/submit-transaction`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rawTxnHex,
-          publicKey,
-          signature,
-          network,
-        }),
-      })
-
-      if (!submitResponse.ok) {
-        const errorText = await submitResponse.text()
-        console.error('Transaction submission failed:', errorText)
-        throw new Error(`Failed to submit signed transaction: ${errorText}`)
-      }
-
-      const result = await submitResponse.json()
-
-      if (!result.success) {
-        throw new Error(result.vmStatus || 'Transaction failed')
-      }
+      console.log('Swap: Transaction submitted successfully, hash:', txHash);
 
       // Success!
       const toAmountValue = quote && toToken ? formatTokenAmount(quote.dstAmount, toToken.decimals) : 0

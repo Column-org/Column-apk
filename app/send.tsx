@@ -206,11 +206,11 @@ export default function Send() {
 
                 {/* Amount Section */}
                 <View style={styles.amountArea}>
-                    <TouchableOpacity style={styles.tokenDisplay} onPress={() => router.push('/selectToken')}>
+                    <View style={styles.tokenDisplay}>
                         <Text style={styles.amountValueText}>
                             {amount || '0'} <Text style={styles.symbolText}>{selectedToken?.metadata.symbol}</Text>
                         </Text>
-                    </TouchableOpacity>
+                    </View>
 
                     <View style={styles.usdPill}>
                         <Text style={styles.usdText}>$ 0.00</Text>

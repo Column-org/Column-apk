@@ -19,6 +19,7 @@ export interface SimulationResult {
     loading: boolean
     success?: boolean
     error?: string
+    gasFee?: string
     balanceChanges?: {
         asset: string
         amount: string
@@ -45,6 +46,7 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
     const { address: currentAddress, allWallets } = useWallet()
     const slideAnim = useRef(new Animated.Value(height)).current
     const opacityAnim = useRef(new Animated.Value(0)).current
+    const [isDataExpanded, setIsDataExpanded] = React.useState(false)
 
     useEffect(() => {
         if (visible) {
@@ -189,12 +191,26 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
 
                             {(request?.method === 'signAndSubmitTransaction' || request?.method === 'signTransaction') && (
                                 <View style={styles.payloadSummary}>
-                                    <Text style={styles.summaryLabel}>Transaction Data</Text>
-                                    <View style={styles.codeBlock}>
-                                        <Text style={styles.codeText}>
-                                            {JSON.stringify(request.params, null, 2)}
-                                        </Text>
-                                    </View>
+                                    <TouchableOpacity
+                                        style={styles.expandHeader}
+                                        onPress={() => setIsDataExpanded(!isDataExpanded)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={styles.summaryLabel}>Transaction Data</Text>
+                                        <Ionicons
+                                            name={isDataExpanded ? "chevron-up" : "chevron-down"}
+                                            size={20}
+                                            color="#8B98A5"
+                                        />
+                                    </TouchableOpacity>
+
+                                    {isDataExpanded && (
+                                        <View style={styles.codeBlock}>
+                                            <Text style={styles.codeText}>
+                                                {JSON.stringify(request.params, null, 2)}
+                                            </Text>
+                                        </View>
+                                    )}
                                 </View>
                             )}
 
@@ -226,6 +242,7 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
                                     </View>
                                 ) : (
                                     <View style={styles.balanceChangesList}>
+                                        {/* Show incoming and outgoing assets based on simulation */}
                                         {simulation.balanceChanges && simulation.balanceChanges.length > 0 ? (
                                             simulation.balanceChanges.map((change, idx) => (
                                                 <View key={idx} style={styles.balanceChangeItem}>
@@ -237,10 +254,10 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
                                                         />
                                                     </View>
                                                     <Text style={styles.changeLabel}>
-                                                        {change.isPositive ? 'You will gain' : 'You will lose'}
+                                                        {change.asset}
                                                     </Text>
                                                     <Text style={[styles.changeValue, { color: change.isPositive ? "#4ADE80" : "#EF4444" }]}>
-                                                        {change.amount} {change.asset}
+                                                        {change.isPositive ? '+' : '-'}{change.amount}
                                                     </Text>
                                                 </View>
                                             ))
@@ -248,6 +265,19 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
                                             <View style={styles.balanceChangeItem}>
                                                 <Ionicons name="information-circle-outline" size={18} color="#8B98A5" style={{ marginRight: 8 }} />
                                                 <Text style={styles.simulationText}>No significant balance changes detected.</Text>
+                                            </View>
+                                        )}
+
+                                        {/* Network Fee (Gas) */}
+                                        {simulation.gasFee && (
+                                            <View style={styles.balanceChangeItem}>
+                                                <View style={[styles.changeIndicator, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+                                                    <Ionicons name="speedometer-outline" size={14} color="#8B98A5" />
+                                                </View>
+                                                <Text style={styles.changeLabel}>Network Fee</Text>
+                                                <Text style={[styles.changeValue, { color: '#8B98A5' }]}>
+                                                    -{simulation.gasFee}
+                                                </Text>
                                             </View>
                                         )}
 
@@ -262,12 +292,6 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
                             </View>
                         )}
 
-                        {(request?.method === 'signAndSubmitTransaction' || request?.method === 'signTransaction') && (
-                            <View style={styles.warningBox}>
-                                <Ionicons name="warning-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
-                                <Text style={styles.warningText}>This will move real assets on the network.</Text>
-                            </View>
-                        )}
                     </ScrollView>
 
                     <View style={styles.footer}>
@@ -435,6 +459,11 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: 'rgba(255, 255, 255, 0.05)',
         gap: 12,
+    },
+    expandHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     summaryLabel: {
         color: '#8B98A5',
