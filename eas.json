@@ -52,7 +52,8 @@
     "production": {
       "android": {
         "serviceAccountKeyPath": "./service-account.json",
-        "track": "internal"
+        "track": "internal",
+        "releaseStatus": "draft"
       },
       "ios": {
         "appleId": "your-apple-id@example.com",

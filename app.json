@@ -76,7 +76,8 @@
             "deploymentTarget": "15.1"
           },
           "android": {
-            "compileSdkVersion": 35
+            "compileSdkVersion": 35,
+            "enableProguardInReleaseBuilds": true
           }
         }
       ],

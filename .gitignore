@@ -43,6 +43,10 @@ expo-backend/.env
 /ios
 /android
 
+# secrets
+service-account.json
+service-account-column.json
+
 # local development
 example/
 example2/
