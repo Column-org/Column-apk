@@ -11,6 +11,7 @@ import { TransactionItem } from '../../components/activities/TransactionItem'
 import { ActivityFilter } from '../../components/activities/ActivityFilter'
 import { ActivityEmptyState } from '../../components/activities/ActivityEmptyState'
 import { ActivitySkeleton } from '../../components/activities/ActivitySkeleton'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -30,6 +31,7 @@ const Activities = () => {
     const [hideFailedTx, setHideFailedTx] = useState(false)
     const [showFilterMenu, setShowFilterMenu] = useState(false)
     const scrollY = useRef(new Animated.Value(0)).current
+    const insets = useSafeAreaInsets()
 
     useEffect(() => {
 
@@ -114,6 +116,7 @@ const Activities = () => {
                 <StatusBar barStyle="light-content" />
 
                 <Animated.View style={[styles.header, {
+                    paddingTop: Math.max(insets.top, IS_SMALL_SCREEN ? 16 : 50),
                     shadowOpacity: headerShadow,
                     elevation: scrollY.interpolate({
                         inputRange: [0, 50],
@@ -215,7 +218,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
         paddingBottom: IS_SMALL_SCREEN ? 8 : 20,
         backgroundColor: '#121315',
         zIndex: 10,

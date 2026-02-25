@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 import { useWallet } from '../context/WalletContext'
 import { useSidebar } from '../context/SidebarContext'
 import { BlurView } from 'expo-blur'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../hooks/useTheme'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
@@ -15,6 +16,7 @@ export const Header = () => {
     const { openSidebar } = useSidebar()
     const { theme } = useTheme()
     const router = useRouter()
+    const insets = useSafeAreaInsets()
 
     const currentWallet = allWallets.find(w => w.address === walletAddress)
 
@@ -25,7 +27,10 @@ export const Header = () => {
     }
 
     return (
-        <View style={styles.header}>
+        <View style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, IS_SMALL_SCREEN ? 16 : 50) }
+        ]}>
             {theme === 'none' ? (
                 <BlurView intensity={40} tint="dark" style={styles.blurContainer}>
                     <TouchableOpacity
@@ -92,7 +97,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
         paddingBottom: IS_SMALL_SCREEN ? 8 : 20,
     },
     blurContainer: {

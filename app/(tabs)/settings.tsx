@@ -11,6 +11,7 @@ import { NetworkSelector } from '../../components/NetworkSelector'
 import { useWallet } from '../../context/WalletContext'
 import AudioService from '../../services/audio/AudioService'
 import { requestNotificationPermissions } from '../../services/NotificationService'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -23,6 +24,7 @@ const Settings = () => {
     const [logoutModalVisible, setLogoutModalVisible] = React.useState(false)
     const [profileExpanded, setProfileExpanded] = React.useState(false)
     const scrollY = useRef(new Animated.Value(0)).current
+    const insets = useSafeAreaInsets()
     const {
         isSecurityEnabled,
         isBiometricEnabled,
@@ -163,7 +165,7 @@ const Settings = () => {
                     styles.stickyHeader,
                     {
                         opacity: headerOpacity,
-                        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
+                        paddingTop: Math.max(insets.top, IS_SMALL_SCREEN ? 16 : 50),
                     }
                 ]}>
                     <LinearGradient
@@ -191,7 +193,10 @@ const Settings = () => {
                     scrollEventThrottle={16}
                 >
                     {/* Header */}
-                    <View style={styles.header}>
+                    <View style={[
+                        styles.header,
+                        { paddingTop: Math.max(insets.top, IS_SMALL_SCREEN ? 16 : 50) }
+                    ]}>
                         <Text style={styles.headerTitle}>{t('settings.title')}</Text>
                     </View>
 
@@ -477,7 +482,6 @@ const styles = StyleSheet.create({
     },
     header: {
         paddingHorizontal: 20,
-        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
         paddingBottom: IS_SMALL_SCREEN ? 8 : 20,
     },
     headerTitle: {

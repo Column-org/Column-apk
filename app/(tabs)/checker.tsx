@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
 import { SwipeableTabWrapper } from '../../components/SwipeableTabWrapper'
 import { useNetwork } from '../../context/NetworkContext'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
     checkCodeExists,
     checkFACodeExists,
@@ -21,6 +22,7 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 export default function Checker() {
     const { t } = useTranslation()
     const { network } = useNetwork()
+    const insets = useSafeAreaInsets()
 
     // Transfer code checker states
     const [codeInput, setCodeInput] = useState('')
@@ -107,7 +109,10 @@ export default function Checker() {
                 <StatusBar barStyle="light-content" />
 
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                    <View style={styles.header}>
+                    <View style={[
+                        styles.header,
+                        { paddingTop: Math.max(insets.top, IS_SMALL_SCREEN ? 16 : 50) }
+                    ]}>
                         <Text style={styles.headerTitle}>Transfer Checker</Text>
                     </View>
 
@@ -220,7 +225,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: IS_SMALL_SCREEN ? 16 : 50,
         paddingBottom: IS_SMALL_SCREEN ? 8 : 20,
     },
     headerTitle: {

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useRouter, usePathname } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import AudioService from '../services/audio/AudioService'
 import { usePreferences } from '../context/PreferencesContext'
 
@@ -11,6 +12,7 @@ export const BottomNavigation = () => {
     const router = useRouter()
     const pathname = usePathname()
     const { isSoundEnabled, isHapticEnabled } = usePreferences()
+    const insets = useSafeAreaInsets()
 
     // Animation for active indicator
     const indicatorX = React.useRef(new Animated.Value(0)).current
@@ -55,7 +57,10 @@ export const BottomNavigation = () => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.navBackground}>
+            <View style={[
+                styles.navBackground,
+                { paddingBottom: Math.max(insets.bottom, 14) }
+            ]}>
                 <View style={styles.navContent}>
                     {/* Floating Active Indicator Background */}
                     <Animated.View
@@ -112,7 +117,6 @@ const styles = StyleSheet.create({
     navBackground: {
         backgroundColor: '#121315',
         paddingTop: 10,
-        paddingBottom: Platform.OS === 'ios' ? 34 : 14,
         borderTopWidth: 1,
         borderTopColor: 'rgba(255, 255, 255, 0.05)',
     },
