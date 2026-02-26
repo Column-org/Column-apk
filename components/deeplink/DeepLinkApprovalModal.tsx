@@ -37,6 +37,7 @@ interface DeepLinkApprovalModalProps {
             asset: string
             amount: string
             isPositive: boolean
+            logoURI?: string
         }[]
     } | null
 }
@@ -230,16 +231,26 @@ export const DeepLinkApprovalModal: React.FC<DeepLinkApprovalModalProps> = ({
                                         {simulation.balanceChanges && simulation.balanceChanges.length > 0 ? (
                                             simulation.balanceChanges.map((change, idx) => (
                                                 <View key={idx} style={styles.balanceChangeItem}>
-                                                    <View style={[styles.changeIndicator, { backgroundColor: change.isPositive ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
-                                                        <Ionicons
-                                                            name={change.isPositive ? "add-outline" : "remove-outline"}
-                                                            size={14}
-                                                            color={change.isPositive ? "#4ADE80" : "#EF4444"}
-                                                        />
+                                                    <View style={[styles.changeIndicator, { backgroundColor: change.isPositive ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', overflow: 'hidden' }]}>
+                                                        {change.logoURI ? (
+                                                            <Image
+                                                                source={{ uri: change.logoURI }}
+                                                                style={{ width: 24, height: 24 }}
+                                                                resizeMode="cover"
+                                                            />
+                                                        ) : (
+                                                            <Ionicons
+                                                                name={change.isPositive ? "add-outline" : "remove-outline"}
+                                                                size={14}
+                                                                color={change.isPositive ? "#4ADE80" : "#EF4444"}
+                                                            />
+                                                        )}
                                                     </View>
-                                                    <Text style={styles.changeLabel}>{change.asset}</Text>
+                                                    <Text style={styles.changeLabel}>
+                                                        {change.asset}
+                                                    </Text>
                                                     <Text style={[styles.changeValue, { color: change.isPositive ? "#4ADE80" : "#EF4444" }]}>
-                                                        {change.isPositive ? '+' : '-'}{change.amount}
+                                                        {change.isPositive ? '+' : '-'}{parseFloat(change.amount).toFixed(4)}
                                                     </Text>
                                                 </View>
                                             ))

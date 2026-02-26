@@ -94,11 +94,44 @@ export async function getTokenMetadata(tokenAddress: string): Promise<{ symbol: 
       decimals: 8,
       logoURI: 'https://gateway.pinata.cloud/ipfs/QmUv8RVdgo6cVQzh7kxerWLatDUt4rCEFoCTkCVLuMAa27',
     },
+    'usdc': {
+      symbol: 'USDC',
+      decimals: 6,
+      logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+    },
+    'usdt': {
+      symbol: 'USDT',
+      decimals: 6,
+      logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png',
+    },
+    // Movement Testnet USDT Object Address
+    '0x927595491037804b410c090a4c152c27af24d647863fc00b4a42904073d2d9de': {
+      symbol: 'USDT',
+      decimals: 6,
+      logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png',
+    },
+    // Movement Testnet USDC Object Address
+    '0x19942a63b019da525252525252525252525252525252525252525252525252': {
+      symbol: 'USDC',
+      decimals: 6,
+      logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+    },
+    '0x8ce6b84c59f727d3ebd0b0e73172f46571e9f6515453d1c15887826a9478443c': {
+      symbol: 'BTC',
+      decimals: 8,
+      logoURI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png',
+    },
+    // Generic keyword matchers
+    'btc': {
+      symbol: 'BTC',
+      decimals: 8,
+      logoURI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png',
+    }
   }
 
   const normalized = tokenAddress.toLowerCase()
   for (const [addr, metadata] of Object.entries(commonTokens)) {
-    if (addr.toLowerCase() === normalized) {
+    if (addr.toLowerCase() === normalized || normalized.includes(addr.toLowerCase())) {
       tokenMetadataCache[tokenAddress] = metadata
       return metadata
     }

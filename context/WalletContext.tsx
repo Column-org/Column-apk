@@ -37,20 +37,34 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined)
 
-import { DEFAULT_NETWORK, NETWORK_CONFIGS } from '../constants/networkConfig'
+import { NETWORK_CONFIGS } from '../constants/networkConfig'
+import { useNetwork } from './NetworkContext'
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
+    const { config: activeNetworkConfig, setNetwork: setGlobalNetwork } = useNetwork()
     const [walletManager] = useState(() => new WalletManager())
     const [transactionService] = useState(() => new TransactionService())
     const [web3Account, setWeb3Account] = useState<Account | null>(null)
     const [allWallets, setAllWallets] = useState<WalletMetadata[]>([])
     const [isWeb3Loading, setIsWeb3Loading] = useState(true)
-    const activeConfig = NETWORK_CONFIGS[DEFAULT_NETWORK]
-    const [network, setNetwork] = useState({
-        name: activeConfig.displayName,
-        chainId: activeConfig.chainId,
-        url: activeConfig.rpcUrl
+    const [network, setNetworkInternal] = useState({
+        name: activeNetworkConfig.displayName,
+        chainId: activeNetworkConfig.chainId,
+        url: activeNetworkConfig.rpcUrl
     })
+
+    // Sync network config from NetworkContext
+    useEffect(() => {
+        if (activeNetworkConfig) {
+            console.log(`[WalletContext] Syncing network: ${activeNetworkConfig.displayName} (${activeNetworkConfig.rpcUrl})`)
+            transactionService.switchNetwork(activeNetworkConfig.rpcUrl)
+            setNetworkInternal({
+                name: activeNetworkConfig.displayName,
+                chainId: activeNetworkConfig.chainId,
+                url: activeNetworkConfig.rpcUrl
+            })
+        }
+    }, [activeNetworkConfig, transactionService])
     const [lastBalance, setLastBalance] = useState<bigint | null>(null)
 
     const refreshWallets = useCallback(async () => {
@@ -59,16 +73,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }, [walletManager])
 
     const switchNetwork = useCallback((networkKey: 'mainnet' | 'testnet') => {
-        const config = NETWORK_CONFIGS[networkKey]
-        const newNetworkState = {
-            name: config.displayName,
-            chainId: config.chainId,
-            url: config.rpcUrl
-        }
-
-        setNetwork(newNetworkState)
-        transactionService.switchNetwork(config.rpcUrl)
-    }, [transactionService])
+        setGlobalNetwork(networkKey)
+    }, [setGlobalNetwork])
 
     useEffect(() => {
         const init = async () => {

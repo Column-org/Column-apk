@@ -24,6 +24,7 @@ import { useWallet } from '../context/WalletContext';
 import { APTOS_INJECTION_SCRIPT } from '../components/browser/AptosProviderScript';
 import { StatusBar } from 'expo-status-bar';
 import { BrowserApprovalModal, BrowserRequest, SimulationResult } from '../components/browser/BrowserApprovalModal';
+import { getTokenMetadata } from '../services/movement_service/transactionHistory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BrowserHome } from '../components/browser/BrowserHome';
 import { BrowserTabs, TabItem } from '../components/browser/BrowserTabs';
@@ -165,22 +166,34 @@ export default function BrowserScreen() {
                     const normalizedUserAddr = normalizeAddr(address || '');
                     console.log('[Simulation] Normalized User Addr:', normalizedUserAddr);
 
-                    // Aggregated changes
-                    const changeMap = new Map<string, { asset: string, amount: number, isPositive: boolean }>();
+                    // Consolidate balance changes by asset (summing net amounts)
+                    // Key can be assetName for coins or NFT name for NFTs
+                    const changeMap = new Map<string, { asset: string, amount: number, logoURI?: string, isNFT?: boolean }>();
 
                     if (result.success && result.events) {
                         console.log(`[Simulation] Processing ${result.events.length} events...`);
-                        result.events.forEach((event: any, idx: number) => {
+
+                        // Use for...of to allow await inside the loop
+                        for (const [idx, event] of result.events.entries()) {
                             const type = (event.type as string).toLowerCase();
                             console.log(`[Simulation] Event ${idx} type: ${type}`);
 
+                            const isFaucetCall = pendingRequest.params.function?.toLowerCase().includes('faucet') ||
+                                pendingRequest.params.function?.toLowerCase().includes('mint') ||
+                                pendingRequest.params.function?.toLowerCase().includes('claim');
+
                             const possibleAddrs = [
                                 event.guid?.account_address,
+                                (event as any).address,
+                                (event as any).account_address,
                                 event.data?.owner,
+                                event.data?.owner_address,
                                 event.data?.account,
+                                event.data?.account_address,
                                 event.data?.addr,
                                 event.data?.from,
                                 event.data?.to,
+                                event.data?.to_address,
                                 event.data?.sender,
                                 event.data?.receiver,
                                 event.data?.store,
@@ -188,11 +201,18 @@ export default function BrowserScreen() {
                                 event.data?.payer,
                                 event.data?.user,
                                 event.data?.payor,
-                                event.data?.recipient
+                                event.data?.recipient,
+                                event.data?.dst
                             ];
 
-                            const matchedAddr = possibleAddrs.find(a => normalizeAddr(a) === normalizedUserAddr);
-                            const isMatch = !!matchedAddr;
+                            const matchedAddr = possibleAddrs.find(a => a && normalizeAddr(a) === normalizedUserAddr);
+                            let isMatch = !!matchedAddr;
+
+                            // Special case for Faucet/Mint/Claim: allow Deposit events even if address match is 0x0/missing
+                            if (!isMatch && isFaucetCall && type.includes('::deposit')) {
+                                console.log(`[Simulation] Faucet call detected, allowing deposit event: ${type}`);
+                                isMatch = true;
+                            }
 
                             if (isMatch) {
                                 console.log(`[Simulation] Event ${idx} MATCHED user: ${type}`);
@@ -201,32 +221,69 @@ export default function BrowserScreen() {
                                 const isTransfer = type.includes('::transfer');
 
                                 // 1. Handle Coin/Fungible Asset Events
-                                // Catch Withdraw, Deposit, or Transfer events associated with the user
                                 if (isWithdraw || isDeposit || isTransfer) {
                                     const amountRaw = event.data?.amount || event.data?.value || event.data?.balance || event.data?.price || event.data?.cost;
 
                                     if (amountRaw !== undefined) {
                                         let assetName = 'MOVE';
                                         let decimals = 8;
+                                        let tokenAddress = ''; // Start empty to ensure proper resolution
 
+                                        // Try to extract token address/type from event string
                                         if (type.includes('<')) {
                                             const match = type.match(/<(.*)>/);
                                             if (match && match[1]) {
-                                                const fullType = match[1];
-                                                if (fullType.includes('aptos_coin::AptosCoin')) {
-                                                    assetName = 'MOVE';
-                                                } else {
-                                                    assetName = fullType.split('::').pop()?.toUpperCase() || 'Asset';
-                                                }
+                                                tokenAddress = match[1];
                                             }
                                         } else if (type.includes('fungible_asset')) {
-                                            assetName = 'Asset';
+                                            // V2 Fungible Asset: Try to find the asset metadata address
+                                            tokenAddress = event.data?.asset || event.data?.metadata;
+
+                                            // If still missing, check simulation state changes for the store's metadata
+                                            if (!tokenAddress && event.data?.store && result.changes) {
+                                                const storeAddr = normalizeAddr(event.data.store);
+                                                const storeChange = result.changes.find((c: any) =>
+                                                    c.type === 'write_resource' &&
+                                                    normalizeAddr(c.address) === storeAddr &&
+                                                    c.data?.type === '0x1::fungible_asset::FungibleStore'
+                                                );
+                                                if (storeChange?.data?.data?.metadata?.inner) {
+                                                    tokenAddress = storeChange.data.data.metadata.inner;
+                                                }
+                                            }
+
+                                            // Final fallback: check payload arguments for anything that looks like a token address (if not the user)
+                                            if (!tokenAddress && pendingRequest.params.functionArguments?.length > 0) {
+                                                for (const arg of pendingRequest.params.functionArguments) {
+                                                    if (typeof arg === 'string' && arg.startsWith('0x') && normalizeAddr(arg) !== normalizedUserAddr) {
+                                                        tokenAddress = arg;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
+                                            if (!tokenAddress) tokenAddress = '0x1::aptos_coin::AptosCoin';
+                                            console.log(`[Simulation] Event ${idx} resolved token address: ${tokenAddress}`);
+                                        }
+
+                                        // Resolve metadata
+                                        let resolvedLogo: string | undefined;
+                                        try {
+                                            const metadata = await getTokenMetadata(tokenAddress);
+                                            if (metadata) {
+                                                assetName = metadata.symbol;
+                                                decimals = metadata.decimals;
+                                                resolvedLogo = metadata.logoURI;
+                                            } else if (tokenAddress.includes('::')) {
+                                                assetName = tokenAddress.split('::').pop()?.toUpperCase() || 'Asset';
+                                            }
+                                        } catch (e) {
+                                            console.warn('[Simulation] Metadata lookup failed:', e);
                                         }
 
                                         const amountVal = Number(amountRaw) / Math.pow(10, decimals);
 
                                         if (amountVal > 0) {
-                                            // Determine direction for Transfers or explicit events
                                             let finalIsPositive = isDeposit;
 
                                             if (isTransfer) {
@@ -238,26 +295,32 @@ export default function BrowserScreen() {
 
                                                 if (isToUser && !isFromUser) finalIsPositive = true;
                                                 else if (isFromUser && !isToUser) finalIsPositive = false;
-                                                else return;
+                                                else continue;
                                             } else {
-                                                // For Withdraw/Deposit, direction is fixed but we double check the address
                                                 finalIsPositive = isDeposit;
                                             }
 
-                                            console.log(`[Simulation] Coin change: ${finalIsPositive ? '+' : '-'}${amountVal} ${assetName}`);
-                                            const key = `${assetName}_${finalIsPositive}`;
-                                            const existing = changeMap.get(key);
+                                            console.log(`[Simulation] Found change: ${finalIsPositive ? '+' : '-'}${amountVal} ${assetName}`);
+
+                                            const signedAmount = finalIsPositive ? amountVal : -amountVal;
+                                            const existing = changeMap.get(assetName);
+
                                             if (existing) {
-                                                existing.amount += amountVal;
+                                                existing.amount += signedAmount;
+                                                // If we find a logo later in the events, use it
+                                                if (!existing.logoURI && resolvedLogo) existing.logoURI = resolvedLogo;
                                             } else {
-                                                changeMap.set(key, { asset: assetName, amount: amountVal, isPositive: finalIsPositive });
+                                                changeMap.set(assetName, {
+                                                    asset: assetName,
+                                                    amount: signedAmount,
+                                                    logoURI: resolvedLogo
+                                                });
                                             }
-                                            return; // If it's a coin event, don't also treat it as NFT
+                                            continue;
                                         }
                                     }
                                 }
-
-                                // 2. Handle NFT Events (Fallback or explicit token objects)
+                                // 2. Handle NFT Events
                                 const isNFTEvent = type.includes('token') || type.includes('object') || type.includes('nft') || type.includes('listing');
                                 if (isNFTEvent && (isWithdraw || isDeposit || isTransfer || type.includes('filled'))) {
                                     const nftName = event.data?.token_name || event.data?.name || event.data?.metadata?.name || event.data?.asset?.name || 'NFT';
@@ -270,24 +333,29 @@ export default function BrowserScreen() {
 
                                     console.log(`[Simulation] NFT change: ${isNFTDeposit ? '+' : '-'}1 ${nftName}`);
 
-                                    const key = `NFT_${nftName}_${isNFTDeposit}`;
-                                    const existing = changeMap.get(key);
+                                    const signedAmount = isNFTDeposit ? 1 : -1;
+                                    const existing = changeMap.get(nftName);
                                     if (existing) {
-                                        existing.amount += 1;
+                                        existing.amount += signedAmount;
                                     } else {
-                                        changeMap.set(key, { asset: nftName, amount: 1, isPositive: isNFTDeposit });
+                                        changeMap.set(nftName, {
+                                            asset: nftName,
+                                            amount: signedAmount,
+                                            isNFT: true
+                                        });
                                     }
                                 }
                             }
-                        });
+                        }
                     }
 
                     const balanceChanges = Array.from(changeMap.values())
-                        .filter(c => c.amount > 0)
+                        .filter(c => Math.abs(c.amount) > 1e-10) // Filter out zero/negligible net changes
                         .map(c => ({
                             asset: c.asset,
-                            amount: c.amount.toString(),
-                            isPositive: c.isPositive
+                            amount: Math.abs(c.amount).toString(),
+                            isPositive: c.amount > 0,
+                            logoURI: c.logoURI
                         }));
 
 

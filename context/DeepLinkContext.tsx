@@ -85,13 +85,15 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const normalizedUserAddr = normalizeAddr(address || '');
                 console.log('[DeepLink Sim] Normalized User Addr:', normalizedUserAddr);
 
-                // Aggregate balance changes by asset and direction
-                const changeMap = new Map<string, { asset: string, amount: number, isPositive: boolean }>();
+                // Consolidate balance changes by asset (summing net amounts)
+                const changeMap = new Map<string, { asset: string, amount: number, logoURI?: string, isNFT?: boolean }>();
 
                 if (result.success && result.events) {
                     console.log(`[DeepLink Sim] Processing ${result.events.length} events...`);
-                    result.events.forEach((event: any, idx: number) => {
+
+                    for (const [idx, event] of result.events.entries()) {
                         const type = (event.type as string).toLowerCase();
+                        console.log(`[DeepLink Sim] Event ${idx} type: ${type}`);
 
                         const isWithdraw = type.includes('::withdraw');
                         const isDeposit = type.includes('::deposit');
@@ -99,11 +101,16 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
                         const possibleAddrs = [
                             event.guid?.account_address,
+                            (event as any).address,
+                            (event as any).account_address,
                             event.data?.owner,
+                            event.data?.owner_address,
                             event.data?.account,
+                            event.data?.account_address,
                             event.data?.addr,
                             event.data?.from,
                             event.data?.to,
+                            event.data?.to_address,
                             event.data?.sender,
                             event.data?.receiver,
                             event.data?.store,
@@ -111,26 +118,84 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                             event.data?.payer,
                             event.data?.user,
                             event.data?.payor,
-                            event.data?.recipient
+                            event.data?.recipient,
+                            event.data?.dst
                         ];
 
-                        const matchedAddr = possibleAddrs.find(a => normalizeAddr(a) === normalizedUserAddr);
-                        const isMatch = !!matchedAddr;
+                        const isFaucetCall = activeRequest?.payload?.transaction?.function?.toLowerCase().includes('faucet') ||
+                            activeRequest?.payload?.transaction?.function?.toLowerCase().includes('mint') ||
+                            activeRequest?.payload?.transaction?.function?.toLowerCase().includes('claim');
+
+                        const matchedAddr = possibleAddrs.find(a => a && normalizeAddr(a) === normalizedUserAddr);
+                        let isMatch = !!matchedAddr;
+
+                        // Support Faucet/Mint/Claim deposits where address field is 0x0
+                        if (!isMatch && isFaucetCall && type.includes('::deposit')) {
+                            console.log(`[DeepLink Sim] Faucet call detected, allowing deposit: ${type}`);
+                            isMatch = true;
+                        }
 
                         if (isMatch) {
-                            console.log(`[DeepLink Sim] Event MATCHED: ${type}`);
+                            console.log(`[DeepLink Sim] Event ${idx} MATCHED: ${type}`);
 
                             if (isWithdraw || isDeposit || isTransfer) {
                                 const amountRaw = event.data?.amount || event.data?.value || event.data?.balance || event.data?.price || event.data?.cost;
                                 if (amountRaw !== undefined) {
                                     let assetName = 'MOVE';
                                     let decimals = 8;
+                                    let tokenAddress = '';
 
                                     if (type.includes('<')) {
                                         const match = type.match(/<(.*)>/);
                                         if (match && match[1]) {
-                                            assetName = match[1].split('::').pop()?.toUpperCase() || 'Asset';
+                                            tokenAddress = match[1];
                                         }
+                                    } else if (type.includes('fungible_asset')) {
+                                        // V2 Fungible Asset: Try to find metadata address
+                                        tokenAddress = event.data?.asset || event.data?.metadata;
+
+                                        // Check simulation changes for the store's metadata
+                                        if (!tokenAddress && event.data?.store && result.changes) {
+                                            const storeAddr = normalizeAddr(event.data.store);
+                                            const storeChange = result.changes.find((c: any) =>
+                                                c.type === 'write_resource' &&
+                                                normalizeAddr(c.address) === storeAddr &&
+                                                c.data?.type === '0x1::fungible_asset::FungibleStore'
+                                            );
+                                            if (storeChange?.data?.data?.metadata?.inner) {
+                                                tokenAddress = storeChange.data.data.metadata.inner;
+                                            }
+                                        }
+
+                                        // Fallback to payload arguments
+                                        const payloadArgs = activeRequest?.payload?.transaction?.functionArguments ||
+                                            activeRequest?.payload?.transaction?.arguments || [];
+                                        if (!tokenAddress && payloadArgs.length > 0) {
+                                            for (const arg of payloadArgs) {
+                                                if (typeof arg === 'string' && arg.startsWith('0x') && normalizeAddr(arg) !== normalizedUserAddr) {
+                                                    tokenAddress = arg;
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if (!tokenAddress) tokenAddress = '0x1::aptos_coin::AptosCoin';
+                                        console.log(`[DeepLink Sim] Event ${idx} resolved token address: ${tokenAddress}`);
+                                    }
+
+                                    // Resolve metadata
+                                    let resolvedLogo: string | undefined;
+                                    try {
+                                        const metadata = await getTokenMetadata(tokenAddress);
+                                        if (metadata) {
+                                            assetName = metadata.symbol;
+                                            decimals = metadata.decimals;
+                                            resolvedLogo = metadata.logoURI;
+                                        } else if (tokenAddress.includes('::')) {
+                                            assetName = tokenAddress.split('::').pop()?.toUpperCase() || 'Asset';
+                                        }
+                                    } catch (e) {
+                                        console.warn('[DeepLink Sim] Metadata lookup failed:', e);
                                     }
 
                                     const amountVal = Number(amountRaw) / Math.pow(10, decimals);
@@ -146,17 +211,25 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
                                             if (isToUser && !isFromUser) finalIsPositive = true;
                                             else if (isFromUser && !isToUser) finalIsPositive = false;
-                                            else return;
+                                            else continue;
                                         }
 
-                                        const key = `${assetName}_${finalIsPositive}`;
-                                        const existing = changeMap.get(key);
+                                        console.log(`[DeepLink Sim] Found change: ${finalIsPositive ? '+' : '-'}${amountVal} ${assetName}`);
+
+                                        const signedAmount = finalIsPositive ? amountVal : -amountVal;
+                                        const existing = changeMap.get(assetName);
+
                                         if (existing) {
-                                            existing.amount += amountVal;
+                                            existing.amount += signedAmount;
+                                            if (!existing.logoURI && resolvedLogo) existing.logoURI = resolvedLogo;
                                         } else {
-                                            changeMap.set(key, { asset: assetName, amount: amountVal, isPositive: finalIsPositive });
+                                            changeMap.set(assetName, {
+                                                asset: assetName,
+                                                amount: signedAmount,
+                                                logoURI: resolvedLogo
+                                            });
                                         }
-                                        return;
+                                        continue;
                                     }
                                 }
                             }
@@ -166,24 +239,29 @@ export const DeepLinkProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                                 const nftName = event.data?.token_name || event.data?.name || event.data?.metadata?.name || 'NFT';
                                 const isNFTDeposit = isDeposit || (isTransfer && normalizeAddr(event.data?.to || event.data?.receiver) === normalizedUserAddr);
 
-                                const key = `NFT_${nftName}_${isNFTDeposit}`;
-                                const existing = changeMap.get(key);
+                                const signedAmount = isNFTDeposit ? 1 : -1;
+                                const existing = changeMap.get(nftName);
                                 if (existing) {
-                                    existing.amount += 1;
+                                    existing.amount += signedAmount;
                                 } else {
-                                    changeMap.set(key, { asset: nftName, amount: 1, isPositive: isNFTDeposit });
+                                    changeMap.set(nftName, {
+                                        asset: nftName,
+                                        amount: signedAmount,
+                                        isNFT: true
+                                    });
                                 }
                             }
                         }
-                    })
+                    }
                 }
 
                 const balanceChanges = Array.from(changeMap.values())
-                    .filter(c => c.amount > 0)
+                    .filter(c => Math.abs(c.amount) > 1e-10) // Filter out zero/negligible net changes
                     .map(c => ({
                         asset: c.asset,
-                        amount: c.amount.toString(),
-                        isPositive: c.isPositive
+                        amount: Math.abs(c.amount).toString(),
+                        isPositive: c.amount > 0,
+                        logoURI: c.logoURI
                     }));
 
                 // Extract Gas
