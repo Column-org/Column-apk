@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, PanResponder, Activ
 import { Ionicons } from '@expo/vector-icons'
 import { useWallet } from '../context/WalletContext'
 import { useRouter } from 'expo-router'
-import { formatAssetBalance, FungibleAsset } from '../services/movementAssets'
+import { formatAssetBalance, FungibleAsset, formatCurrency } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
 import { useBalanceVisibility } from '../context/BalanceVisibilityContext'
 import { SkeletonLoader } from './SkeletonLoader'
@@ -104,7 +104,7 @@ const SwipeableToken = ({ name, amount, value, iconUri, tokenPrice, isOpen, onOp
                 )}
                 <View style={styles.watchlistDetails}>
                     <Text style={styles.watchlistName} numberOfLines={1}>{name}</Text>
-                    <Text style={styles.movePriceText}>{isHidden ? '••••' : `$${(tokenPrice || 0).toFixed(4)}`}</Text>
+                    <Text style={styles.movePriceText}>{isHidden ? '••••' : `$${formatCurrency(tokenPrice || 0, 4)}`}</Text>
                 </View>
                 <View style={styles.watchlistRight}>
                     <View style={styles.moveRightSection}>
@@ -257,7 +257,7 @@ export const TokenList = ({ refreshKey, onRefreshRef, onLoadingChange, filterMod
                                 name={asset.metadata.name}
                                 amount={isMoveToken ? formattedBalance : `${formattedBalance} ${symbol}`}
                                 asset={asset}
-                                value={`$${usdValue.toFixed(2)}`}
+                                value={`$${formatCurrency(usdValue)}`}
                                 iconUri={asset.metadata.icon_uri}
                                 tokenPrice={unitPrice}
                                 isOpen={openTokenIndex === index}

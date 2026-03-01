@@ -2,6 +2,7 @@ import React from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Dimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SavingsGoals } from '../components/SavingsGoals'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
@@ -9,6 +10,7 @@ const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
 export default function Save() {
     const router = useRouter()
+    const insets = useSafeAreaInsets()
 
     return (
         <View style={styles.container}>
@@ -23,7 +25,7 @@ export default function Save() {
                 <View style={{ width: 28 }} />
             </View>
 
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) }} showsVerticalScrollIndicator={false}>
                 <SavingsGoals />
             </ScrollView>
         </View>

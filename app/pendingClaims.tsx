@@ -137,12 +137,7 @@ export default function PendingClaims() {
 
     const copyCode = async (code: string) => {
         await Clipboard.setStringAsync(code)
-        setAlertModal({
-            visible: true,
-            type: 'success',
-            title: 'Copied',
-            message: 'Claim code copied to clipboard',
-        })
+        Alert.alert('Copied', 'Claim code copied to clipboard.')
     }
 
     const formatAddress = (address?: string) => {

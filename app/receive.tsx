@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, StatusBar, Animated, Share, Alert, Modal, Dimensions } from 'react-native'
+import * as NavigationBar from 'expo-navigation-bar';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, StatusBar, Animated, Share, Alert, Modal, Dimensions, Pressable, Platform } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { QrCodeSvg } from 'react-native-qr-svg'
 import { BlurView } from 'expo-blur'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import * as Clipboard from 'expo-clipboard'
 import { useWallet } from '../context/WalletContext'
@@ -23,6 +25,7 @@ export default function Receive() {
     const { t } = useTranslation()
     const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
+    const insets = useSafeAreaInsets()
     const [activeTab, setActiveTab] = useState<'qrcode' | 'code'>('qrcode')
     const [claimCode, setClaimCode] = useState('')
     const [isClaiming, setIsClaiming] = useState(false)
@@ -49,12 +52,30 @@ export default function Receive() {
         setShowSuccess(false)
     }
 
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            const configureNavigationBar = async () => {
+                try {
+                    await NavigationBar.setBackgroundColorAsync('#121315');
+                    await NavigationBar.setButtonStyleAsync('light');
+                    if (showSuccess) {
+                        await NavigationBar.setBackgroundColorAsync('#121315');
+                        await NavigationBar.setButtonStyleAsync('light');
+                    }
+                } catch (e) {
+                    console.log('Error configuring navigation bar:', e);
+                }
+            };
+            configureNavigationBar();
+        }
+    }, [showSuccess]);
+
     const handleCopy = async () => {
         if (walletAddress) {
             await Clipboard.setStringAsync(walletAddress)
-            toast.show('Copied!', { type: 'success' })
+            Alert.alert('Copied', 'Address copied to clipboard.')
         } else {
-            toast.show('No wallet address to copy', { type: 'error' })
+            Alert.alert('Error', 'No wallet address to copy.')
         }
     }
 
@@ -158,14 +179,15 @@ export default function Receive() {
                 onRequestClose={hideSuccessMessage}
                 statusBarTranslucent
             >
+                <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
                 <View style={styles.modalOverlay}>
-                    <BlurView intensity={40} style={StyleSheet.absoluteFill} tint="dark" />
+                    <Pressable style={styles.modalBackdrop} onPress={hideSuccessMessage} />
                     <TouchableOpacity
                         style={styles.modalDismiss}
                         activeOpacity={1}
                         onPress={hideSuccessMessage}
                     >
-                        <View style={styles.modalContent}>
+                        <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
                             <View style={styles.successIcon}>
                                 <Ionicons name="checkmark-circle" size={80} color="#34C759" />
                             </View>
@@ -176,11 +198,11 @@ export default function Receive() {
                                 </Text>
                             )}
                             <TouchableOpacity
-                                style={styles.dismissButton}
+                                style={styles.doneButton}
                                 onPress={hideSuccessMessage}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.dismissButtonText}>Done</Text>
+                                <Text style={styles.doneButtonText}>Done</Text>
                             </TouchableOpacity>
                         </View>
                     </TouchableOpacity>
@@ -266,7 +288,7 @@ export default function Receive() {
                 <View style={{ flex: 1 }} />
 
                 {activeTab === 'qrcode' && (
-                    <View style={styles.buttonContainer}>
+                    <View style={[styles.buttonContainer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                         <TouchableOpacity style={styles.copyButton} activeOpacity={0.7} onPress={handleCopy}>
                             <Ionicons name="copy-outline" size={20} color="white" />
                             <Text style={styles.buttonText}>Copy</Text>
@@ -437,6 +459,10 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    },
+    modalBackdrop: {
+        ...StyleSheet.absoluteFillObject,
     },
     modalDismiss: {
         flex: 1,

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native'
+import * as NavigationBar from 'expo-navigation-bar';
+import { Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Pressable, ScrollView, StatusBar } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { AddressBookService, Contact } from '../../services/AddressBookService'
@@ -11,6 +14,7 @@ interface RecipientAddressInputProps {
 
 export default function RecipientAddressInput({ recipientAddress, onChangeAddress }: RecipientAddressInputProps) {
     const router = useRouter()
+    const insets = useSafeAreaInsets()
     const params = useLocalSearchParams()
     const [isContactModalVisible, setIsContactModalVisible] = useState(false)
     const [contacts, setContacts] = useState<Contact[]>([])
@@ -18,6 +22,24 @@ export default function RecipientAddressInput({ recipientAddress, onChangeAddres
     useEffect(() => {
         loadContacts()
     }, [])
+
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            const configureNavigationBar = async () => {
+                try {
+                    await NavigationBar.setBackgroundColorAsync('#121315');
+                    await NavigationBar.setButtonStyleAsync('light');
+                    if (isContactModalVisible) {
+                        await NavigationBar.setBackgroundColorAsync('#121315');
+                        await NavigationBar.setButtonStyleAsync('light');
+                    }
+                } catch (e) {
+                    console.log('Error configuring navigation bar:', e);
+                }
+            };
+            configureNavigationBar();
+        }
+    }, [isContactModalVisible]);
 
     const loadContacts = async () => {
         const loaded = await AddressBookService.getContacts()
@@ -85,9 +107,10 @@ export default function RecipientAddressInput({ recipientAddress, onChangeAddres
                     onRequestClose={() => setIsContactModalVisible(false)}
                     statusBarTranslucent={true}
                 >
+                    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
                     <View style={styles.modalOverlay}>
                         <Pressable style={styles.modalBackdrop} onPress={() => setIsContactModalVisible(false)} />
-                        <View style={styles.modalContent}>
+                        <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>Choose Contact</Text>
                                 <TouchableOpacity onPress={() => setIsContactModalVisible(false)}>
@@ -192,11 +215,10 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(0,0,0,0.4)',
     },
     modalBackdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'transparent',
     },
     modalContent: {
         backgroundColor: '#121315',

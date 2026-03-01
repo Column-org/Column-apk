@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import * as NavigationBar from 'expo-navigation-bar';
 import {
     View,
     Text,
@@ -9,7 +10,7 @@ import {
     Platform,
     ImageBackground,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useWallet } from '../../context/WalletContext'
@@ -23,13 +24,20 @@ const AccountCenter = () => {
     const { address: activeAddress, allWallets, switchWallet, updateWallet, isLoading } = useWallet()
     const { getThemeImage } = useTheme()
     const router = useRouter()
+    const insets = useSafeAreaInsets()
     const [activeTab, setActiveTab] = useState<'Type' | 'Recent' | 'Value'>('Type')
 
-    // Edit State
-    const [isEditModalVisible, setIsEditModalVisible] = useState(false)
-    const [editingWallet, setEditingWallet] = useState<any>(null)
-    const [editName, setEditName] = useState('')
-    const [editEmoji, setEditEmoji] = useState('💰')
+    // Navigation for Edit
+    const navigateToEdit = (wallet: any) => {
+        router.push({
+            pathname: '/settings/edit-wallet',
+            params: {
+                address: wallet.address,
+                name: wallet.name,
+                emoji: wallet.emoji || '💰'
+            }
+        })
+    }
     const [collapsedGroups, setCollapsedGroups] = useState<Record<number, boolean>>({})
 
     const toggleGroup = (index: number) => {
@@ -38,6 +46,20 @@ const AccountCenter = () => {
             [index]: !prev[index]
         }))
     }
+
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            const configureNavigationBar = async () => {
+                try {
+                    // In edge-to-edge mode, we only ensure the icons are light
+                    await NavigationBar.setButtonStyleAsync('light');
+                } catch (e) {
+                    console.log('Error configuring navigation bar:', e);
+                }
+            };
+            configureNavigationBar();
+        }
+    }, []);
 
     // In a real app, we'd group by actual source. 
     // Here we'll simulate the grouping as seen in the image for demonstration,
@@ -68,23 +90,7 @@ const AccountCenter = () => {
         return `${address.slice(0, 4)}...${address.slice(-4)}`
     }
 
-    const openEditModal = (wallet: any) => {
-        setEditingWallet(wallet)
-        setEditName(wallet.name)
-        setEditEmoji(wallet.emoji || '💰')
-        setIsEditModalVisible(true)
-    }
 
-    const handleSaveEdit = async () => {
-        if (editingWallet) {
-            await updateWallet(editingWallet.address, {
-                name: editName,
-                emoji: editEmoji
-            })
-            setIsEditModalVisible(false)
-            setEditingWallet(null)
-        }
-    }
 
     const handleSwitchWallet = async (address: string) => {
         if (address === activeAddress) return
@@ -123,7 +129,7 @@ const AccountCenter = () => {
                         style={styles.editIcon}
                         onPress={(e) => {
                             e.stopPropagation();
-                            openEditModal(wallet);
+                            navigateToEdit(wallet);
                         }}
                     >
                         <Ionicons name="settings-outline" size={20} color="#8B98A5" />
@@ -139,7 +145,7 @@ const AccountCenter = () => {
 
             <View style={styles.safeArea}>
                 {/* Header */}
-                <View style={styles.header}>
+                <View style={[styles.header, { paddingTop: Math.max(insets.top, 10) + 10 }]}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
                     </TouchableOpacity>
@@ -177,7 +183,7 @@ const AccountCenter = () => {
                 </ScrollView>
 
                 {/* Footer Action */}
-                <View style={styles.footer}>
+                <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 10 }]}>
                     <TouchableOpacity
                         style={styles.addButton}
                         onPress={() => {
@@ -189,55 +195,7 @@ const AccountCenter = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Edit Modal */}
-                <Modal
-                    visible={isEditModalVisible}
-                    transparent={true}
-                    animationType="slide"
-                    onRequestClose={() => setIsEditModalVisible(false)}
-                >
-                    <BlurView intensity={80} tint="dark" style={styles.modalOverlay}>
-                        <Pressable style={styles.modalBackdrop} onPress={() => setIsEditModalVisible(false)} />
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Edit Wallet</Text>
-                                <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-                                    <Ionicons name="close" size={24} color="white" />
-                                </TouchableOpacity>
-                            </View>
 
-                            <View style={styles.editSection}>
-                                <Text style={styles.inputLabel}>Wallet Name</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={editName}
-                                    onChangeText={setEditName}
-                                    placeholder="Enter wallet name"
-                                    placeholderTextColor="#8B98A5"
-                                />
-                            </View>
-
-                            <View style={styles.editSection}>
-                                <Text style={styles.inputLabel}>Wallet Icon</Text>
-                                <View style={styles.emojiGrid}>
-                                    {EMOJIS.map(emoji => (
-                                        <TouchableOpacity
-                                            key={emoji}
-                                            style={[styles.emojiItem, editEmoji === emoji && styles.selectedEmoji]}
-                                            onPress={() => setEditEmoji(emoji)}
-                                        >
-                                            <Text style={styles.emojiLarge}>{emoji}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-
-                            <TouchableOpacity style={styles.saveButton} onPress={handleSaveEdit}>
-                                <Text style={styles.saveButtonText}>Save Changes</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </BlurView>
-                </Modal>
             </View>
         </View>
     )
@@ -263,7 +221,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingTop: 50, // Match Header.tsx for large screens, moves it up compared to SafeAreaView + padding
         paddingBottom: 16,
     },
     backButton: {
@@ -388,7 +345,6 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         backgroundColor: '#121315',
-        paddingBottom: Platform.OS === 'ios' ? 34 : 24,
         paddingTop: 16,
         paddingHorizontal: 16,
         borderTopWidth: 1,
@@ -420,7 +376,6 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     },
     modalHeader: {
         flexDirection: 'row',

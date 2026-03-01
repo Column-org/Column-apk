@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
+import { useSecurity } from '../context/SecurityContext'
 import { getFungibleAssets, FungibleAsset } from '../services/movementAssets'
 import { getBatchTokenPrices, SYMBOL_TO_ID, TokenPrice } from '../services/coinGecko'
 
@@ -22,6 +23,7 @@ const notifyListeners = (assets: FungibleAsset[], prices: Record<string, TokenPr
 export function useAssets(refreshKey: number = 0) {
     const { address: walletAddress } = useWallet()
     const { network } = useNetwork()
+    const { isLocked } = useSecurity()
     const [assets, setAssets] = useState<FungibleAsset[]>(assetCache || [])
     const [prices, setPrices] = useState<Record<string, TokenPrice>>(priceMapCache)
     const [isLoading, setIsLoading] = useState(!assetCache && isFetchingGlobal)
@@ -49,7 +51,7 @@ export function useAssets(refreshKey: number = 0) {
     }, [])
 
     const fetchData = useCallback(async (force: boolean = false) => {
-        if (!walletAddress) return
+        if (!walletAddress || isLocked) return
 
         const now = Date.now()
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Alert } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import GeneratedCodeCard from '../components/send/GeneratedCodeCard'
@@ -76,12 +76,7 @@ export default function ClaimCode() {
                     code={code}
                     tokenName={tokenName}
                     onCopySuccess={() => {
-                        setAlertModal({
-                            visible: true,
-                            type: 'success',
-                            title: 'Copied',
-                            message: 'Copied to clipboard',
-                        })
+                        Alert.alert('Copied', 'Copied to clipboard.')
                     }}
                 // onEmailShare={() => setShowEmailForm(!showEmailForm)}
                 />

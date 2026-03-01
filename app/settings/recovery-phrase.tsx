@@ -6,51 +6,44 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useWallet } from '../../context/WalletContext'
 import { useSecurity } from '../../context/SecurityContext'
 import * as Clipboard from 'expo-clipboard'
-import * as LocalAuthentication from 'expo-local-authentication'
 
 import { SecurityWarning } from '../../components/SecurityWarning'
+import AuthenticationModal from '../../components/security/AuthenticationModal'
 
+// Redundant imports removed
 export default function RecoveryPhraseScreen() {
     const router = useRouter()
     const { exportSeedphrase } = useWallet()
     const insets = useSafeAreaInsets()
-    const { isBiometricEnabled } = useSecurity()
+    const { isBiometricEnabled, isPasscodeSet } = useSecurity()
     const [mnemonic, setMnemonic] = useState<string[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [showWarning, setShowWarning] = useState(true)
+    const [showAuthModal, setShowAuthModal] = useState(false)
+
+    useEffect(() => {
+        // Simple state management
+    }, [])
 
     const handleConfirmWarning = async () => {
-        setShowWarning(false)
-        authenticateAndLoad()
-    }
-
-    const authenticateAndLoad = async () => {
-        if (!isBiometricEnabled) {
+        if (!isPasscodeSet && !isBiometricEnabled) {
             Alert.alert(
                 'Security Required',
-                'Please enable Biometric Lock in Settings to view your Recovery Phrase.',
+                'Please set a Passcode or enable Biometric Lock in Settings to view your Recovery Phrase.',
                 [{ text: 'OK', onPress: () => router.back() }]
             )
             return
         }
+        setShowWarning(false)
+        setShowAuthModal(true)
+    }
 
-        const hasHardware = await LocalAuthentication.hasHardwareAsync()
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync()
-
-        if (hasHardware && isEnrolled) {
-            const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: 'Authenticate to view Recovery Phrase',
-                fallbackLabel: 'Cancel',
-            })
-
-            if (!result.success) {
-                router.back()
-                return
-            }
-        }
-
+    const handleAuthSuccess = () => {
+        setShowAuthModal(false)
         loadSeedphrase()
     }
+
+
 
     const loadSeedphrase = async () => {
         try {
@@ -121,6 +114,17 @@ export default function RecoveryPhraseScreen() {
                     <Text style={styles.copyButtonText}>Copy to Clipboard</Text>
                 </Pressable>
             </ScrollView>
+
+            <AuthenticationModal
+                visible={showAuthModal}
+                onClose={() => {
+                    setShowAuthModal(false)
+                    router.back()
+                }}
+                onSuccess={handleAuthSuccess}
+                title="Recovery Phrase"
+                subtitle="Enter passcode or use biometric to view"
+            />
         </View>
     )
 }

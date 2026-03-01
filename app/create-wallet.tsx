@@ -13,6 +13,7 @@ export default function CreateWalletScreen() {
     const [mnemonic, setMnemonic] = useState<string[]>([])
     const [isGenerating, setIsGenerating] = useState(false)
     const [hasConfirmed, setHasConfirmed] = useState(false)
+    const hasGenerated = React.useRef(false)
 
     const generateWallet = async () => {
         setIsGenerating(true)
@@ -27,7 +28,10 @@ export default function CreateWalletScreen() {
     }
 
     useEffect(() => {
-        generateWallet()
+        if (!hasGenerated.current) {
+            hasGenerated.current = true
+            generateWallet()
+        }
     }, [])
 
     const copyToClipboard = async () => {
@@ -56,7 +60,7 @@ export default function CreateWalletScreen() {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) + 10 }]}>
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#ffffff" />
                 </Pressable>
@@ -116,7 +120,7 @@ export default function CreateWalletScreen() {
                 </Pressable>
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
                 <Pressable
                     style={[styles.continueButton, !hasConfirmed && styles.buttonDisabled]}
                     onPress={handleContinue}

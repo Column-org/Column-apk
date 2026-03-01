@@ -478,3 +478,10 @@ export function formatAssetBalance(amount: string, decimals: number): string {
     maximumFractionDigits: decimals,
   })
 }
+
+export function formatCurrency(value: number, decimals: number = 2): string {
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+}

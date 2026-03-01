@@ -17,7 +17,7 @@ import { useTheme } from '../../hooks/useTheme'
 import * as Clipboard from 'expo-clipboard'
 
 export default function ManageAccountScreen() {
-    const { address, allWallets, logout: unifiedLogout } = useWallet()
+    const { address, allWallets } = useWallet()
     const router = useRouter()
 
     const currentWallet = allWallets.find(w => w.address === address)
@@ -34,22 +34,8 @@ export default function ManageAccountScreen() {
         }
     }
 
-    const handleRemoveWallet = () => {
-        Alert.alert(
-            'Remove Wallet',
-            'Are you sure you want to remove this wallet from this device? Make sure you have backed up your recovery phrase.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Remove',
-                    style: 'destructive',
-                    onPress: async () => {
-                        // Implement remove logic if needed, for now just go back or logout
-                        router.back()
-                    }
-                }
-            ]
-        )
+    const handleRemoveWalletStatus = () => {
+        router.push('/settings/remove-wallet')
     }
 
     return (
@@ -112,7 +98,7 @@ export default function ManageAccountScreen() {
 
                 {/* Remove Button */}
                 <View style={styles.footer}>
-                    <TouchableOpacity style={styles.removeButton} onPress={handleRemoveWallet}>
+                    <TouchableOpacity style={styles.removeButton} onPress={handleRemoveWalletStatus}>
                         <Text style={styles.removeButtonText}>Remove</Text>
                     </TouchableOpacity>
                 </View>

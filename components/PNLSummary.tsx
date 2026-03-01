@@ -5,7 +5,7 @@ import { useAssets } from '../hooks/useAssets'
 import { useGlobalGlow } from '../context/GlobalGlowContext'
 import { usePreferences } from '../context/PreferencesContext'
 import { SYMBOL_TO_ID } from '../services/coinGecko'
-import { formatAssetBalance } from '../services/movementAssets'
+import { formatAssetBalance, formatCurrency } from '../services/movementAssets'
 import { useBalanceVisibility } from '../context/BalanceVisibilityContext'
 
 // Persistent session flag to prevent re-triggering on tab switches
@@ -90,7 +90,7 @@ export const PNLSummary = () => {
                 </View>
                 <View style={styles.pnlContent}>
                     <Text style={[styles.pnlAmount, !isPositive && styles.pnlAmountNegative]}>
-                        {isHidden ? '••••' : `${isPositive ? '+' : '-'}$${Math.abs(pnlData.amount).toFixed(2)}`}
+                        {isHidden ? '••••' : `${isPositive ? '+' : '-'}$${formatCurrency(Math.abs(pnlData.amount))}`}
                     </Text>
                     <View style={isPositive ? styles.badgePositive : styles.badgeNegative}>
                         <Text style={[styles.badgeText, isPositive ? styles.badgeTextPositive : styles.badgeTextNegative]}>

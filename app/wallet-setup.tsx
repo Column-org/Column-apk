@@ -1,19 +1,20 @@
 import React from 'react'
 import { View, Text, StyleSheet, Pressable, StatusBar, Image } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
 export default function WalletSetupScreen() {
     const router = useRouter()
+    const insets = useSafeAreaInsets()
 
     const handleWeb3Setup = () => {
         router.push('/web3-setup')
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <View style={styles.content}>
+            <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) + 10 }]}>
                 <View style={styles.heroContainer}>
                     <Image
                         source={require('../assets/first-page.png')}
@@ -36,7 +37,7 @@ export default function WalletSetupScreen() {
                     </Pressable>
                 </View>
             </View>
-        </SafeAreaView>
+        </View>
     )
 }
 

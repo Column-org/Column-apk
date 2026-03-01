@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Vibration, StatusBar, Image } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Vibration, StatusBar, Image, Pressable, InteractionManager } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSecurity } from '../../context/SecurityContext'
 
@@ -12,12 +12,17 @@ export default function LockScreen() {
   const hasTriggeredInitialAuth = useRef(false)
 
   useEffect(() => {
-    // Auto-trigger biometric ONLY ONCE when component first mounts
-    if (isBiometricEnabled && !isPasscodeSet && !isAuthenticating && !hasTriggeredInitialAuth.current) {
-      hasTriggeredInitialAuth.current = true
-      handleBiometric()
-    }
-  }, []) // Empty dependency array - only run on mount
+    // Wait for interface to be ready before triggering biometrics
+    const task = InteractionManager.runAfterInteractions(() => {
+      // Auto-trigger biometric ONLY ONCE when component first mounts
+      if (isBiometricEnabled && !isPasscodeSet && !isAuthenticating && !hasTriggeredInitialAuth.current) {
+        hasTriggeredInitialAuth.current = true
+        handleBiometric()
+      }
+    });
+
+    return () => task.cancel();
+  }, []) // Run once after interactions
 
   const handleBiometric = async () => {
     if (isAuthenticating) return
@@ -36,6 +41,7 @@ export default function LockScreen() {
   const handleNumberPress = async (num: string) => {
     if (passcode.length >= 6) return
 
+    Vibration.vibrate(40) // Haptic feedback for every press
     const newPasscode = passcode + num
     setPasscode(newPasscode)
     setError('')
@@ -54,6 +60,7 @@ export default function LockScreen() {
   }
 
   const handleDelete = () => {
+    Vibration.vibrate(40)
     setPasscode((prev) => prev.slice(0, -1))
     setError('')
   }
@@ -83,37 +90,45 @@ export default function LockScreen() {
             {row.map((item) => {
               if (item === 'biometric') {
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={item}
-                    style={styles.numberButton}
+                    style={({ pressed }) => [
+                      styles.numberButton,
+                      pressed && isBiometricEnabled && { backgroundColor: 'rgba(255, 255, 255, 0.15)' }
+                    ]}
                     onPress={isBiometricEnabled ? handleBiometric : undefined}
-                    activeOpacity={isBiometricEnabled ? 0.7 : 1}
                   >
                     {isBiometricEnabled && <Ionicons name="finger-print" size={28} color="#ffda34" />}
-                  </TouchableOpacity>
+                  </Pressable>
                 )
               }
               if (item === 'delete') {
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={item}
-                    style={styles.numberButton}
+                    style={({ pressed }) => [
+                      styles.numberButton,
+                      pressed && { backgroundColor: 'rgba(255, 255, 255, 0.15)' }
+                    ]}
                     onPress={handleDelete}
-                    activeOpacity={0.7}
                   >
                     <Ionicons name="backspace-outline" size={28} color="white" />
-                  </TouchableOpacity>
+                  </Pressable>
                 )
               }
               return (
-                <TouchableOpacity
+                <Pressable
                   key={item}
-                  style={styles.numberButton}
+                  style={({ pressed }) => [
+                    styles.numberButton,
+                    pressed && { backgroundColor: 'rgba(255, 255, 255, 0.15)' }
+                  ]}
                   onPress={() => handleNumberPress(item)}
-                  activeOpacity={0.7}
                 >
-                  <Text style={styles.numberText}>{item}</Text>
-                </TouchableOpacity>
+                  {({ pressed }) => (
+                    <Text style={[styles.numberText, pressed && { opacity: 0.8 }]}>{item}</Text>
+                  )}
+                </Pressable>
               )
             })}
           </View>
@@ -212,13 +227,13 @@ const styles = StyleSheet.create({
   },
   dotsContainer: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 16,
+    gap: 20,
+    marginBottom: 24,
   },
   dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: '#8B98A5',
   },

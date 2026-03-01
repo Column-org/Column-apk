@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FungibleAsset, formatAssetBalance } from '../services/movementAssets';
+import { FungibleAsset, formatAssetBalance, formatCurrency } from '../services/movementAssets';
 
 interface ProjectItemProps {
     name: string;
@@ -85,7 +85,7 @@ export const ProjectItem = ({ name, iconUri, appUrl, assets, isHidden }: Project
                                     <Text style={styles.assetAmount}>{isHidden ? '••••' : `${balance} ${asset.metadata.symbol}`}</Text>
                                 </View>
                                 <View style={styles.assetRight}>
-                                    <Text style={styles.assetValue}>{isHidden ? '••••' : `$0.00`}</Text>
+                                    <Text style={styles.assetValue}>{isHidden ? '••••' : `$${formatCurrency(0)}`}</Text>
                                 </View>
                             </View>
                         );

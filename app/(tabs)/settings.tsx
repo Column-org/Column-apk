@@ -17,11 +17,10 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
 
 const Settings = () => {
-    const { logout: unifiedLogout, address, publicKey, allWallets } = useWallet()
+    const { address, publicKey, allWallets } = useWallet()
     const currentWallet = allWallets.find(w => w.address === address)
     const router = useRouter()
     const { t, i18n } = useTranslation()
-    const [logoutModalVisible, setLogoutModalVisible] = React.useState(false)
     const [profileExpanded, setProfileExpanded] = React.useState(false)
     const scrollY = useRef(new Animated.Value(0)).current
     const insets = useSafeAreaInsets()
@@ -81,30 +80,7 @@ const Settings = () => {
         }
     }
 
-    const handleToggleBiometric = async () => {
-        if (isBiometricEnabled) {
-            Alert.alert(
-                'Disable Biometric',
-                'Are you sure you want to disable biometric authentication?',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                        text: 'Disable',
-                        style: 'destructive',
-                        onPress: async () => {
-                            await disableBiometric()
-                            await disableSecurity()
-                        },
-                    },
-                ]
-            )
-        } else {
-            const success = await enableBiometric()
-            if (!success) {
-                Alert.alert('Failed', 'Could not enable biometric authentication.')
-            }
-        }
-    }
+
 
     const handleToggleNotifications = async () => {
         AudioService.feedback('click')
@@ -122,26 +98,8 @@ const Settings = () => {
         await setNotificationsEnabled(!isNotificationsEnabled)
     }
 
-    const handleLogout = async () => {
-        try {
-            await clearAllSecurity()
-            await unifiedLogout()
-            setLogoutModalVisible(false)
-            router.replace('/')
-        } catch (error) {
-            console.error('Logout error:', error)
-            // Still try to navigate to home/entry to reset state
-            router.replace('/')
-        }
-    }
 
-    const handleExportPrivateKey = () => {
-        router.push('/settings/private-key')
-    }
 
-    const handleExportSeedphrase = () => {
-        router.push('/settings/recovery-phrase')
-    }
 
     const headerOpacity = scrollY.interpolate({
         inputRange: [0, 60],
@@ -256,7 +214,7 @@ const Settings = () => {
                         <Text style={styles.sectionTitle}>{t('settings.security')}</Text>
                         <TouchableOpacity
                             style={[styles.settingItem, styles.cardTop]}
-                            onPress={handleToggleBiometric}
+                            onPress={() => router.push('/settings/biometric-settings')}
                             disabled={!isBiometricAvailable}
                             activeOpacity={0.7}
                         >
@@ -265,8 +223,11 @@ const Settings = () => {
                                     <Ionicons name="finger-print" size={22} color="#ffda34" />
                                     <Text style={styles.settingText}>{t('settings.biometricLock')}</Text>
                                 </View>
-                                <View style={[styles.toggle, isBiometricEnabled && styles.toggleActive]}>
-                                    <View style={[styles.toggleDot, isBiometricEnabled && styles.toggleDotActive]} />
+                                <View style={styles.settingRight}>
+                                    <Text style={styles.settingValue}>
+                                        {isBiometricEnabled ? 'Enabled' : 'Disabled'}
+                                    </Text>
+                                    <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -279,9 +240,29 @@ const Settings = () => {
                             </View>
                         )}
 
+                        <TouchableOpacity
+                            style={[
+                                styles.settingItem,
+                                (isSecurityEnabled || isBiometricEnabled || isPasscodeSet) ? styles.cardMiddle : styles.cardBottom
+                            ]}
+                            onPress={() => router.push('/settings/passcode-setup')}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.settingMainRow}>
+                                <View style={styles.settingLeft}>
+                                    <Ionicons name="keypad-outline" size={22} color="#ffda34" />
+                                    <Text style={styles.settingText}>{isPasscodeSet ? 'Change Passcode' : 'Setup Passcode'}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
+                            </View>
+                        </TouchableOpacity>
+
                         {isPasscodeSet && (
                             <TouchableOpacity
-                                style={[styles.settingItem, styles.cardMiddle]}
+                                style={[
+                                    styles.settingItem,
+                                    (isSecurityEnabled || isBiometricEnabled) ? styles.cardMiddle : styles.cardBottom
+                                ]}
                                 onPress={handleToggleSecurity}
                                 activeOpacity={0.7}
                             >
@@ -299,7 +280,7 @@ const Settings = () => {
 
                         {(isSecurityEnabled || isBiometricEnabled) && (
                             <TouchableOpacity
-                                style={[styles.settingItem, styles.cardMiddle]}
+                                style={[styles.settingItem, styles.cardBottom]}
                                 onPress={() => router.push('/settings/lockTimeout')}
                                 activeOpacity={0.7}
                             >
@@ -315,34 +296,6 @@ const Settings = () => {
                                 </View>
                             </TouchableOpacity>
                         )}
-
-                        <TouchableOpacity
-                            style={[styles.settingItem, styles.cardMiddle]}
-                            onPress={handleExportSeedphrase}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.settingMainRow}>
-                                <View style={styles.settingLeft}>
-                                    <Ionicons name="key-outline" size={22} color="#ffda34" />
-                                    <Text style={styles.settingText}>{t('settings.recoveryPhrase')}</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.settingItem, styles.cardBottom]}
-                            onPress={handleExportPrivateKey}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.settingMainRow}>
-                                <View style={styles.settingLeft}>
-                                    <Ionicons name="shield-checkmark-outline" size={22} color="#ffda34" />
-                                    <Text style={styles.settingText}>{t('settings.privateKey')}</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={20} color="#8B98A5" />
-                            </View>
-                        </TouchableOpacity>
                     </View>
 
                     {/* Preferences Section */}
@@ -464,6 +417,7 @@ const Settings = () => {
                             </View>
                         </TouchableOpacity>
                     </View>
+
 
                     <View style={{ height: 100 }} />
                 </Animated.ScrollView>
@@ -780,6 +734,12 @@ const styles = StyleSheet.create({
     },
     toggleDotActive: {
         backgroundColor: '#121315',
+    },
+    logoutItem: {
+        marginTop: 0,
+        backgroundColor: 'rgba(239, 68, 68, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.15)',
     },
     emojiIconContainer: {
         width: 26,

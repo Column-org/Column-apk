@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Alert,
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { FungibleAsset, getFungibleAssets, formatAssetBalance } from '../services/movementAssets'
 import { useNetwork } from '../context/NetworkContext'
 import { createFATransferWithCode, createMoveTransferWithCode } from '../services/movement_service/sendWithCode'
@@ -19,6 +20,7 @@ export default function Send() {
     const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey } = useWallet()
     const { network } = useNetwork()
     const params = useLocalSearchParams()
+    const insets = useSafeAreaInsets()
 
     const [sendMode, setSendMode] = useState<'address' | 'code'>('address')
     const [selectedToken, setSelectedToken] = useState<FungibleAsset | null>(null)
@@ -192,10 +194,11 @@ export default function Send() {
                         <Text style={[styles.tabText, sendMode === 'address' && styles.activeTabText]}>Address</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.tab, sendMode === 'code' && styles.activeTab]}
-                        onPress={() => setSendMode('code')}
+                        style={[styles.tab, { opacity: 0.5 }]}
+                        onPress={() => { }}
+                        disabled={true}
                     >
-                        <Text style={[styles.tabText, sendMode === 'code' && styles.activeTabText]}>Code</Text>
+                        <Text style={styles.tabText}>Code</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -223,7 +226,7 @@ export default function Send() {
                 </View>
 
                 {/* Interactions */}
-                <View style={styles.bottomArea}>
+                <View style={[styles.bottomArea, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                     {/* Percentage buttons */}
                     <View style={styles.percentageRow}>
                         {[0.25, 0.5, 0.75, 1].map((pct, idx) => (
@@ -241,32 +244,24 @@ export default function Send() {
 
                     {/* Submit Button */}
                     <TouchableOpacity
-                        style={[styles.nextBtn, (!amount || parseFloat(amount) <= 0) && styles.nextBtnDisabled]}
-                        disabled={!amount || parseFloat(amount) <= 0}
+                        style={[
+                            styles.nextBtn,
+                            (!walletAddress || !amount || parseFloat(amount) <= 0 || (selectedToken && parseFloat(amount) > (parseInt(selectedToken.amount) / Math.pow(10, selectedToken.metadata.decimals)))) && styles.nextBtnDisabled
+                        ]}
+                        activeOpacity={0.8}
                         onPress={() => {
-                            if (!selectedToken) {
-                                toast.show('Error', { data: { message: 'Please select a token.' }, type: 'error' })
-                                return
-                            }
-                            if (!amount || parseFloat(amount) <= 0) {
-                                toast.show('Error', { data: { message: 'Please enter a valid amount.' }, type: 'error' })
-                                return
-                            }
                             if (!walletAddress) {
-                                toast.show('Error', { data: { message: 'Wallet not connected.' }, type: 'error' })
+                                toast.show('Error', { data: { message: 'Wallet not connected. Please create or import a wallet first.' }, type: 'error' })
                                 return
                             }
-                            if (sendMode === 'address') {
-                                router.push({
-                                    pathname: '/sendConfirm',
-                                    params: { token: JSON.stringify(selectedToken), amount }
-                                })
-                            } else {
-                                handleCreateCodeTransfer()
-                            }
+                            router.push({
+                                pathname: '/sendConfirm',
+                                params: { token: JSON.stringify(selectedToken), amount }
+                            })
                         }}
+                        disabled={!walletAddress || !amount || parseFloat(amount) <= 0}
                     >
-                        <Text style={styles.nextBtnText}>{sendMode === 'address' ? 'Next' : 'Create Link'}</Text>
+                        <Text style={styles.nextBtnText}>Next</Text>
                     </TouchableOpacity>
                 </View>
             </View>

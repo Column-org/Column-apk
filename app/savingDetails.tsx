@@ -8,6 +8,8 @@ import { getCycle, fromBaseUnit, toBaseUnit, SavingCycle } from '../services/mov
 import { topUpCycle, earlyWithdrawCycle, closeCycle } from '../services/movement_service/savingCycleFunctions'
 import { getFungibleAssets } from '../services/movementAssets'
 import AlertModal from '../components/AlertModal'
+import { useSecurity } from '../context/SecurityContext'
+import AuthenticationModal from '../components/security/AuthenticationModal'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
@@ -23,6 +25,9 @@ export default function SavingDetails() {
     const [showWithdraw, setShowWithdraw] = useState(false)
     const [amount, setAmount] = useState('')
     const [processing, setProcessing] = useState(false)
+    const { isPasscodeSet, isBiometricEnabled } = useSecurity()
+    const [showAuthModal, setShowAuthModal] = useState(false)
+    const [authCallback, setAuthCallback] = useState<{ type: 'add' | 'withdraw', data?: any } | null>(null)
     const [showAlert, setShowAlert] = useState(false)
     const [alertType, setAlertType] = useState<'success' | 'error'>('success')
     const [alertMessage, setAlertMessage] = useState('')
@@ -209,7 +214,6 @@ export default function SavingDetails() {
             }
         }
     }
-
     const handleAddFunds = async () => {
         if (!amount || parseFloat(amount) <= 0) {
             alert('Please enter a valid amount')
@@ -218,6 +222,16 @@ export default function SavingDetails() {
 
         const amountToAdd = parseFloat(amount)
 
+        if (isPasscodeSet || isBiometricEnabled) {
+            setAuthCallback({ type: 'add', data: amountToAdd })
+            setShowAuthModal(true)
+            return
+        }
+
+        processAddFunds(amountToAdd)
+    }
+
+    const processAddFunds = async (amountToAdd: number) => {
         // Check actual wallet balance
         if (amountToAdd > availableBalance) {
             alert(`Insufficient balance. You have ${availableBalance.toFixed(2)} ${assetSymbol} available.`)
@@ -256,6 +270,16 @@ export default function SavingDetails() {
     }
 
     const handleWithdraw = async (early: boolean) => {
+        if (isPasscodeSet || isBiometricEnabled) {
+            setAuthCallback({ type: 'withdraw', data: early })
+            setShowAuthModal(true)
+            return
+        }
+
+        processWithdraw(early)
+    }
+
+    const processWithdraw = async (early: boolean) => {
         setProcessing(true)
         const result = early
             ? await earlyWithdrawCycle(walletAddress || '', cycleId!, buildSignHash(), network)
@@ -279,6 +303,25 @@ export default function SavingDetails() {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
+
+            <AuthenticationModal
+                visible={showAuthModal}
+                onClose={() => {
+                    setShowAuthModal(false)
+                    setAuthCallback(null)
+                }}
+                onSuccess={() => {
+                    setShowAuthModal(false)
+                    if (authCallback?.type === 'add') {
+                        processAddFunds(authCallback.data)
+                    } else if (authCallback?.type === 'withdraw') {
+                        processWithdraw(authCallback.data)
+                    }
+                    setAuthCallback(null)
+                }}
+                title="Verify Identity"
+                subtitle="Verification required for this action"
+            />
 
             {/* Header */}
             <View style={styles.header}>

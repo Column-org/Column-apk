@@ -6,6 +6,8 @@ import { useWallet } from '../context/WalletContext'
 import { useNetwork } from '../context/NetworkContext'
 import { toBaseUnit, fromBaseUnit, createCycle, getFABalance } from '../services/movement_service/savingCycleService'
 import { useToast } from '../context/ToastContext'
+import { useSecurity } from '../context/SecurityContext'
+import AuthenticationModal from '../components/security/AuthenticationModal'
 import { DateRangePicker } from '../components/DateRangePicker'
 import { TOKEN_METADATA } from '../constants/tokenMetadata'
 
@@ -43,6 +45,8 @@ export default function CreateSavingCycle() {
     const [allowedAssets, setAllowedAssets] = useState<AllowedAsset[]>([])
     const [selectedAsset, setSelectedAsset] = useState<AllowedAsset | null>(null)
     const [loadingAssets, setLoadingAssets] = useState(true)
+    const { isPasscodeSet, isBiometricEnabled } = useSecurity()
+    const [showAuthModal, setShowAuthModal] = useState(false)
 
 
 
@@ -114,16 +118,23 @@ export default function CreateSavingCycle() {
             return
         }
 
+        if (isPasscodeSet || isBiometricEnabled) {
+            setShowAuthModal(true)
+        } else {
+            processCreate()
+        }
+    }
+
+    const processCreate = async () => {
         const startTimestamp = Math.floor(startDateTime.getTime() / 1000)
         const endTimestamp = Math.floor(endDateTime.getTime() / 1000)
+        const nowTimestamp = Math.floor(Date.now() / 1000)
 
-        if (startTimestamp >= endTimestamp) {
+        // Adjust start time if it's very close to now to avoid 'past date' errors
+        const finalStartTimestamp = Math.max(startTimestamp, nowTimestamp)
+
+        if (finalStartTimestamp >= endTimestamp) {
             toast.show('Error', { data: { message: 'End date must be after start date' }, type: 'error' })
-            return
-        }
-
-        if (startTimestamp < Math.floor(Date.now() / 1000)) {
-            toast.show('Error', { data: { message: 'Start date cannot be in the past' }, type: 'error' })
             return
         }
 
@@ -144,7 +155,7 @@ export default function CreateSavingCycle() {
                 walletAddress || '',
                 name,
                 description,
-                startTimestamp,
+                finalStartTimestamp,
                 endTimestamp,
                 selectedAsset.address,
                 toBaseUnit(parseFloat(initialDeposit), selectedAsset.decimals),
@@ -176,7 +187,16 @@ export default function CreateSavingCycle() {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
 
-
+            <AuthenticationModal
+                visible={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                onSuccess={() => {
+                    setShowAuthModal(false)
+                    processCreate()
+                }}
+                title="Authorize Saving Plan"
+                subtitle="Confirm identity to create plan"
+            />
 
             {/* Header */}
             <View style={styles.header}>

@@ -45,17 +45,6 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
 
     const currentWallet = allWallets.find(w => w.address === walletAddress)
 
-    const handleLogout = async () => {
-        try {
-            onClose()
-            await clearAllSecurity()
-            await unifiedLogout()
-            router.replace('/')
-        } catch (error) {
-            console.error('Logout error:', error)
-            router.replace('/')
-        }
-    }
 
     useEffect(() => {
         if (isVisible) {
@@ -93,6 +82,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
     const copyToClipboard = async () => {
         if (walletAddress) {
             await Clipboard.setStringAsync(walletAddress)
+            Alert.alert('Copied', 'Address copied to clipboard.')
         }
     }
 
@@ -229,18 +219,8 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                             <TouchableOpacity
                                 style={styles.logoutButton}
                                 onPress={() => {
-                                    Alert.alert(
-                                        'Logout',
-                                        'Are you sure you want to logout? This will clear all data on this device.',
-                                        [
-                                            { text: 'Cancel', style: 'cancel' },
-                                            {
-                                                text: 'Logout',
-                                                style: 'destructive',
-                                                onPress: handleLogout,
-                                            },
-                                        ]
-                                    )
+                                    onClose()
+                                    setTimeout(() => router.push('/settings/logout'), 250)
                                 }}
                             >
                                 <View style={styles.logoutButtonContent}>

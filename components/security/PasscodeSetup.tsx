@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Vibration, StatusBar, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Vibration, StatusBar } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSecurity } from '../../context/SecurityContext'
 
@@ -33,7 +33,7 @@ export default function PasscodeSetup({ onComplete, onCancel }: PasscodeSetupPro
           try {
             await setPasscode(newPasscode)
             await enableSecurity()
-            Alert.alert('Success', 'Passcode has been set successfully', [{ text: 'OK', onPress: onComplete }])
+            onComplete()
           } catch (err) {
             setError('Failed to save passcode')
             setPasscodeValue('')
@@ -193,13 +193,13 @@ const styles = StyleSheet.create({
   },
   dotsContainer: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 16,
+    gap: 20,
+    marginBottom: 24,
   },
   dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: '#8B98A5',
   },

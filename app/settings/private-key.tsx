@@ -6,52 +6,45 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useWallet } from '../../context/WalletContext'
 import { useSecurity } from '../../context/SecurityContext'
 import * as Clipboard from 'expo-clipboard'
-import * as LocalAuthentication from 'expo-local-authentication'
 
 import { SecurityWarning } from '../../components/SecurityWarning'
+import AuthenticationModal from '../../components/security/AuthenticationModal'
 
 export default function PrivateKeyScreen() {
     const router = useRouter()
     const { exportPrivateKey } = useWallet()
     const insets = useSafeAreaInsets()
-    const { isBiometricEnabled } = useSecurity()
+    const { isBiometricEnabled, isPasscodeSet } = useSecurity()
     const [privateKey, setPrivateKey] = useState<string>('')
     const [isLoading, setIsLoading] = useState(true)
     const [isVisible, setIsVisible] = useState(false)
     const [showWarning, setShowWarning] = useState(true)
+    const [showAuthModal, setShowAuthModal] = useState(false)
+
+    useEffect(() => {
+        // Automatically check if we should show warning based on params if needed, 
+        // but for now we just keep the simple state
+    }, [])
 
     const handleConfirmWarning = async () => {
-        setShowWarning(false)
-        authenticateAndLoad()
-    }
-
-    const authenticateAndLoad = async () => {
-        if (!isBiometricEnabled) {
+        if (!isPasscodeSet && !isBiometricEnabled) {
             Alert.alert(
                 'Security Required',
-                'Please enable Biometric Lock in Settings to view your Private Key.',
+                'Please set a Passcode or enable Biometric Lock in Settings to view your Private Key.',
                 [{ text: 'OK', onPress: () => router.back() }]
             )
             return
         }
+        setShowWarning(false)
+        setShowAuthModal(true)
+    }
 
-        const hasHardware = await LocalAuthentication.hasHardwareAsync()
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync()
-
-        if (hasHardware && isEnrolled) {
-            const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: 'Authenticate to view Private Key',
-                fallbackLabel: 'Cancel',
-            })
-
-            if (!result.success) {
-                router.back()
-                return
-            }
-        }
-
+    const handleAuthSuccess = () => {
+        setShowAuthModal(false)
         loadPrivateKey()
     }
+
+
 
     const loadPrivateKey = async () => {
         try {
@@ -132,6 +125,17 @@ export default function PrivateKeyScreen() {
                     <Text style={styles.copyButtonText}>Copy to Clipboard</Text>
                 </Pressable>
             </ScrollView>
+
+            <AuthenticationModal
+                visible={showAuthModal}
+                onClose={() => {
+                    setShowAuthModal(false)
+                    router.back()
+                }}
+                onSuccess={handleAuthSuccess}
+                title="Private Key"
+                subtitle="Enter passcode or use biometric to view"
+            />
         </View>
     )
 }

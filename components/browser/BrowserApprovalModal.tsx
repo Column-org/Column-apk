@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity, Dimensions, ScrollView, Platform, Image, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity, Dimensions, ScrollView, Platform, Image, ActivityIndicator, StatusBar } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useNetwork } from '../../context/NetworkContext'
@@ -44,6 +45,7 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
     simulation,
 }) => {
     const { network: currentNetwork } = useNetwork()
+    const insets = useSafeAreaInsets()
     const { address: currentAddress, allWallets } = useWallet()
     const slideAnim = useRef(new Animated.Value(height)).current
     const opacityAnim = useRef(new Animated.Value(0)).current
@@ -118,6 +120,7 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
             onRequestClose={onDecline}
             statusBarTranslucent
         >
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
             <View style={styles.overlay}>
                 <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]} />
 
@@ -126,6 +129,7 @@ export const BrowserApprovalModal: React.FC<BrowserApprovalModalProps> = ({
                         styles.content,
                         {
                             transform: [{ translateY: slideAnim }],
+                            paddingBottom: Math.max(insets.bottom, 24) + 10,
                         },
                     ]}
                 >
@@ -340,14 +344,13 @@ const styles = StyleSheet.create({
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
     content: {
         backgroundColor: '#121315',
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         paddingTop: 12,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
         paddingHorizontal: 24,
         maxHeight: height * 0.85,
     },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput, Image, Pressable } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput, Image, Pressable, StatusBar } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { MosaicToken } from '../../services/mosaic/mosaicService'
 
@@ -12,6 +13,7 @@ interface SwapTokenSelectorProps {
 
 export default function SwapTokenSelector({ selectedToken, tokens, onSelectToken, label }: SwapTokenSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false)
+  const insets = useSafeAreaInsets()
   const [searchQuery, setSearchQuery] = useState('')
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
 
@@ -67,12 +69,13 @@ export default function SwapTokenSelector({ selectedToken, tokens, onSelectToken
         onRequestClose={() => setModalVisible(false)}
         statusBarTranslucent
       >
+        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
         <Pressable
           style={styles.modalContainer}
           onPress={() => setModalVisible(false)}
         >
           <Pressable
-            style={styles.modalContent}
+            style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}
             onPress={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -181,7 +184,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'flex-end',
   },
   modalContent: {

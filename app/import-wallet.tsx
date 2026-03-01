@@ -44,7 +44,7 @@ export default function ImportWalletScreen() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
+                <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) + 10 }]}>
                     <Pressable onPress={() => router.back()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#ffffff" />
                     </Pressable>
@@ -85,7 +85,7 @@ export default function ImportWalletScreen() {
                     </View>
                 </ScrollView>
 
-                <View style={styles.footer}>
+                <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
                     <Pressable
                         style={[styles.importButton, isLoading && styles.buttonDisabled]}
                         onPress={handleImport}
@@ -169,7 +169,6 @@ const styles = StyleSheet.create({
     },
     footer: {
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     },
     importButton: {
         backgroundColor: '#ffda34',

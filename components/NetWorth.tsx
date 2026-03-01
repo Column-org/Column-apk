@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { formatAssetBalance } from '../services/movementAssets'
+import { formatAssetBalance, formatCurrency } from '../services/movementAssets'
 import { useBalanceVisibility } from '../context/BalanceVisibilityContext'
 import { SkeletonLoader } from './SkeletonLoader'
 import { useAssets } from '../hooks/useAssets'
@@ -95,7 +95,7 @@ export const NetWorth = ({ refreshKey }: NetWorthProps) => {
     return (
         <Pressable onLongPress={toggleVisibility} style={styles.netWorthSection}>
             <Text style={styles.netWorthAmount} selectable={false}>
-                {isHidden ? '••••••' : `$${displayValue.toFixed(2)}`}
+                {isHidden ? '••••••' : `$${formatCurrency(displayValue)}`}
             </Text>
         </Pressable>
     )

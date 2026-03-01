@@ -7,7 +7,7 @@ export default function PasscodeSetupScreen() {
 
   return (
     <PasscodeSetup
-      onComplete={() => router.back()}
+      onComplete={() => router.replace('/settings/passcode-success')}
       onCancel={() => router.back()}
     />
   )

@@ -1,14 +1,14 @@
-import { View, ScrollView, StyleSheet, StatusBar, Animated, RefreshControl, Dimensions, Image } from 'react-native'
+import { View, ScrollView, StyleSheet, StatusBar, Animated, RefreshControl, Dimensions, Image, TouchableOpacity, Pressable, Text, PanResponder } from 'react-native'
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Header } from '../../components/Header'
+import { Ionicons } from '@expo/vector-icons'
 import { NetWorth } from '../../components/NetWorth'
 import { ActionButtons } from '../../components/ActionButtons'
 import { PortfolioTabs } from '../../components/PortfolioTabs'
 import { TokenList } from '../../components/TokenList'
 import { NFTList } from '../../components/NFTList'
 import { PNLSummary } from '../../components/PNLSummary'
-import PendingClaimsIndicator from '../../components/PendingClaimsIndicator'
 import { useTheme } from '../../hooks/useTheme'
 import { useNetwork } from '../../context/NetworkContext'
 import { usePreferences } from '../../context/PreferencesContext'
@@ -17,10 +17,126 @@ import { fetchPendingClaims, getPendingClaimsCount } from '../../services/pendin
 import { getFungibleAssets, formatAssetBalance, FungibleAsset } from '../../services/movementAssets'
 import { useFocusEffect } from 'expo-router'
 import { useAssets } from '../../hooks/useAssets'
+import { useSecurity } from '../../context/SecurityContext'
 import { SYMBOL_TO_ID } from '../../services/coinGecko'
+import { useRouter } from 'expo-router'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const IS_SMALL_SCREEN = SCREEN_HEIGHT < 750
+
+const NotificationStack = ({ pendingClaimsCount }: { pendingClaimsCount: number }) => {
+    const { isPasscodeSet, isBiometricEnabled } = useSecurity()
+    const [securityDismissed, setSecurityDismissed] = useState(false)
+    const [claimsDismissed, setClaimsDismissed] = useState(false)
+    const router = useRouter()
+
+    const alerts = useMemo(() => {
+        const list = []
+        if (!isPasscodeSet && !securityDismissed) {
+            list.push({
+                id: 'security',
+                title: 'Secure Your Wallet',
+                subtitle: 'Set a passcode and enable biometrics to protect your assets.',
+                icon: 'shield-checkmark',
+                onPress: () => router.push('/settings'),
+                onDismiss: () => setSecurityDismissed(true)
+            })
+        }
+        if (pendingClaimsCount > 0 && !claimsDismissed) {
+            list.push({
+                id: 'claims',
+                title: 'Pending Claims',
+                subtitle: `You have ${pendingClaimsCount} claims waiting for you.`,
+                icon: 'time-outline',
+                onPress: () => router.push('/pendingClaims'),
+                onDismiss: () => setClaimsDismissed(true)
+            })
+        }
+        return list
+    }, [isPasscodeSet, isBiometricEnabled, securityDismissed, pendingClaimsCount, claimsDismissed, router])
+
+    const translateX = useRef(new Animated.Value(0)).current
+    const opacity = useRef(new Animated.Value(1)).current
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => {
+                return Math.abs(gestureState.dx) > 10
+            },
+            onPanResponderMove: (_, gestureState) => {
+                translateX.setValue(gestureState.dx)
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                const topAlert = alerts[0]
+                if (Math.abs(gestureState.dx) > 120 || Math.abs(gestureState.vx) > 0.8) {
+                    const toValue = gestureState.dx > 0 ? 500 : -500
+                    Animated.parallel([
+                        Animated.timing(translateX, {
+                            toValue,
+                            duration: 250,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(opacity, {
+                            toValue: 0,
+                            duration: 250,
+                            useNativeDriver: true,
+                        }),
+                    ]).start(() => {
+                        if (topAlert.onDismiss) topAlert.onDismiss()
+                        translateX.setValue(0)
+                        opacity.setValue(1)
+                    })
+                } else {
+                    Animated.spring(translateX, {
+                        toValue: 0,
+                        useNativeDriver: true,
+                        friction: 8,
+                        tension: 40,
+                    }).start()
+                }
+            },
+        })
+    ).current
+
+    if (alerts.length === 0) return null
+
+    const topAlert = alerts[0]
+
+    return (
+        <View style={styles.alertStackContainer}>
+            {/* Background elements to create "stack" effect */}
+            {alerts.length > 1 && <View style={styles.stackCardBehind} />}
+            {alerts.length > 2 && <View style={styles.stackCardBehind2} />}
+
+            <Animated.View
+                style={{
+                    opacity,
+                    transform: [{ translateX }],
+                    zIndex: 10,
+                }}
+                {...panResponder.panHandlers}
+            >
+                <TouchableOpacity
+                    style={styles.alertCard}
+                    activeOpacity={0.8}
+                    onPress={topAlert.onPress}
+                >
+                    <View style={styles.alertContent}>
+                        <View style={styles.alertIconContainer}>
+                            <Ionicons name={topAlert.icon as any} size={24} color="#ffda34" />
+                        </View>
+                        <View style={styles.alertTextContent}>
+                            <Text style={styles.alertTitle}>{topAlert.title}</Text>
+                            <Text style={styles.alertSubtitle}>{topAlert.subtitle}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="#ffda34" style={styles.alertChevron} />
+                    </View>
+                </TouchableOpacity>
+            </Animated.View>
+        </View>
+    )
+}
 
 const Home = () => {
     const scrollY = useRef(new Animated.Value(0)).current
@@ -139,6 +255,7 @@ const Home = () => {
         }).start()
     }
 
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#121315" />
@@ -199,7 +316,7 @@ const Home = () => {
                     <View style={styles.headerSpacer} />
                     <NetWorth refreshKey={refreshKey} />
                     <PNLSummary />
-
+                    <NotificationStack pendingClaimsCount={pendingClaimsCount} />
                     <ActionButtons />
                     <PortfolioTabs
                         activeTab={activeTab}
@@ -208,7 +325,6 @@ const Home = () => {
                         isRefreshing={isTokenRefreshing}
                     />
 
-                    <PendingClaimsIndicator count={pendingClaimsCount} />
 
                     <TokenList
                         refreshKey={refreshKey}
@@ -298,6 +414,78 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         height: '50%',
+    },
+    alertStackContainer: {
+        paddingHorizontal: 20,
+        marginTop: 10,
+        marginBottom: 16,
+        position: 'relative',
+    },
+    stackCardBehind: {
+        position: 'absolute',
+        top: 6,
+        left: 28,
+        right: 28,
+        bottom: -6,
+        borderRadius: 20,
+        backgroundColor: '#1E1F23',
+        zIndex: -1,
+        opacity: 0.6,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    stackCardBehind2: {
+        position: 'absolute',
+        top: 12,
+        left: 36,
+        right: 36,
+        bottom: -12,
+        borderRadius: 20,
+        backgroundColor: '#1E1F23',
+        zIndex: -2,
+        opacity: 0.3,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.03)',
+    },
+    alertCardContainer: {
+        width: '100%',
+    },
+    alertCard: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        backgroundColor: '#1E1F23', // Dark solid background
+    },
+    alertContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+    },
+    alertIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255, 218, 52, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    alertTextContent: {
+        flex: 1,
+        marginRight: 8,
+    },
+    alertTitle: {
+        color: '#ffda34',
+        fontSize: 16,
+        fontWeight: '700',
+        marginBottom: 2,
+    },
+    alertSubtitle: {
+        color: 'rgba(255, 255, 255, 0.7)',
+        fontSize: 12,
+        lineHeight: 16,
+    },
+    alertChevron: {
+        marginLeft: 4,
     },
 });
 

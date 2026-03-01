@@ -35,7 +35,7 @@
       "predictiveBackGestureEnabled": false,
       "usesCleartextTraffic": true,
       "navigationBarColor": "#121315",
-      "navigationBarStyle": "dark-content",
+      "navigationBarStyle": "light-content",
       "intentFilters": [
         {
           "action": "VIEW",

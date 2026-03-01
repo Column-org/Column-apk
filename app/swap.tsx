@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Activi
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTranslation } from 'react-i18next'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNetwork } from '../context/NetworkContext'
 import { getSwapQuote, getTokens, formatTokenAmount, parseTokenAmount, MosaicToken, SwapQuote } from '../services/mosaic/mosaicService'
 import SwapTokenSelector from '../components/swap/SwapTokenSelector'
@@ -18,6 +19,7 @@ export default function Swap() {
   const { t } = useTranslation()
   const { address: walletAddress, signRawHash: web3SignRawHash, account: web3Account, walletPublicKey, signAndSubmitTransaction } = useWallet()
   const { network } = useNetwork()
+  const insets = useSafeAreaInsets()
 
   const [tokens, setTokens] = useState<MosaicToken[]>([])
   const [fromToken, setFromToken] = useState<MosaicToken | null>(null)
@@ -274,7 +276,7 @@ export default function Swap() {
           )}
         </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: Math.max(insets.bottom, 40) }} />
       </ScrollView>
 
 

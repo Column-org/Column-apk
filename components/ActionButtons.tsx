@@ -25,10 +25,16 @@ export const ActionButtons = () => {
                 <Text style={styles.actionText}>{t('home.swap')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton} activeOpacity={1} onPress={() => router.push('/save')}>
+            <TouchableOpacity
+                style={[styles.actionButton, { opacity: 0.5 }]}
+                activeOpacity={1}
+                onPress={() => { }}
+                disabled={true}
+            >
                 <Ionicons name="wallet-outline" size={28} color="#ffda34" />
                 <Text style={styles.actionText}>{t('home.save')}</Text>
             </TouchableOpacity>
+
         </View>
     )
 }

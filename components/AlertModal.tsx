@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity, Platform } from 'react-native'
+import { View, Text, StyleSheet, Modal, Animated, TouchableOpacity, Platform, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Clipboard from 'expo-clipboard'
 
@@ -31,8 +31,7 @@ export default function AlertModal({
     const handleCopy = async () => {
         if (claimCode) {
             await Clipboard.setStringAsync(claimCode)
-            setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
+            Alert.alert('Copied', 'Claim code copied to clipboard.')
         }
     }
 

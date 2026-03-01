@@ -1,7 +1,8 @@
 import { Stack, useRouter, useSegments } from 'expo-router'
-import { View, LogBox, StyleSheet } from 'react-native'
+import { View, LogBox, StyleSheet, Platform } from 'react-native'
 import React, { useEffect, useRef } from 'react'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import * as NavigationBar from 'expo-navigation-bar'
 import { NetworkProvider } from '../context/NetworkContext'
 import { SecurityProvider, useSecurity } from '../context/SecurityContext'
 import { BalanceVisibilityProvider } from '../context/BalanceVisibilityContext'
@@ -29,7 +30,7 @@ function AppContent() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#121315' }}>
-      <AuraBackground />
+      {!showLock && <AuraBackground />}
       <AppUI />
       {showLock && (
         <View style={StyleSheet.absoluteFill}>
@@ -75,6 +76,13 @@ export default function RootLayout() {
   useEffect(() => {
     // Prime the audio engine immediately
     AudioService.init()
+
+    if (Platform.OS === 'android') {
+      try {
+        NavigationBar.setBackgroundColorAsync('#121315')
+        NavigationBar.setButtonStyleAsync('light')
+      } catch (err) { }
+    }
   }, [])
 
   return (

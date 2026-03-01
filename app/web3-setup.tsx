@@ -7,29 +7,39 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 export default function Web3SetupScreen() {
     const router = useRouter()
     const insets = useSafeAreaInsets()
+    const isNavigating = React.useRef(false)
 
     const handleCreateNew = () => {
+        if (isNavigating.current) return;
+        isNavigating.current = true;
         router.push('/create-wallet')
+        setTimeout(() => isNavigating.current = false, 1000)
     }
 
     const handleImportPrivateKey = () => {
+        if (isNavigating.current) return;
+        isNavigating.current = true;
         router.push({
             pathname: '/import-wallet',
             params: { type: 'privateKey' }
         })
+        setTimeout(() => isNavigating.current = false, 1000)
     }
 
     const handleImportSeedPhrase = () => {
+        if (isNavigating.current) return;
+        isNavigating.current = true;
         router.push({
             pathname: '/import-wallet',
             params: { type: 'seedPhrase' }
         })
+        setTimeout(() => isNavigating.current = false, 1000)
     }
 
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 10) + 10 }]}>
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#ffffff" />
                 </Pressable>
@@ -99,7 +109,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 50 : 60,
         paddingBottom: 16,
         backgroundColor: '#121315',
     },

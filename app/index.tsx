@@ -2,11 +2,14 @@ import React, { useEffect, useRef } from 'react'
 import { View, StyleSheet, Image, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useWallet } from '../context/WalletContext'
+import { useSecurity } from '../context/SecurityContext'
 
 export default function EntryScreen() {
     const router = useRouter()
-    const { isWeb3Loaded, isLoading } = useWallet()
+    const { isWeb3Loaded, isLoading: isWalletLoading } = useWallet()
+    const { isHydrated } = useSecurity()
     const hasNavigated = useRef(false)
+    const isLoading = isWalletLoading || !isHydrated
 
     useEffect(() => {
         console.log('[EntryScreen] State change:', { isLoading, isWeb3Loaded, hasNavigated: hasNavigated.current })

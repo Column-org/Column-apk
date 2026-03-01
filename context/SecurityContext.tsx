@@ -14,6 +14,7 @@ interface SecurityContextType {
   isBiometricAvailable: boolean
   isLocked: boolean
   isPasscodeSet: boolean
+  isHydrated: boolean
   lockTimeout: number
   setPasscode: (passcode: string) => Promise<void>
   verifyPasscode: (passcode: string) => Promise<boolean>
@@ -37,6 +38,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [isPasscodeSet, setIsPasscodeSet] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
   const [lockTimeout, setLockTimeoutState] = useState(1)
 
   const lastActiveTime = useRef<number>(Date.now())
@@ -91,8 +93,8 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         if (securityEnabled === 'true' && (passcode || biometricEnabled === 'true')) {
           setIsLocked(true)
         }
-      } catch (error) {
-        console.error('Error loading security settings:', error)
+      } finally {
+        setIsHydrated(true)
       }
     }
     loadSettings()
@@ -299,6 +301,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         isBiometricAvailable,
         isLocked,
         isPasscodeSet,
+        isHydrated,
         lockTimeout,
         setPasscode,
         verifyPasscode,

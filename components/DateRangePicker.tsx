@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Pressable } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Pressable, StatusBar } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 
 interface DateRangePickerProps {
@@ -15,6 +16,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     onStartDateChange,
     onEndDateChange,
 }) => {
+    const insets = useSafeAreaInsets()
     const [showStartPicker, setShowStartPicker] = useState(false)
     const [showEndPicker, setShowEndPicker] = useState(false)
     const [tempStartDate, setTempStartDate] = useState(startDate)
@@ -289,6 +291,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 onRequestClose={() => setShowStartPicker(false)}
                 statusBarTranslucent
             >
+                <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
                 <Pressable
                     style={styles.modalOverlay}
                     onPress={() => {
@@ -318,6 +321,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 onRequestClose={() => setShowEndPicker(false)}
                 statusBarTranslucent
             >
+                <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
                 <Pressable
                     style={styles.modalOverlay}
                     onPress={() => {
@@ -379,7 +383,7 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
         justifyContent: 'flex-end',
     },
     pickerContainer: {
@@ -387,7 +391,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         maxHeight: '85%',
-        paddingBottom: 40,
+        paddingBottom: 20,
     },
     pickerHeader: {
         flexDirection: 'row',

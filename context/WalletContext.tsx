@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { WalletManager, WalletMetadata } from '../services/walletManager/WalletManager'
 import { TransactionService } from '../services/walletManager/TransactionService'
 import { Account } from '@aptos-labs/ts-sdk'
@@ -65,6 +65,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             })
         }
     }, [activeNetworkConfig, transactionService])
+    const isCreatingRef = useRef(false)
     const [lastBalance, setLastBalance] = useState<bigint | null>(null)
 
     const refreshWallets = useCallback(async () => {
@@ -126,6 +127,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }, [web3Account, lastBalance, transactionService])
 
     const createWeb3Wallet = useCallback(async (name?: string) => {
+        if (isCreatingRef.current) {
+            console.log('[WalletContext] createWeb3Wallet already in progress, skipping.')
+            return { address: '', mnemonic: '' }
+        }
+        isCreatingRef.current = true
+
         setIsWeb3Loading(true)
         // Give UI a chance to render the loader
         await new Promise(resolve => setTimeout(resolve, 50))
@@ -137,6 +144,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             return result
         } finally {
             setIsWeb3Loading(false)
+            // Small delay before unlocking to avoid fast double-clicks
+            setTimeout(() => { isCreatingRef.current = false }, 500)
         }
     }, [walletManager, refreshWallets])
 
