@@ -198,11 +198,11 @@ export default function Receive() {
                                 </Text>
                             )}
                             <TouchableOpacity
-                                style={styles.doneButton}
+                                style={styles.dismissButton}
                                 onPress={hideSuccessMessage}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.doneButtonText}>Done</Text>
+                                <Text style={styles.dismissButtonText}>Done</Text>
                             </TouchableOpacity>
                         </View>
                     </TouchableOpacity>
