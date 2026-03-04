@@ -57,12 +57,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     logo: {
-        width: 180,
-        height: 180,
-        marginBottom: 60,
+        width: 200,
+        height: 200,
     },
     loaderContainer: {
         position: 'absolute',
-        bottom: 80,
+        bottom: 100,
     }
 })
