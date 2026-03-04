@@ -56,10 +56,8 @@ export default function Receive() {
         if (Platform.OS === 'android') {
             const configureNavigationBar = async () => {
                 try {
-                    await NavigationBar.setBackgroundColorAsync('#121315');
                     await NavigationBar.setButtonStyleAsync('light');
                     if (showSuccess) {
-                        await NavigationBar.setBackgroundColorAsync('#121315');
                         await NavigationBar.setButtonStyleAsync('light');
                     }
                 } catch (e) {
@@ -228,27 +226,18 @@ export default function Receive() {
 
                 <View style={styles.tabContainer}>
                     <TouchableOpacity
-                        style={[styles.tab, activeTab === 'qrcode' && styles.activeTab]}
-                        onPress={() => setActiveTab('qrcode')}
+                        style={[styles.tab, styles.activeTab]}
+                        onPress={() => { }}
                         activeOpacity={0.7}
                     >
-                        <Text style={[styles.tabText, activeTab === 'qrcode' && styles.activeTabText]}>
+                        <Text style={[styles.tabText, styles.activeTabText]}>
                             QR Code
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'code' && styles.activeTab]}
-                        onPress={() => setActiveTab('code')}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'code' && styles.activeTabText]}>
-                            Code
                         </Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.content}>
-                    {activeTab === 'qrcode' ? (
+                    {activeTab === 'qrcode' && (
                         <View style={styles.qrContainer}>
                             <View style={styles.qrCodePlaceholder}>
                                 <QrCodeSvg
@@ -269,13 +258,6 @@ export default function Receive() {
                                 </TouchableOpacity>
                             </View>
                         </View>
-                    ) : (
-                        <ClaimTransferForm
-                            code={claimCode}
-                            onChangeCode={setClaimCode}
-                            onSubmit={handleClaimTransfer}
-                            isSubmitting={isClaiming}
-                        />
                     )}
 
                     {activeTab === 'qrcode' && (

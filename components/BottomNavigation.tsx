@@ -25,15 +25,13 @@ export const BottomNavigation = () => {
     const tabs = [
         { name: 'Home', path: '/', icon: 'home' },
         { name: 'History', path: '/activities', icon: 'repeat' },
-        { name: 'Shield', path: '/checker', icon: 'shield' },
         { name: 'Settings', path: '/settings', icon: 'settings' },
     ]
 
     const getActiveIndex = () => {
         if (pathname === '/' || pathname === '/(tabs)/home') return 0
         if (pathname === '/activities' || pathname === '/(tabs)/activities') return 1
-        if (pathname === '/checker' || pathname === '/(tabs)/checker') return 2
-        if (pathname === '/settings' || pathname === '/(tabs)/settings') return 3
+        if (pathname === '/settings' || pathname === '/(tabs)/settings') return 2
         return 0
     }
 

@@ -279,7 +279,6 @@ export const APTOS_INJECTION_SCRIPT = `
 
         // Legacy API shims for older dApps
         isColumn: true,
-        isSatoshi: true,
         isPetra: true,
         isMartian: true,
         isMovement: true,
@@ -357,7 +356,7 @@ export const APTOS_INJECTION_SCRIPT = `
     });
 
     // Assign to global namespaces for legacy dApps
-    var namespaces = ['aptos', 'petra', 'martian', 'pontem', 'column', 'satoshi', 'movement', 'okxwallet'];
+    var namespaces = ['aptos', 'petra', 'martian', 'pontem', 'column', 'movement', 'okxwallet'];
     for (var i = 0; i < namespaces.length; i++) {
         try {
             Object.defineProperty(window, namespaces[i], {

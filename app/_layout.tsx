@@ -23,8 +23,14 @@ import AudioService from '../services/audio/AudioService'
 LogBox.ignoreLogs(['warnOfExpoGoPushUsage']);
 
 function AppContent() {
-  const { isLocked, isSecurityEnabled, isPasscodeSet, isBiometricEnabled } = useSecurity()
+  const { isLocked, isSecurityEnabled, isPasscodeSet, isBiometricEnabled, isHydrated } = useSecurity()
   const { walletPublicKey } = useWallet()
+
+  // Prevent any rendering until security context is ready (hydrated)
+  // This is the most crucial part to prevent the "white flash"
+  if (!isHydrated) {
+    return <View style={{ flex: 1, backgroundColor: '#121315' }} />
+  }
 
   const showLock = isLocked && isSecurityEnabled && walletPublicKey && (isPasscodeSet || isBiometricEnabled)
 
@@ -33,7 +39,7 @@ function AppContent() {
       {!showLock && <AuraBackground />}
       <AppUI />
       {showLock && (
-        <View style={StyleSheet.absoluteFill}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#121315' }]}>
           <LockScreen />
         </View>
       )}
@@ -79,7 +85,6 @@ export default function RootLayout() {
 
     if (Platform.OS === 'android') {
       try {
-        NavigationBar.setBackgroundColorAsync('#121315')
         NavigationBar.setButtonStyleAsync('light')
       } catch (err) { }
     }

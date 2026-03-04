@@ -8,8 +8,17 @@ export default function EntryScreen() {
     const router = useRouter()
     const { isWeb3Loaded, isLoading: isWalletLoading } = useWallet()
     const { isHydrated } = useSecurity()
+    const [minDurationReached, setMinDurationReached] = React.useState(false)
     const hasNavigated = useRef(false)
-    const isLoading = isWalletLoading || !isHydrated
+    const isLoading = isWalletLoading || !isHydrated || !minDurationReached
+
+    useEffect(() => {
+        // Ensure the splash stays visible for at least 2 seconds for a premium feel
+        const timer = setTimeout(() => {
+            setMinDurationReached(true)
+        }, 2000)
+        return () => clearTimeout(timer)
+    }, [])
 
     useEffect(() => {
         console.log('[EntryScreen] State change:', { isLoading, isWeb3Loaded, hasNavigated: hasNavigated.current })
@@ -29,7 +38,7 @@ export default function EntryScreen() {
     return (
         <View style={styles.container}>
             <Image
-                source={require('../assets/Collumn-Login.png')}
+                source={require('../assets/Column.png')}
                 style={styles.logo}
                 resizeMode="contain"
             />
@@ -48,12 +57,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     logo: {
-        width: 140,
-        height: 140,
-        marginBottom: 40,
+        width: 180,
+        height: 180,
+        marginBottom: 60,
     },
     loaderContainer: {
         position: 'absolute',
-        bottom: 60,
+        bottom: 80,
     }
 })

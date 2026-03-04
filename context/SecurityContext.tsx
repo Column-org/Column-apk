@@ -76,11 +76,23 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadSettings = async () => {
       try {
+        console.log('[SecurityContext] Hydrating security settings...')
+
+        // Wrap SecureStore calls safely
+        const fetchItem = async (key: string) => {
+          try {
+            return await SecureStore.getItemAsync(key)
+          } catch (e) {
+            console.warn(`[SecurityContext] Failed to fetch ${key}:`, e)
+            return null
+          }
+        }
+
         const [passcode, biometricEnabled, securityEnabled, timeout] = await Promise.all([
-          SecureStore.getItemAsync(PASSCODE_KEY),
-          SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY),
-          SecureStore.getItemAsync(SECURITY_ENABLED_KEY),
-          SecureStore.getItemAsync(LOCK_TIMEOUT_KEY),
+          fetchItem(PASSCODE_KEY),
+          fetchItem(BIOMETRIC_ENABLED_KEY),
+          fetchItem(SECURITY_ENABLED_KEY),
+          fetchItem(LOCK_TIMEOUT_KEY),
         ])
 
         setIsPasscodeSet(!!passcode)
@@ -91,10 +103,14 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
         setLockTimeoutState(storedTimeout === 0 ? 1 : storedTimeout)
 
         if (securityEnabled === 'true' && (passcode || biometricEnabled === 'true')) {
+          console.log('[SecurityContext] Security enabled, locking app')
           setIsLocked(true)
         }
+      } catch (err) {
+        console.error('[SecurityContext] Critical hydration error:', err)
       } finally {
         setIsHydrated(true)
+        console.log('[SecurityContext] Hydration complete')
       }
     }
     loadSettings()
@@ -219,7 +235,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock Satoshi Wallet',
+        promptMessage: 'Unlock Column',
         fallbackLabel: 'Use passcode',
         cancelLabel: 'Cancel',
       })

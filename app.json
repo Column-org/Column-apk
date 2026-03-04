@@ -6,10 +6,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/AppIcon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "backgroundColor": "#121315",
     "splash": {
-      "image": "./assets/Collumn-Login.png",
+      "image": "./assets/Column.png",
       "resizeMode": "contain",
       "backgroundColor": "#121315"
     },
@@ -28,7 +29,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/AppIcon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#121315"
       },
       "package": "com.getcolumn.app",
       "edgeToEdgeEnabled": true,

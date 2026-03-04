@@ -30,10 +30,8 @@ export default function AddressBook() {
         if (Platform.OS === 'android') {
             const configureNavigationBar = async () => {
                 try {
-                    await NavigationBar.setBackgroundColorAsync('#121315');
                     await NavigationBar.setButtonStyleAsync('light');
                     if (isAddModalVisible) {
-                        await NavigationBar.setBackgroundColorAsync('#121315');
                         await NavigationBar.setButtonStyleAsync('light');
                     }
                 } catch (e) {

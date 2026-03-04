@@ -18,7 +18,7 @@
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       }
     },
-    "preview": {
+    "production-apk": {
       "distribution": "internal",
       "developmentClient": false,
       "android": {

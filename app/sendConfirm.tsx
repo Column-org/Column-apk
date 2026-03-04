@@ -8,7 +8,6 @@ import RecipientAddressInput from '../components/send/RecipientAddressInput'
 import TransactionSummary from '../components/send/TransactionSummary'
 import { AddressBookService, Contact } from '../services/AddressBookService'
 import { useSecurity } from '../context/SecurityContext'
-import AuthenticationModal from '../components/security/AuthenticationModal'
 
 const EMOJIS = ['👤', '💼', '🏠', '🏦', '🦊', '🐼', '🐱', '🐶', '🦄', '🌟'];
 
@@ -26,7 +25,6 @@ export default function SendConfirm() {
     const [contactName, setContactName] = useState('')
     const [contactEmoji, setContactEmoji] = useState('👤')
     const { isPasscodeSet, isBiometricEnabled } = useSecurity()
-    const [showAuthModal, setShowAuthModal] = useState(false)
 
     React.useEffect(() => {
         if (params.token) {
@@ -73,11 +71,7 @@ export default function SendConfirm() {
     }
 
     const handleConfirm = () => {
-        if (isPasscodeSet || isBiometricEnabled) {
-            setShowAuthModal(true)
-        } else {
-            processSend()
-        }
+        processSend()
     }
 
     const processSend = () => {
@@ -198,16 +192,7 @@ export default function SendConfirm() {
                         </View>
                     </View>
                 </Modal>
-                <AuthenticationModal
-                    visible={showAuthModal}
-                    onClose={() => setShowAuthModal(false)}
-                    onSuccess={() => {
-                        setShowAuthModal(false)
-                        processSend()
-                    }}
-                    title="Confirm Transaction"
-                    subtitle="Verify your identity to send funds"
-                />
+
             </ScrollView>
         </View>
     )

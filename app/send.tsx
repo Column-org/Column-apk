@@ -193,13 +193,6 @@ export default function Send() {
                     >
                         <Text style={[styles.tabText, sendMode === 'address' && styles.activeTabText]}>Address</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, { opacity: 0.5 }]}
-                        onPress={() => { }}
-                        disabled={true}
-                    >
-                        <Text style={styles.tabText}>Code</Text>
-                    </TouchableOpacity>
                 </View>
 
                 <TokenSelector

@@ -10,48 +10,44 @@ export const ActionButtons = () => {
 
     return (
         <View style={styles.actions}>
-            <TouchableOpacity style={styles.actionButton} activeOpacity={1} onPress={() => router.push('/receive')}>
-                <Ionicons name="download-outline" size={28} color="#ffda34" />
-                <Text style={styles.actionText}>{t('home.receive')}</Text>
-            </TouchableOpacity>
+            <View style={styles.buttonWrapper}>
+                <TouchableOpacity style={styles.actionButton} activeOpacity={1} onPress={() => router.push('/receive')}>
+                    <Ionicons name="download-outline" size={28} color="#ffda34" />
+                    <Text style={styles.actionText}>{t('home.receive')}</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton} activeOpacity={1} onPress={() => router.push('/send')}>
-                <Ionicons name="paper-plane-outline" size={28} color="#ffda34" />
-                <Text style={styles.actionText}>{t('home.send')}</Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} activeOpacity={1} onPress={() => router.push('/send')}>
+                    <Ionicons name="paper-plane-outline" size={28} color="#ffda34" />
+                    <Text style={styles.actionText}>{t('home.send')}</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton} activeOpacity={1} onPress={() => router.push('/swap')}>
-                <Ionicons name="repeat-outline" size={28} color="#ffda34" />
-                <Text style={styles.actionText}>{t('home.swap')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-                style={[styles.actionButton, { opacity: 0.5 }]}
-                activeOpacity={1}
-                onPress={() => { }}
-                disabled={true}
-            >
-                <Ionicons name="wallet-outline" size={28} color="#ffda34" />
-                <Text style={styles.actionText}>{t('home.save')}</Text>
-            </TouchableOpacity>
-
+                <TouchableOpacity style={styles.actionButton} activeOpacity={1} onPress={() => router.push('/swap')}>
+                    <Ionicons name="repeat-outline" size={28} color="#ffda34" />
+                    <Text style={styles.actionText}>{t('home.swap')}</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     )
 }
 
 const styles = StyleSheet.create({
     actions: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 8,
+        width: '100%',
+        alignItems: 'center',
         paddingHorizontal: 20,
         paddingTop: 10,
         paddingBottom: 0,
         zIndex: 10,
         position: 'relative',
     },
+    buttonWrapper: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 12,
+        width: '100%',
+    },
     actionButton: {
-        flex: 1,
+        width: 100, // Fixed width for better centering behavior
         alignItems: 'center',
         backgroundColor: '#222327',
         borderRadius: 14,
