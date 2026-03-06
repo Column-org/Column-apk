@@ -23,13 +23,13 @@ export const BottomNavigation = () => {
     }, [isSoundEnabled, isHapticEnabled])
 
     const tabs = [
-        { name: 'Home', path: '/', icon: 'home' },
-        { name: 'History', path: '/activities', icon: 'repeat' },
-        { name: 'Settings', path: '/settings', icon: 'settings' },
+        { name: 'Home', path: '/(tabs)/home', icon: 'home' },
+        { name: 'History', path: '/(tabs)/activities', icon: 'repeat' },
+        { name: 'Settings', path: '/(tabs)/settings', icon: 'settings' },
     ]
 
     const getActiveIndex = () => {
-        if (pathname === '/' || pathname === '/(tabs)/home') return 0
+        if (pathname === '/' || pathname === '/home' || pathname === '/(tabs)/home') return 0
         if (pathname === '/activities' || pathname === '/(tabs)/activities') return 1
         if (pathname === '/settings' || pathname === '/(tabs)/settings') return 2
         return 0
